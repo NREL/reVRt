@@ -1,0 +1,13 @@
+[workspace]
+members = [ "crates/lib"]
+default-members = ["crates/lib"]
+resolver = "3"
+
+[workspace.package]
+version = "0.0.1"
+authors = [
+  "Guilherme Castelão <gpimenta@nrel.gov>",
+  "Paul Pinchuk <Pavlo.Pinchuk@nrel.gov>",
+]
+edition = "2024"
+rust-version = "1.85.0"
