@@ -6,3 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+pathfinding = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+zarrs = { workspace = true }
