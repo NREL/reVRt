@@ -25,6 +25,8 @@ points should be organized and moved to the appropriate section.
     depth first search can't be a good deal because read a full
     chunk to use only a line of points.
   - Some implementations require Copy, thus float is not possible.
+  - Goal can be multiple targets. Return the best solution for each target
+    and return the best of the best. Maybe return in order of best cost.
 
 ## Priorities:
 
@@ -33,7 +35,7 @@ points should be organized and moved to the appropriate section.
    - Don't worry about memory requirements or speed.
    - All serial and synchronous.
    - Tests are welcome, but not required.
-   - unrap() is fine.
+   - unwrap() is fine.
    - Ignore the first pixel in the boundary (i.e. i=0 & i=len-1).
    - Use as many public resources as convenient. Avoid custom solutions
      at this stage.
@@ -61,7 +63,7 @@ points should be organized and moved to the appropriate section.
    possible, but we should keep in mind that the memory requirements.
    It's OK to use some memory, but it should be possible to run it with
    a reasonable ammount.
-   - What is a reasonable ammount? 10GB? It should not necessarily require
+   - What is a reasonable ammount? 30GB? It should not necessarily require
      HPC, but feasible in a regular computer, even if slow.
    - Be able to run in a laptop must not compromise the performance in
      the HPC. If a choice is to be made, the priority is to take full
@@ -72,6 +74,7 @@ points should be organized and moved to the appropriate section.
      would probably create restrictions along the design. What is a fair
      limit? Expect 1TB of input data, i.e. all variables in multiple
      datasets required to estimate the cost and path?
+     (20 variables f64, with 50m resolution)
 6. Speed.
    - Assume availability of multiple cores, so parallelism might
      be an advantage.
