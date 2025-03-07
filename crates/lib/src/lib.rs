@@ -26,7 +26,8 @@ impl Dataset {
     /// - Weight the cost. Remember that the cost is for a side,
     ///   thus a diagnonal move has to calculate consider the longer
     ///   distance.
-    fn successors(&self, Pos(x, y): Pos) -> Vec<(Pos, u64)> {
+    fn successors(&self, position: &Pos) -> Vec<(Pos, u64)> {
+        let &Pos(x, y) = position;
         let array = zarrs::array::Array::open(self.store.clone(), "/A").unwrap();
 
 
