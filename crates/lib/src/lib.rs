@@ -1,3 +1,6 @@
+//! # Path optimization with weigthed costs
+//!
+//!
 
 mod error;
 
