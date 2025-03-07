@@ -1,0 +1,78 @@
+# Path optimization with custom cost function
+
+
+## Inbox (ideas to be organized)
+
+Ideally this section should be empty, so whenever there is a chance, this
+points should be organized and moved to the appropriate section.
+
+- Use a cache for the chunks.
+- Does it make sense a cache on the final weight calculated? Maybe
+  a HashMap with (x, y), and rolling the oldest out to minimize
+  the overhead by tracking use such as LRU?
+- Should it try to read ahead? Maybe a trigger when get too close
+  to the edge of a chunk, so it already request the next neighbor?
+- Certainly async!
+- Read the chunk is probably the most expensive operation, and
+  calculate the cost for each grid point is probably next. Thus:
+  - Request one point in the database;
+  - From the point, designate which chunk it is;
+  - Load the full chunk (I don't think it is possible or efficient
+    don't do a full chunk at once), for all required variables;
+  - Calculate the cost for all points in the chunk in parallel.
+    This is a place easy to parallelize. The question is how the
+    pathfinding algorithm prioritize the next target. Due to I/O,
+    depth first search can't be a good deal because read a full
+    chunk to use only a line of points.
+  - Some implementations require Copy, thus float is not possible.
+
+## Priorities:
+
+1. Correctness. Give a correct answer at any cost.
+   Simplifications:
+   - Don't worry about memory requirements or speed.
+   - All serial and synchronous.
+   - Tests are welcome, but not required.
+   - unrap() is fine.
+   - Ignore the first pixel in the boundary (i.e. i=0 & i=len-1).
+   - Use as many public resources as convenient. Avoid custom solutions
+     at this stage.
+2. Python interface.
+   Allow realworld usage of the code even if it is not the most efficient.
+   The goal here is to minimize the effort on maintaining the Python
+   library to allow diverting the effort to the Rust code.
+3. Asynchronous operations.
+   - At least the I/O.
+   - Depending on the final design, the cost calculation might be a good
+     case for that as well.
+   - It is annoying to have that before implementing the tests, but it
+     might impose too many changes in the code and probably would result
+     in re-writing the tests.
+4. Harness the code with minimum tests.
+   - Focus on high level results, since the low level specific operations
+     might change soon.
+   - Some basic integration tests to build the grounds for future. Keep
+     in mind that this might get heavy.
+   - Initiate the samples features so as we evolve the code, we can keep
+     track on the edge cases right the way. The goal here is to add and
+     modify the samples right the way as a new edge case is identified.
+5. Manageable memory footprint.
+   We don't need to limit ourselves to the smallest memory footprint
+   possible, but we should keep in mind that the memory requirements.
+   It's OK to use some memory, but it should be possible to run it with
+   a reasonable ammount.
+   - What is a reasonable ammount? 10GB? It should not necessarily require
+     HPC, but feasible in a regular computer, even if slow.
+   - Be able to run in a laptop must not compromise the performance in
+     the HPC. If a choice is to be made, the priority is to take full
+     advantage of extra resouces, and pay an extra price in the regular
+     laptop. I.e. if has access to 150GB or 100 cores, take full advantage
+     of that, while keeping an alternative, even if costly, for a laptop.
+   - We don't need to be ready for infinite memory requirements. That
+     would probably create restrictions along the design. What is a fair
+     limit? Expect 1TB of input data, i.e. all variables in multiple
+     datasets required to estimate the cost and path?
+6. Speed.
+   - Assume availability of multiple cores, so parallelism might
+     be an advantage.
+   - Given the grid size, I/O is probably the bottleneck.
