@@ -7,6 +7,7 @@ rust-version.workspace = true
 
 [dependencies]
 pathfinding = { workspace = true }
+rayon = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 zarrs = { workspace = true }
