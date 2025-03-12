@@ -10,6 +10,7 @@ use error::Result;
 
 struct Dataset {
     store: zarrs::storage::ReadableListableStorage,
+    cache: zarrs::array::ChunkCacheLruChunkLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
 
 impl Dataset {
@@ -17,8 +18,10 @@ impl Dataset {
         let filesystem = zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
 
         let store: zarrs::storage::ReadableListableStorage = std::sync::Arc::new(filesystem);
+        // ATENTION: Hardcoded in ~250MB
+        let cache = zarrs::array::ChunkCacheLruChunkLimit::new(250_000_000);
 
-        Ok(Self { store })
+        Ok(Self { store, cache })
     }
 
     /// Determine the successors of a position.
