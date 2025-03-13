@@ -69,3 +69,65 @@ impl Dataset {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Pos(u64, u64);
 
+#[cfg(test)]
+pub(crate) mod samples {
+    use ndarray::Array2;
+    use rand::Rng;
+
+    /// Create a single variable (/cost) zarr store
+    ///
+    /// Just a proof of concept with lots of hardcoded values
+    /// that must be improved.
+    pub(crate) fn single_variable_zarr() -> std::path::PathBuf {
+        let ni = 8;
+        let nj = 8;
+
+        let tmp_path = tempfile::TempDir::new().unwrap();
+
+        let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
+            zarrs::filesystem::FilesystemStore::new(tmp_path.path())
+                .expect("could not open filesystem store"),
+        );
+
+        zarrs::group::GroupBuilder::new()
+            .build(store.clone(), "/")
+            .unwrap()
+            .store_metadata()
+            .unwrap();
+
+        // Create an array
+        let array_path = "/cost";
+        let array = zarrs::array::ArrayBuilder::new(
+            vec![ni, nj], // array shape
+            zarrs::array::DataType::Float32,
+            vec![4, 4].try_into().unwrap(), // regular chunk shape
+            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
+        )
+        // .bytes_to_bytes_codecs(vec![]) // uncompressed
+        .dimension_names(["y", "x"].into())
+        // .storage_transformers(vec![].into())
+        .build(store.clone(), array_path)
+        .unwrap();
+
+        // Write array metadata to store
+        array.store_metadata().unwrap();
+
+        let mut rng = rand::rng();
+        let mut a = vec![];
+        for _x in 0..(ni * nj) {
+            a.push(rng.random_range(0.0..=1.0));
+        }
+        let data: Array2<f32> =
+            ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+                .unwrap();
+
+        array
+            .store_chunks_ndarray(
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..2, 0..2]),
+                data,
+            )
+            .unwrap();
+
+        tmp_path.into_path()
+    }
+}
