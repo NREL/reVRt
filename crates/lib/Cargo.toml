@@ -6,6 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ndarray = { workspace = true }
 pathfinding = { workspace = true }
 rayon = { workspace = true }
 thiserror = { workspace = true }
