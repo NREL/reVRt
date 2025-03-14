@@ -67,7 +67,34 @@ impl Dataset {
 
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct Pos(u64, u64);
+struct Point(u32, u32);
+
+impl Point {
+    fn successors(&self) -> Vec<(Point, usize)> {
+        let &Point(x, y) = self;
+        vec![
+            Point(x + 1, y + 2),
+            Point(x + 1, y - 2),
+            Point(x - 1, y + 2),
+            Point(x - 1, y - 2),
+            Point(x + 2, y + 1),
+            Point(x + 2, y - 1),
+            Point(x - 2, y + 1),
+            Point(x - 2, y - 1),
+        ]
+        .into_iter()
+        .map(|p| (p, 1))
+        .collect()
+    }
+}
+
+use ndarray::parallel::prelude::{IntoParallelIterator, ParallelIterator};
+fn many_tracks(start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
+    start
+        .into_par_iter()
+        .filter_map(|s| dijkstra(s, |p| p.successors(), |p| end.contains(p)))
+        .collect::<Vec<_>>()
+}
 
 #[cfg(test)]
 pub(crate) mod samples {
