@@ -92,15 +92,39 @@ impl Simulation {
 
     fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
         let &Point(x, y) = position;
+
+        let array = zarrs::array::Array::open(self.store.clone(), "/A").unwrap();
+
+        // Cutting off the edges for now.
+        let shape = array.shape();
+        if x == 0 || x as u64 >= (shape[0]) || y == 0 || y as u64 >= (shape[1]) {
+            return vec![];
+        }
+
+        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+            (x as u64 - 1)..(x as u64 + 2),
+            (y as u64 - 1)..(y as u64 + 2),
+        ]);
+        dbg!(&subset);
+
+        let value = array
+            .retrieve_array_subset_elements_opt_cached::<f64, zarrs::array::ChunkCacheTypeDecoded>(
+                &self.cache,
+                &subset,
+                &zarrs::array::codec::CodecOptions::default(),
+            )
+            .unwrap();
+        dbg!(&value);
+
         vec![
-            (Point(x - 1, y - 1), 1),
-            (Point(x, y - 1), 1),
-            (Point(x + 1, y - 1), 1),
-            (Point(x - 1, y), 1),
-            (Point(x + 1, y), 1),
-            (Point(x - 1, y + 1), 1),
-            (Point(x, y + 1), 1),
-            (Point(x + 1, y + 1), 1),
+            (Point(x - 1, y - 1), (value[0] * 1e4) as usize),
+            (Point(x, y - 1), (value[1] * 1e4) as usize),
+            (Point(x + 1, y - 1), (value[2] * 1e4) as usize),
+            (Point(x - 1, y), (value[3] * 1e4) as usize),
+            (Point(x + 1, y), (value[5] * 1e4) as usize),
+            (Point(x - 1, y + 1), (value[6] * 1e4) as usize),
+            (Point(x, y + 1), (value[7] * 1e4) as usize),
+            (Point(x + 1, y + 1), (value[8] * 1e4) as usize),
         ]
     }
 
