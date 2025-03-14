@@ -69,10 +69,27 @@ impl Dataset {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Point(u32, u32);
 
-struct Simulation {}
+struct Simulation {
+    store: zarrs::storage::ReadableListableStorage,
+    cache: zarrs::array::ChunkCacheLruChunkLimit<zarrs::array::ChunkCacheTypeDecoded>,
+}
 
 use ndarray::parallel::prelude::{IntoParallelIterator, ParallelIterator};
 impl Simulation {
+    fn new<P: AsRef<std::path::Path>>(store_path: P) -> Result<Self> {
+        let cache_size = 250_000_000;
+
+        let filesystem = zarrs::filesystem::FilesystemStore::new(store_path)
+            .expect("could not open filesystem store");
+        dbg!(&filesystem);
+
+        let store: zarrs::storage::ReadableListableStorage = std::sync::Arc::new(filesystem);
+
+        let cache = zarrs::array::ChunkCacheLruChunkLimit::new(cache_size);
+
+        Ok(Self { store, cache })
+    }
+
     fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
         let &Point(x, y) = position;
         vec![
