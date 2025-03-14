@@ -89,6 +89,14 @@ impl Simulation {
         Ok(Self { store, cache })
     }
 
+    /// Determine the successors of a position.
+    ///
+    /// ToDo:
+    /// - Handle the edges of the array.
+    /// - Include diagonal moves.
+    /// - Weight the cost. Remember that the cost is for a side,
+    ///   thus a diagnonal move has to calculate consider the longer
+    ///   distance.
     fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
         let &Point(x, y) = position;
 
@@ -100,12 +108,14 @@ impl Simulation {
             return vec![];
         }
 
+        // Capture the 3x3 neighborhood
         let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
             (x as u64 - 1)..(x as u64 + 2),
             (y as u64 - 1)..(y as u64 + 2),
         ]);
         dbg!(&subset);
 
+        // Retrieve the 3x3 neighborhood values
         let value = array
             .retrieve_array_subset_elements_opt_cached::<f64, zarrs::array::ChunkCacheTypeDecoded>(
                 &self.cache,
