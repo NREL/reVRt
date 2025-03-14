@@ -33,13 +33,25 @@ struct Dataset {
 
 impl Dataset {
     fn new<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
-        let filesystem = zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
+        let filesystem =
+            zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
 
-        let store: zarrs::storage::ReadableListableStorage = std::sync::Arc::new(filesystem);
+        let source: zarrs::storage::ReadableListableStorage = std::sync::Arc::new(filesystem);
         // ATENTION: Hardcoded in ~250MB
-        let cache = zarrs::array::ChunkCacheLruChunkLimit::new(250_000_000);
+        let cache = zarrs::array::ChunkCacheLruSizeLimit::new(250_000_000);
 
-        Ok(Self { store, cache })
+        let cost_variables = vec!["A".to_string()];
+        let tmp_path = tempfile::TempDir::new().unwrap();
+        let cost = zarrs::filesystem::FilesystemStore::new(tmp_path.path())
+            .expect("could not open filesystem store");
+        let cost = std::sync::Arc::new(cost);
+
+        Ok(Self {
+            source,
+            cost_variables,
+            cache,
+            cost,
+        })
     }
 
     /// Determine the successors of a position.
