@@ -10,9 +10,25 @@ use zarrs::array::ArrayChunkCacheExt;
 
 use error::Result;
 
+/// Manages the features datasets and calculated total cost
 struct Dataset {
-    store: zarrs::storage::ReadableListableStorage,
-    cache: zarrs::array::ChunkCacheLruChunkLimit<zarrs::array::ChunkCacheTypeDecoded>,
+    /// One or more storages with the features
+    // Might benefit of creating a catalog mapping the features
+    // to datasets and repective paths.
+    source: zarrs::storage::ReadableListableStorage,
+    // source: AsyncReadableListableStorage,
+    //source: Vec<AsyncReadableListableStorage>,
+    /// Variables used to define cost
+    /// Minimalist solution for the cost calculation. In the future
+    /// it will be modified to include weights and other types of
+    /// relations such as operations between features.
+    /// At this point it just allows custom variables names and the
+    /// cost is calculated from multiple variables.
+    cost_variables: Vec<String>,
+    /// Storage for the calculated cost
+    cost: zarrs::storage::ReadableWritableListableStorage,
+    /// Cache for the cost
+    cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
 
 impl Dataset {
