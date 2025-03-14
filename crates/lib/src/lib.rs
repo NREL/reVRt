@@ -76,8 +76,7 @@ struct Simulation {
 
 use ndarray::parallel::prelude::{IntoParallelIterator, ParallelIterator};
 impl Simulation {
-    fn new<P: AsRef<std::path::Path>>(store_path: P) -> Result<Self> {
-        let cache_size = 250_000_000;
+    fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
 
         let filesystem = zarrs::filesystem::FilesystemStore::new(store_path)
             .expect("could not open filesystem store");
