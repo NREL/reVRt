@@ -69,31 +69,30 @@ impl Dataset {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Point(u32, u32);
 
-impl Point {
-    fn successors(&self) -> Vec<(Point, usize)> {
-        let &Point(x, y) = self;
-        vec![
-            Point(x + 1, y + 2),
-            Point(x + 1, y - 2),
-            Point(x - 1, y + 2),
-            Point(x - 1, y - 2),
-            Point(x + 2, y + 1),
-            Point(x + 2, y - 1),
-            Point(x - 2, y + 1),
-            Point(x - 2, y - 1),
-        ]
-        .into_iter()
-        .map(|p| (p, 1))
-        .collect()
-    }
-}
+struct Simulation {}
 
 use ndarray::parallel::prelude::{IntoParallelIterator, ParallelIterator};
-fn many_tracks(start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
-    start
-        .into_par_iter()
-        .filter_map(|s| dijkstra(s, |p| p.successors(), |p| end.contains(p)))
-        .collect::<Vec<_>>()
+impl Simulation {
+    fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
+        let &Point(x, y) = position;
+        vec![
+            (Point(x - 1, y - 1), 1),
+            (Point(x, y - 1), 1),
+            (Point(x + 1, y - 1), 1),
+            (Point(x - 1, y), 1),
+            (Point(x + 1, y), 1),
+            (Point(x - 1, y + 1), 1),
+            (Point(x, y + 1), 1),
+            (Point(x + 1, y + 1), 1),
+        ]
+    }
+
+    fn scout(&self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
+        start
+            .into_par_iter()
+            .filter_map(|s| dijkstra(s, |p| self.successors(p), |p| end.contains(p)))
+            .collect::<Vec<_>>()
+    }
 }
 
 #[cfg(test)]
