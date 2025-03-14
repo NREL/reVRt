@@ -5,6 +5,7 @@
 mod error;
 
 use pathfinding::prelude::dijkstra;
+use tracing::trace;
 
 use error::Result;
 
@@ -98,6 +99,8 @@ impl Simulation {
     ///   thus a diagnonal move has to calculate consider the longer
     ///   distance.
     fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
+        trace!("Successors of {:?}", position);
+
         let &Point(x, y) = position;
 
         let array = zarrs::array::Array::open(self.store.clone(), "/A").unwrap();
@@ -113,7 +116,7 @@ impl Simulation {
             (x as u64 - 1)..(x as u64 + 2),
             (y as u64 - 1)..(y as u64 + 2),
         ]);
-        dbg!(&subset);
+        trace!("Subset {:?}", subset);
 
         // Retrieve the 3x3 neighborhood values
         let value = array
@@ -123,9 +126,10 @@ impl Simulation {
                 &zarrs::array::codec::CodecOptions::default(),
             )
             .unwrap();
-        dbg!(&value);
 
-        vec![
+        trace!("Read values {:?}", value);
+
+        let neighbors = vec![
             (Point(x - 1, y - 1), (value[0] * 1e4) as usize),
             (Point(x, y - 1), (value[1] * 1e4) as usize),
             (Point(x + 1, y - 1), (value[2] * 1e4) as usize),
@@ -134,7 +138,9 @@ impl Simulation {
             (Point(x - 1, y + 1), (value[6] * 1e4) as usize),
             (Point(x, y + 1), (value[7] * 1e4) as usize),
             (Point(x + 1, y + 1), (value[8] * 1e4) as usize),
-        ]
+        ];
+        trace!("Neighbors {:?}", neighbors);
+        neighbors
     }
 
     fn scout(&self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
