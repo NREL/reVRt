@@ -6,6 +6,7 @@ mod error;
 
 use pathfinding::prelude::dijkstra;
 use tracing::trace;
+use zarrs::array::ArrayChunkCacheExt;
 
 use error::Result;
 
