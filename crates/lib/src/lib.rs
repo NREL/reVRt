@@ -101,7 +101,7 @@ struct Point(u32, u32);
 
 struct Simulation {
     store: zarrs::storage::ReadableListableStorage,
-    cache: zarrs::array::ChunkCacheLruChunkLimit<zarrs::array::ChunkCacheTypeDecoded>,
+    cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
 
 use ndarray::parallel::prelude::{IntoParallelIterator, ParallelIterator};
@@ -114,7 +114,7 @@ impl Simulation {
 
         let store: zarrs::storage::ReadableListableStorage = std::sync::Arc::new(filesystem);
 
-        let cache = zarrs::array::ChunkCacheLruChunkLimit::new(cache_size);
+        let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
 
         Ok(Self { store, cache })
     }
