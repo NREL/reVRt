@@ -90,8 +90,6 @@ mod test_dataset {
             .retrieve_array_subset_elements::<f32>(&subset)
             .unwrap();
         dbg!(&value);
-
-        assert!(false);
     }
 }
 
