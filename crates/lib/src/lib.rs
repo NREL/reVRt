@@ -76,6 +76,7 @@ impl Dataset {
 mod test_dataset {
     use super::*;
 
+    #[test]
     fn dev() {
         let store_path = samples::single_variable_zarr();
         let dataset = Dataset::new(&store_path).unwrap();
