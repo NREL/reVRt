@@ -103,7 +103,6 @@ struct Simulation {
     cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
 
-
 impl Simulation {
     fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
         let filesystem = zarrs::filesystem::FilesystemStore::new(store_path)
