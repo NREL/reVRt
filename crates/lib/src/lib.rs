@@ -55,47 +55,45 @@ impl Dataset {
         })
     }
 
-    /// Determine the successors of a position.
-    ///
-    /// ToDo:
-    /// - Handle the edges of the array.
-    /// - Include diagonal moves.
-    /// - Weight the cost. Remember that the cost is for a side,
-    ///   thus a diagnonal move has to calculate consider the longer
-    ///   distance.
-    fn successors(&self, position: &Pos) -> Vec<(Pos, u64)> {
-        let &Pos(x, y) = position;
+    /*
+    fn value(&self, Pos(x, y): Pos) -> f32 {
         let array = zarrs::array::Array::open(self.store.clone(), "/A").unwrap();
-
-
-        // Cutting off the edges for now.
-        let shape = array.shape();
-        if x == 0 || x >= (shape[0]) || y == 0 || y >= (shape[1]) {
-            return vec![];
-        }
-
-        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[(x-1)..(x+2), (y-1)..(y+2)]);
-
-        //let value = array.retrieve_array_subset_ndarray::<f64>(&subset).unwrap();
-        let value = array.retrieve_array_subset_elements::<f64>(&subset).unwrap();
-        dbg!(&value);
-
-        let output = vec![
-            (Pos(x-1, y-1), (value[0] * 1e4) as u64),
-            (Pos(x, y-1), (value[1]* 1e4) as u64),
-            (Pos(x+1, y-1), (value[2]* 1e4) as u64),
-            (Pos(x-1, y), (value[3]* 1e4) as u64),
-            (Pos(x+1, y), (value[5]* 1e4) as u64),
-            (Pos(x-1, y+1), (value[6]* 1e4) as u64),
-            (Pos(x, y+1), (value[7]* 1e4) as u64),
-            (Pos(x+1, y+1), (value[8]* 1e4) as u64),
-        ];
-        output
-
-
+        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[x..(x + 1), y..(y + 1)]);
+        let value = array
+            .retrieve_array_subset_elements::<f32>(&subset)
+            .unwrap();
+        value[0]
     }
+
+    //let value = array.retrieve_array_subset_ndarray::<f32>(&subset).unwrap();
+    // let value = array.retrieve_array_subset_elements::<f32>(&subset).unwrap();
+    */
 }
 
+#[cfg(test)]
+mod test_dataset {
+    use super::*;
+
+    fn dev() {
+        let store_path = samples::single_variable_zarr();
+        let dataset = Dataset::new(&store_path).unwrap();
+
+        let array = zarrs::array::Array::open(dataset.source.clone(), "/cost").unwrap();
+        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[0..5, 0..2]);
+        dbg!(&subset);
+
+        // Find the chunks that intersect the subset
+        let target_chunks = &array.chunks_in_array_subset(&subset).unwrap();
+        dbg!(&target_chunks);
+
+        let value = array
+            .retrieve_array_subset_elements::<f32>(&subset)
+            .unwrap();
+        dbg!(&value);
+
+        assert!(false);
+    }
+}
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Point(u32, u32);
@@ -108,10 +106,8 @@ struct Simulation {
 
 impl Simulation {
     fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
-
         let filesystem = zarrs::filesystem::FilesystemStore::new(store_path)
             .expect("could not open filesystem store");
-        dbg!(&filesystem);
 
         let store: zarrs::storage::ReadableListableStorage = std::sync::Arc::new(filesystem);
 
@@ -133,7 +129,7 @@ impl Simulation {
 
         let &Point(x, y) = position;
 
-        let array = zarrs::array::Array::open(self.store.clone(), "/A").unwrap();
+        let array = zarrs::array::Array::open(self.store.clone(), "/cost").unwrap();
 
         // Cutting off the edges for now.
         let shape = array.shape();
@@ -150,7 +146,7 @@ impl Simulation {
 
         // Retrieve the 3x3 neighborhood values
         let value = array
-            .retrieve_array_subset_elements_opt_cached::<f64, zarrs::array::ChunkCacheTypeDecoded>(
+            .retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(
                 &self.cache,
                 &subset,
                 &zarrs::array::codec::CodecOptions::default(),
