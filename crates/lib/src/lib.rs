@@ -5,6 +5,7 @@
 mod error;
 
 use pathfinding::prelude::dijkstra;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::trace;
 use zarrs::array::ArrayChunkCacheExt;
 
@@ -104,7 +105,7 @@ struct Simulation {
     cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
 
-use ndarray::parallel::prelude::{IntoParallelIterator, ParallelIterator};
+
 impl Simulation {
     fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
 
