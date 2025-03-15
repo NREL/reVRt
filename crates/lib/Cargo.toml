@@ -6,3 +6,11 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ndarray = { workspace = true }
+pathfinding = { workspace = true }
+rand = { workspace = true }
+rayon = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+zarrs = { workspace = true }
