@@ -11,6 +11,7 @@ use zarrs::array::ArrayChunkCacheExt;
 
 use error::Result;
 
+#[allow(dead_code)]
 /// Manages the features datasets and calculated total cost
 struct Dataset {
     /// One or more storages with the features
@@ -33,6 +34,7 @@ struct Dataset {
 }
 
 impl Dataset {
+    #[allow(dead_code)]
     fn new<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
         let filesystem =
             zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
