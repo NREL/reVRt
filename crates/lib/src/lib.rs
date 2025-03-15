@@ -96,7 +96,7 @@ mod test_dataset {
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct Point(u32, u32);
+struct Point(u64, u64);
 
 struct Simulation {
     store: zarrs::storage::ReadableListableStorage,
@@ -133,14 +133,14 @@ impl Simulation {
 
         // Cutting off the edges for now.
         let shape = array.shape();
-        if x == 0 || x as u64 >= (shape[0]) || y == 0 || y as u64 >= (shape[1]) {
+        if x == 0 || x >= (shape[0]) || y == 0 || y >= (shape[1]) {
             return vec![];
         }
 
         // Capture the 3x3 neighborhood
         let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
-            (x as u64 - 1)..(x as u64 + 2),
-            (y as u64 - 1)..(y as u64 + 2),
+            (x - 1)..(x + 2),
+            (y - 1)..(y + 2),
         ]);
         trace!("Subset {:?}", subset);
 
