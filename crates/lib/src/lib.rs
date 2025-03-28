@@ -72,30 +72,6 @@ impl Dataset {
     */
 }
 
-#[cfg(test)]
-mod test_dataset {
-    use super::*;
-
-    #[test]
-    fn dev() {
-        let store_path = samples::single_variable_zarr();
-        let dataset = Dataset::new(&store_path).unwrap();
-
-        let array = zarrs::array::Array::open(dataset.source.clone(), "/cost").unwrap();
-        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[0..5, 0..2]);
-        dbg!(&subset);
-
-        // Find the chunks that intersect the subset
-        let target_chunks = &array.chunks_in_array_subset(&subset).unwrap();
-        dbg!(&target_chunks);
-
-        let value = array
-            .retrieve_array_subset_elements::<f32>(&subset)
-            .unwrap();
-        dbg!(&value);
-    }
-}
-
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Point(u64, u64);
 
