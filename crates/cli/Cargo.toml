@@ -6,3 +6,4 @@ authors.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+clap = { workspace = true }
