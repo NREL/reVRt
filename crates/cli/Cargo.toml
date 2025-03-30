@@ -1,8 +1,9 @@
 [package]
 name = "reVX-transmission-cli"
-edition = "2024"
-version.workspace = true
+version = "0.0.1"
 authors.workspace = true
+edition.workspace = true
+# license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
