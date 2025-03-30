@@ -1,0 +1,12 @@
+[package]
+name = "reVX-transmission-cli"
+version = "0.0.1"
+authors.workspace = true
+edition.workspace = true
+# license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
