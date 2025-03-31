@@ -96,7 +96,8 @@ impl Dataset {
         trace!("Cost subset extends to {:?} chunks", chunks.num_elements_usize());
 
         for i in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[0]) {
-            for j in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[1]) {
+            for j in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
+                trace!("Checking if cost for chunk ({}, {}) has been calculated", i, j);
                 if self.cost_chunk_idx[[i as usize, j as usize]] {
                     continue;
                 }
