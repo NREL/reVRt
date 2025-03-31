@@ -171,7 +171,8 @@ pub(crate) mod samples {
             .unwrap();
 
         // Create an array
-        let array_path = "/A";
+        // Remember to remove /cost
+        for array_path in ["/A", "/B", "/C", "/cost"].iter() {
         let array = zarrs::array::ArrayBuilder::new(
             vec![ni, nj], // array shape
             zarrs::array::DataType::Float32,
@@ -202,6 +203,7 @@ pub(crate) mod samples {
                 data,
             )
             .unwrap();
+            }
 
         tmp_path.into_path()
     }
