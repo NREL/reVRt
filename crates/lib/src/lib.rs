@@ -2,6 +2,7 @@
 //!
 //!
 
+mod dataset;
 mod error;
 
 use pathfinding::prelude::dijkstra;
