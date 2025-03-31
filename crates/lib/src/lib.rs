@@ -7,7 +7,7 @@ mod error;
 
 use pathfinding::prelude::dijkstra;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::trace;
+use tracing::{trace, warn};
 use zarrs::array::ArrayChunkCacheExt;
 
 use error::Result;
