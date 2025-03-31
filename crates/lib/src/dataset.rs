@@ -1,6 +1,5 @@
-
 use tracing::{trace, warn};
- use zarrs::array::ArrayChunkCacheExt;
+use zarrs::array::ArrayChunkCacheExt;
 use zarrs::storage::{ReadableListableStorage, ReadableWritableListableStorage};
 
 use crate::Point;
@@ -17,7 +16,7 @@ struct Dataset {
 impl Dataset {
     fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
         let filesystem = zarrs::filesystem::FilesystemStore::new(path).unwrap();
-        let source= std::sync::Arc::new(filesystem);
+        let source = std::sync::Arc::new(filesystem);
 
         // ==== Create the cost dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
@@ -40,7 +39,9 @@ impl Dataset {
             zarrs::array::DataType::Float32,
             vec![4, 4].try_into().unwrap(), // regular chunk shape
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
-        ).build(cost.clone(), "/cost").unwrap();
+        )
+        .build(cost.clone(), "/cost")
+        .unwrap();
         array.store_metadata().unwrap();
 
         trace!("Cost dataset contents: {:?}", cost.list().unwrap());
@@ -71,7 +72,7 @@ impl Dataset {
                 //dbg!(&chunk_subset);
         let chunk_subset = &zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i+1), j..(j+1)]);
         trace!("Target chunk subset: {:?}", chunk_subset);
-                // array.store_chunk_elements(&chunk_indices
+        // array.store_chunk_elements(&chunk_indices
         cost.store_chunks_ndarray(&chunk_subset, output).unwrap();
     }
 
@@ -81,23 +82,32 @@ impl Dataset {
 
         // Cutting off the edges for now.
         let shape = cost.shape();
-        if x == 0 || x >= (shape[0]-1) || y == 0 || y >= (shape[1]-1) {
+        if x == 0 || x >= (shape[0] - 1) || y == 0 || y >= (shape[1] - 1) {
             warn!("I'm not ready to deal with the edges yet");
             return vec![];
         }
 
-
-        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[(x-1)..(x + 2), (y-1)..(y + 2)]);
+        // Capture the 3x3 neighborhood
+        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+            (x - 1)..(x + 2),
+            (y - 1)..(y + 2),
+        ]);
         trace!("Cost subset: {:?}", subset);
 
         // Find the chunks that intersect the subset
         let chunks = &cost.chunks_in_array_subset(&subset).unwrap().unwrap();
         trace!("Cost chunks: {:?}", chunks);
-        trace!("Cost subset extends to {:?} chunks", chunks.num_elements_usize());
+        trace!(
+            "Cost subset extends to {:?} chunks",
+            chunks.num_elements_usize()
+        );
 
         for i in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[0]) {
             for j in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
-                trace!("Checking if cost for chunk ({}, {}) has been calculated", i, j);
+                trace!(
+                    "Checking if cost for chunk ({}, {}) has been calculated",
+                    i, j
+                );
                 if self.cost_chunk_idx[[i as usize, j as usize]] {
                     continue;
                 }
@@ -109,24 +119,29 @@ impl Dataset {
         }
 
         // Retrieve the 3x3 neighborhood values
-        let value: Vec<f32> = cost.retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(&self.cache, &subset, &zarrs::array::codec::CodecOptions::default()).unwrap();
+        let value: Vec<f32> = cost
+            .retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(
+                &self.cache,
+                &subset,
+                &zarrs::array::codec::CodecOptions::default(),
+            )
+            .unwrap();
 
         trace!("Read values {:?}", value);
 
-          let neighbors = vec![
-              (Point(x - 1, y - 1), value[0]),
-              (Point(x, y - 1), value[1] ),
-              (Point(x + 1, y - 1), value[2] ),
-              (Point(x - 1, y), value[3] ),
-              (Point(x + 1, y), value[5] ),
-              (Point(x - 1, y + 1), value[6] ),
-              (Point(x, y + 1), value[7] ),
-              (Point(x + 1, y + 1), value[8] ),
-          ];
-          trace!("Neighbors {:?}", neighbors);
+        let neighbors = vec![
+            (Point(x - 1, y - 1), value[0]),
+            (Point(x, y - 1), value[1]),
+            (Point(x + 1, y - 1), value[2]),
+            (Point(x - 1, y), value[3]),
+            (Point(x + 1, y), value[5]),
+            (Point(x - 1, y + 1), value[6]),
+            (Point(x, y + 1), value[7]),
+            (Point(x + 1, y + 1), value[8]),
+        ];
+        trace!("Neighbors {:?}", neighbors);
 
-          neighbors
-
+        neighbors
 
         /*
         let mut data = array
@@ -140,7 +155,6 @@ impl Dataset {
             )
             .unwrap();
         */
-
     }
 }
 
@@ -173,41 +187,40 @@ pub(crate) mod samples {
         // Create an array
         // Remember to remove /cost
         for array_path in ["/A", "/B", "/C", "/cost"].iter() {
-        let array = zarrs::array::ArrayBuilder::new(
-            vec![ni, nj], // array shape
-            zarrs::array::DataType::Float32,
-            vec![4, 4].try_into().unwrap(), // regular chunk shape
-            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
-        )
-        // .bytes_to_bytes_codecs(vec![]) // uncompressed
-        .dimension_names(["y", "x"].into())
-        // .storage_transformers(vec![].into())
-        .build(store.clone(), array_path)
-        .unwrap();
-
-        // Write array metadata to store
-        array.store_metadata().unwrap();
-
-        let mut rng = rand::rng();
-        let mut a = vec![];
-        for _x in 0..(ni * nj) {
-            a.push(rng.random_range(0.0..=1.0));
-        }
-        let data: Array2<f32> =
-            ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
-                .unwrap();
-
-        array
-            .store_chunks_ndarray(
-                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..2, 0..2]),
-                data,
+            let array = zarrs::array::ArrayBuilder::new(
+                vec![ni, nj], // array shape
+                zarrs::array::DataType::Float32,
+                vec![4, 4].try_into().unwrap(), // regular chunk shape
+                zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
             )
+            // .bytes_to_bytes_codecs(vec![]) // uncompressed
+            .dimension_names(["y", "x"].into())
+            // .storage_transformers(vec![].into())
+            .build(store.clone(), array_path)
             .unwrap();
+
+            // Write array metadata to store
+            array.store_metadata().unwrap();
+
+            let mut rng = rand::rng();
+            let mut a = vec![];
+            for _x in 0..(ni * nj) {
+                a.push(rng.random_range(0.0..=1.0));
             }
+            let data: Array2<f32> =
+                ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+                    .unwrap();
+
+            array
+                .store_chunks_ndarray(
+                    &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..2, 0..2]),
+                    data,
+                )
+                .unwrap();
+        }
 
         tmp_path.into_path()
     }
-
 }
 
 #[cfg(test)]
