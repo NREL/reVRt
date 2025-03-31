@@ -1,5 +1,5 @@
 
-use tracing::trace;
+use tracing::{trace, warn};
  use zarrs::array::ArrayChunkCacheExt;
 use zarrs::storage::{ReadableListableStorage, ReadableWritableListableStorage};
 
@@ -71,6 +71,15 @@ impl Dataset {
 
     fn get_3x3(&mut self, x: u64, y: u64) -> Vec<(Point, f32)>{
         let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
+        trace!("Cost dataset with shape: {:?}", cost.shape());
+
+        // Cutting off the edges for now.
+        let shape = cost.shape();
+        if x == 0 || x >= (shape[0]-1) || y == 0 || y >= (shape[1]-1) {
+            warn!("I'm not ready to deal with the edges yet");
+            return vec![];
+        }
+
 
         let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[(x-1)..(x + 2), (y-1)..(y + 2)]);
         dbg!(&subset);
