@@ -27,12 +27,14 @@ impl Dataset {
                 .expect("could not open filesystem store"),
         );
 
+        trace!("Creating a new group for the cost dataset");
         zarrs::group::GroupBuilder::new()
             .build(cost.clone(), "/")
             .unwrap()
             .store_metadata()
             .unwrap();
 
+        trace!("Creating an empty cost array");
         let array = zarrs::array::ArrayBuilder::new(
             vec![8, 8], // array shape
             zarrs::array::DataType::Float32,
@@ -40,6 +42,8 @@ impl Dataset {
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         ).build(cost.clone(), "/cost").unwrap();
         array.store_metadata().unwrap();
+
+        trace!("Cost dataset contents: {:?}", cost.list().unwrap());
 
         let cost_chunk_idx = ndarray::Array2::from_elem((2, 2), false);
 
@@ -49,14 +53,16 @@ impl Dataset {
     }
 
     fn calculate_chunk_cost(&self, i: u64, j: u64) {
-                dbg!(i);
-                dbg!(j);
+        trace!("Calculating cost for chunk ({}, {})", i, j);
+
+        trace!("Getting '/A' variable");
         let array = zarrs::array::Array::open(self.source.clone(), "/A").unwrap();
         let value = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
-                dbg!(&value);
-                //let value = array.retrieve_chunk(&[i, j]).unwrap();
+        trace!("Value: {:?}", value);
+        //let value = array.retrieve_chunk(&[i, j]).unwrap();
+        trace!("Calculating cost for chunk ({}, {})", i, j);
         let output = value * 10.0;
-                dbg!(&output);
+
         let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
         let chunk_indices: Vec<u64> = vec![i, j];
@@ -64,7 +70,7 @@ impl Dataset {
                 // let chunk_subset = array.chunk_grid().subset(&chunk_indices, array.shape()).unwrap().unwrap();
                 //dbg!(&chunk_subset);
         let chunk_subset = &zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i+1), j..(j+1)]);
-                dbg!(&chunk_subset);
+        trace!("Target chunk subset: {:?}", chunk_subset);
                 // array.store_chunk_elements(&chunk_indices
         cost.store_chunks_ndarray(&chunk_subset, output).unwrap();
     }
@@ -82,14 +88,13 @@ impl Dataset {
 
 
         let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[(x-1)..(x + 2), (y-1)..(y + 2)]);
-        dbg!(&subset);
+        trace!("Cost subset: {:?}", subset);
 
         // Find the chunks that intersect the subset
         let chunks = &cost.chunks_in_array_subset(&subset).unwrap().unwrap();
-        dbg!(&chunks);
-        dbg!(chunks.num_elements_usize());
-        dbg!(chunks.start());
-        dbg!(&self.cost_chunk_idx);
+        trace!("Cost chunks: {:?}", chunks);
+        trace!("Cost subset extends to {:?} chunks", chunks.num_elements_usize());
+
         for i in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[0]) {
             for j in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[1]) {
                 if self.cost_chunk_idx[[i as usize, j as usize]] {
@@ -104,7 +109,6 @@ impl Dataset {
 
         // Retrieve the 3x3 neighborhood values
         let value: Vec<f32> = cost.retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(&self.cache, &subset, &zarrs::array::codec::CodecOptions::default()).unwrap();
-        dbg!(&value);
 
         trace!("Read values {:?}", value);
 
