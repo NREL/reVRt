@@ -16,20 +16,17 @@ use error::Result;
 struct Point(u64, u64);
 
 struct Simulation {
-    store: zarrs::storage::ReadableListableStorage,
-    cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
+    dataset: dataset::Dataset,
 }
 
 impl Simulation {
-    fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
-        let filesystem = zarrs::filesystem::FilesystemStore::new(store_path)
-            .expect("could not open filesystem store");
+    pub fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
 
-        let store: zarrs::storage::ReadableListableStorage = std::sync::Arc::new(filesystem);
+        let dataset = dataset::Dataset::open(store_path, cache_size)?;
 
-        let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
-
-        Ok(Self { store, cache })
+        Ok(Self {
+            dataset,
+        })
     }
 
     /// Determine the successors of a position.
@@ -44,45 +41,16 @@ impl Simulation {
         trace!("Successors of {:?}", position);
 
         let &Point(x, y) = position;
+        trace!("Position {} {}", x, y);
 
-        let array = zarrs::array::Array::open(self.store.clone(), "/cost").unwrap();
-
-        // Cutting off the edges for now.
-        let shape = array.shape();
-        if x == 0 || x >= (shape[0]) || y == 0 || y >= (shape[1]) {
-            return vec![];
-        }
-
-        // Capture the 3x3 neighborhood
-        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
-            (x - 1)..(x + 2),
-            (y - 1)..(y + 2),
-        ]);
-        trace!("Subset {:?}", subset);
-
-        // Retrieve the 3x3 neighborhood values
-        let value = array
-            .retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(
-                &self.cache,
-                &subset,
-                &zarrs::array::codec::CodecOptions::default(),
-            )
-            .unwrap();
-
-        trace!("Read values {:?}", value);
-
-        let neighbors = vec![
-            (Point(x - 1, y - 1), (value[0] * 1e4) as usize),
-            (Point(x, y - 1), (value[1] * 1e4) as usize),
-            (Point(x + 1, y - 1), (value[2] * 1e4) as usize),
-            (Point(x - 1, y), (value[3] * 1e4) as usize),
-            (Point(x + 1, y), (value[5] * 1e4) as usize),
-            (Point(x - 1, y + 1), (value[6] * 1e4) as usize),
-            (Point(x, y + 1), (value[7] * 1e4) as usize),
-            (Point(x + 1, y + 1), (value[8] * 1e4) as usize),
-        ];
-        trace!("Neighbors {:?}", neighbors);
-        neighbors
+        let neighbors = self.dataset.get_3x3(x, y);
+        //dbg!(&neighbors);
+        let neighbors = neighbors
+            .into_iter()
+            .map(|(p, c)| (p, (1e4 * c) as usize))
+            .collect();
+        //dbg!(&neighbors);
+        return neighbors;
     }
 
     fn scout(&self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
