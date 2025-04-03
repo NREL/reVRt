@@ -4,7 +4,6 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use tracing::{info, trace};
-use tracing_subscriber;
 
 use nrel_transmission::resolve;
 

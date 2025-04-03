@@ -62,6 +62,18 @@ impl Simulation {
     }
 }
 
+
+pub fn resolve<P: AsRef<std::path::Path>>(
+    store_path: P,
+    cache_size: u64,
+    start: &[Point],
+    end: Vec<Point>,
+) -> Result<Vec<(Vec<Point>, usize)>> {
+    let mut simulation: Simulation = Simulation::new(store_path, cache_size).unwrap();
+    let result = simulation.scout(start, end);
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,15 +91,4 @@ mod tests {
         assert!(cost > &0);
         dbg!(&solutions);
     }
-}
-
-pub fn resolve<P: AsRef<std::path::Path>>(
-    store_path: P,
-    cache_size: u64,
-    start: &[Point],
-    end: Vec<Point>,
-) -> Result<Vec<(Vec<Point>, usize)>> {
-    let mut simulation: Simulation = Simulation::new(store_path, cache_size).unwrap();
-    let result = simulation.scout(start, end);
-    Ok(result)
 }
