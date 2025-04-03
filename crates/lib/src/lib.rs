@@ -40,12 +40,11 @@ impl Simulation {
         trace!("Position {} {}", x, y);
 
         let neighbors = self.dataset.get_3x3(x, y);
-        //dbg!(&neighbors);
         let neighbors = neighbors
             .into_iter()
             .map(|(p, c)| (p, (1e4 * c) as usize))
             .collect();
-        //dbg!(&neighbors);
+        trace!("Adjusting neighbors' types: {:?}", neighbors);
         return neighbors;
     }
 
