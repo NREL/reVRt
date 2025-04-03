@@ -1,4 +1,3 @@
-
 use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
@@ -34,7 +33,8 @@ impl Dataset {
     pub(super) fn open<P: AsRef<std::path::Path>>(path: P, cache_size: u64) -> Result<Self> {
         trace!("Opening dataset");
         trace!("Building FilesystemStore with path: {:?}", path.as_ref());
-        let filesystem = zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
+        let filesystem =
+            zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
         let source = std::sync::Arc::new(filesystem);
 
         // ==== Create the cost dataset ====
@@ -146,7 +146,6 @@ impl Dataset {
             "Cost subset extends to {:?} chunks",
             chunks.num_elements_usize()
         );
-
 
         for i in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[0]) {
             for j in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
@@ -261,7 +260,10 @@ pub(crate) mod samples {
 
             array
                 .store_chunks_ndarray(
-                    &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni/ci), 0..(nj/cj)]),
+                    &zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                        0..(ni / ci),
+                        0..(nj / cj),
+                    ]),
                     data,
                 )
                 .unwrap();
