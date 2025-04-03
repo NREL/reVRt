@@ -62,7 +62,6 @@ impl Simulation {
     }
 }
 
-
 pub fn resolve<P: AsRef<std::path::Path>>(
     store_path: P,
     cache_size: u64,
