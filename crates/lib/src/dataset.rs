@@ -80,7 +80,7 @@ impl Dataset {
     }
 
     fn calculate_chunk_cost(&self, i: u64, j: u64) {
-        trace!("Calculating cost for chunk ({}, {})", i, j);
+        debug!("Calculating cost for chunk ({}, {})", i, j);
 
         trace!("Getting '/A' variable");
         let array = zarrs::array::Array::open(self.source.clone(), "/A").unwrap();
