@@ -12,14 +12,20 @@ use tracing::trace;
 use error::Result;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct Point(u64, u64);
+pub struct Point(u64, u64);
+
+impl Point {
+    pub fn new(x: u64, y: u64) -> Self {
+        Self(x, y)
+    }
+}
 
 struct Simulation {
     dataset: dataset::Dataset,
 }
 
 impl Simulation {
-    pub fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
+    fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
         let dataset = dataset::Dataset::open(store_path, cache_size)?;
 
         Ok(Self { dataset })
@@ -48,7 +54,7 @@ impl Simulation {
         return neighbors;
     }
 
-    fn scout(&self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
+    fn scout(&mut self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
         start
             .into_par_iter()
             .filter_map(|s| dijkstra(s, |p| self.successors(p), |p| end.contains(p)))
@@ -73,4 +79,15 @@ mod tests {
         assert!(cost > &0);
         dbg!(&solutions);
     }
+}
+
+pub fn resolve<P: AsRef<std::path::Path>>(
+    store_path: P,
+    cache_size: u64,
+    start: &[Point],
+    end: Vec<Point>,
+) -> Result<Vec<(Vec<Point>, usize)>> {
+    let mut simulation: Simulation = Simulation::new(store_path, cache_size).unwrap();
+    let result = simulation.scout(start, end);
+    Ok(result)
 }
