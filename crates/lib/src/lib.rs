@@ -11,7 +11,6 @@ use tracing::trace;
 
 use error::Result;
 
-
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct Point(u64, u64);
 
@@ -21,12 +20,9 @@ struct Simulation {
 
 impl Simulation {
     pub fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
-
         let dataset = dataset::Dataset::open(store_path, cache_size)?;
 
-        Ok(Self {
-            dataset,
-        })
+        Ok(Self { dataset })
     }
 
     /// Determine the successors of a position.
