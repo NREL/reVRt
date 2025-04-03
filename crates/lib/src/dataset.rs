@@ -44,7 +44,7 @@ impl Dataset {
             tmp_path.path()
         );
         let cost: ReadableWritableListableStorage = std::sync::Arc::new(
-            zarrs::filesystem::FilesystemStore::new(&tmp_path.path())
+            zarrs::filesystem::FilesystemStore::new(tmp_path.path())
                 .expect("could not open filesystem store"),
         );
 
@@ -111,7 +111,7 @@ impl Dataset {
         let chunk_subset =
             &zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
         trace!("Target chunk subset: {:?}", chunk_subset);
-        cost.store_chunks_ndarray(&chunk_subset, output).unwrap();
+        cost.store_chunks_ndarray(chunk_subset, output).unwrap();
     }
 
     pub(super) fn get_3x3(&self, x: u64, y: u64) -> Vec<(Point, f32)> {

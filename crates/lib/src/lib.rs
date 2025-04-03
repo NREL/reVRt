@@ -51,7 +51,7 @@ impl Simulation {
             .map(|(p, c)| (p, (1e4 * c) as usize))
             .collect();
         trace!("Adjusting neighbors' types: {:?}", neighbors);
-        return neighbors;
+        neighbors
     }
 
     fn scout(&mut self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
