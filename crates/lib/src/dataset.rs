@@ -1,4 +1,7 @@
-use tracing::{trace, warn};
+
+use std::sync::RwLock;
+
+use tracing::{debug, trace, warn};
 use zarrs::array::ArrayChunkCacheExt;
 use zarrs::storage::{ReadableListableStorage, ReadableWritableListableStorage};
 
@@ -7,8 +10,20 @@ use crate::error::Result;
 
 struct Dataset {
     source: ReadableListableStorage,
+    // Silly way to keep the tmp path alive
+    #[allow(dead_code)]
+    cost_path: tempfile::TempDir,
+    /// Variables used to define cost
+    /// Minimalist solution for the cost calculation. In the future
+    /// it will be modified to include weights and other types of
+    /// relations such as operations between features.
+    /// At this point it just allows custom variables names and the
+    /// cost is calculated from multiple variables.
+    // cost_variables: Vec<String>,
+    /// Storage for the calculated cost
     cost: ReadableWritableListableStorage,
-    cost_chunk_idx: ndarray::Array2<bool>,
+    /// Index of cost chunks already calculated
+    cost_chunk_idx: RwLock<ndarray::Array2<bool>>,
     /// Cache for the cost
     cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
@@ -46,11 +61,22 @@ impl Dataset {
 
         trace!("Cost dataset contents: {:?}", cost.list().unwrap());
 
-        let cost_chunk_idx = ndarray::Array2::from_elem((2, 2), false);
+        let cost_chunk_idx = ndarray::Array2::from_elem((2, 2), false).into();
 
-        let cache = zarrs::array::ChunkCacheLruSizeLimit::new(250_000_000);
+        if cache_size < 1_000_000 {
+            warn!("Cache size smalled than 1MB");
+        }
+        trace!("Creating cache with size {}MB", cache_size / 1_000_000);
+        let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
 
-        Ok(Self { source, cost, cost_chunk_idx, cache })
+        trace!("Dataset opened successfully");
+        Ok(Self {
+            source,
+            cost_path: tmp_path,
+            cost,
+            cost_chunk_idx,
+            cache,
+        })
     }
 
     fn calculate_chunk_cost(&self, i: u64, j: u64) {
@@ -102,19 +128,20 @@ impl Dataset {
             chunks.num_elements_usize()
         );
 
+
         for i in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[0]) {
             for j in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
                 trace!(
                     "Checking if cost for chunk ({}, {}) has been calculated",
                     i, j
                 );
-                if self.cost_chunk_idx[[i as usize, j as usize]] {
-                    continue;
+                if self.cost_chunk_idx.read().unwrap()[[i as usize, j as usize]] {
+                    trace!("Cost for chunk ({}, {}) already calculated", i, j);
+                } else {
+                    self.calculate_chunk_cost(i, j);
+                    let mut chunk_idx = self.cost_chunk_idx.write().unwrap();
+                    chunk_idx[[i as usize, j as usize]] = true;
                 }
-                self.calculate_chunk_cost(i, j);
-                dbg!(&self.cost_chunk_idx[[i as usize, j as usize]]);
-                self.cost_chunk_idx[[i as usize, j as usize]] = true;
-                dbg!(&self.cost_chunk_idx[[i as usize, j as usize]]);
             }
         }
 
