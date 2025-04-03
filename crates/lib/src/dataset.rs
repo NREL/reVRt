@@ -48,15 +48,23 @@ impl Dataset {
             .store_metadata()
             .unwrap();
 
+        // -- Temporary solution to specify cost storage --
+        let tmp = zarrs::array::Array::open(source.clone(), "/A").unwrap();
+        let cost_shape = tmp.shape();
+        let chunk_shape = tmp.chunk_grid().clone();
+        // ----
+
         trace!("Creating an empty cost array");
         let array = zarrs::array::ArrayBuilder::new(
-            vec![8, 8], // array shape
+            cost_shape.into(),
             zarrs::array::DataType::Float32,
-            vec![4, 4].try_into().unwrap(), // regular chunk shape
+            chunk_shape,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         .build(cost.clone(), "/cost")
         .unwrap();
+        warn!("Cost shape: {:?}", array.shape().to_vec());
+        warn!("Cost chunk shape: {:?}", array.chunk_grid());
         array.store_metadata().unwrap();
 
         trace!("Cost dataset contents: {:?}", cost.list().unwrap());
