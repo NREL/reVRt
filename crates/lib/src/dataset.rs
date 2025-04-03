@@ -280,7 +280,7 @@ mod tests {
     #[test]
     fn test_single_variable_zarr() {
         let path = samples::single_variable_zarr();
-        let mut dataset = Dataset::open(path, 250_000_000).unwrap();
+        let dataset = Dataset::open(path, 250_000_000).unwrap();
 
         let results = dataset.get_3x3(3, 2);
         dbg!(&results);
