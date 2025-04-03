@@ -62,8 +62,8 @@ mod tests {
 
     #[test]
     fn minimalist() {
-        let store_path = samples::single_variable_zarr();
-        let simulation = Simulation::new(&store_path, 250_000_000).unwrap();
+        let store_path = dataset::samples::single_variable_zarr();
+        let mut simulation = Simulation::new(&store_path, 250_000_000).unwrap();
         let start = vec![Point(2, 3)];
         let end = vec![Point(6, 6)];
         let solutions = simulation.scout(&start, end);
