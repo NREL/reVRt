@@ -39,9 +39,12 @@ impl Dataset {
 
         // ==== Create the cost dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
-        let tmp_path = std::path::PathBuf::from("./cost_demo.zarr");
+        trace!(
+            "Initializing a temporary cost dataset at {:?}",
+            tmp_path.path()
+        );
         let cost: ReadableWritableListableStorage = std::sync::Arc::new(
-            zarrs::filesystem::FilesystemStore::new(tmp_path.as_path())
+            zarrs::filesystem::FilesystemStore::new(&tmp_path.path())
                 .expect("could not open filesystem store"),
         );
 
@@ -98,19 +101,16 @@ impl Dataset {
         let array = zarrs::array::Array::open(self.source.clone(), "/A").unwrap();
         let value = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
         trace!("Value: {:?}", value);
-        //let value = array.retrieve_chunk(&[i, j]).unwrap();
         trace!("Calculating cost for chunk ({}, {})", i, j);
         let output = value * 10.0;
 
         let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
         let chunk_indices: Vec<u64> = vec![i, j];
-                dbg!(&chunk_indices);
-                // let chunk_subset = array.chunk_grid().subset(&chunk_indices, array.shape()).unwrap().unwrap();
-                //dbg!(&chunk_subset);
-        let chunk_subset = &zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i+1), j..(j+1)]);
+        trace!("Storing chunk at {:?}", chunk_indices);
+        let chunk_subset =
+            &zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
         trace!("Target chunk subset: {:?}", chunk_subset);
-        // array.store_chunk_elements(&chunk_indices
         cost.store_chunks_ndarray(&chunk_subset, output).unwrap();
     }
 
