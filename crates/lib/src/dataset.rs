@@ -8,7 +8,9 @@ use zarrs::storage::{ReadableListableStorage, ReadableWritableListableStorage};
 use crate::Point;
 use crate::error::Result;
 
-struct Dataset {
+/// Manages the features datasets and calculated total cost
+pub(super) struct Dataset {
+    /// A Zarr storages with the features
     source: ReadableListableStorage,
     // Silly way to keep the tmp path alive
     #[allow(dead_code)]
@@ -29,8 +31,10 @@ struct Dataset {
 }
 
 impl Dataset {
-    fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
-        let filesystem = zarrs::filesystem::FilesystemStore::new(path).unwrap();
+    pub(super) fn open<P: AsRef<std::path::Path>>(path: P, cache_size: u64) -> Result<Self> {
+        trace!("Opening dataset");
+        trace!("Building FilesystemStore with path: {:?}", path.as_ref());
+        let filesystem = zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
         let source = std::sync::Arc::new(filesystem);
 
         // ==== Create the cost dataset ====
@@ -110,7 +114,14 @@ impl Dataset {
         cost.store_chunks_ndarray(&chunk_subset, output).unwrap();
     }
 
-    fn get_3x3(&mut self, x: u64, y: u64) -> Vec<(Point, f32)>{
+    pub(super) fn get_3x3(&self, x: u64, y: u64) -> Vec<(Point, f32)> {
+        trace!("Getting 3x3 neighborhood for ({}, {})", x, y);
+
+        trace!("Cost dataset contents: {:?}", self.cost.list().unwrap());
+        // What is this size?
+        trace!("Cost dataset size: {:?}", self.cost.size().unwrap());
+
+        trace!("Opening cost dataset");
         let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
         trace!("Cost dataset with shape: {:?}", cost.shape());
 
