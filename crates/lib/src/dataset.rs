@@ -216,6 +216,8 @@ pub(crate) mod samples {
     pub(crate) fn single_variable_zarr() -> std::path::PathBuf {
         let ni = 8;
         let nj = 8;
+        let ci = 4;
+        let cj = 4;
 
         let tmp_path = tempfile::TempDir::new().unwrap();
 
@@ -236,7 +238,7 @@ pub(crate) mod samples {
             let array = zarrs::array::ArrayBuilder::new(
                 vec![ni, nj], // array shape
                 zarrs::array::DataType::Float32,
-                vec![4, 4].try_into().unwrap(), // regular chunk shape
+                vec![ci, cj].try_into().unwrap(), // regular chunk shape
                 zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
             )
             // .bytes_to_bytes_codecs(vec![]) // uncompressed
@@ -259,7 +261,7 @@ pub(crate) mod samples {
 
             array
                 .store_chunks_ndarray(
-                    &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..2, 0..2]),
+                    &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni/ci), 0..(nj/cj)]),
                     data,
                 )
                 .unwrap();
