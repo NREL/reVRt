@@ -233,7 +233,7 @@ sphinx-tabs = ">=3.4.1,<4"
 sphinxcontrib-mermaid = ">=1.0.0,<2"
 
 [tool.pixi.feature.build.dependencies]
-python-build = ">=1.2.2,<2"
+python-build = ">=1.2.2.post1,<2"
 pkginfo = ">=1.12.1.2,<2"
 twine = ">=6.1.0,<7"
 
