@@ -160,7 +160,7 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = [
-    "F401", # unused-import
+  "F401", # unused-import
 ]
 "tests/**.py" = [
   "ARG001", # unused-function-argument
@@ -215,9 +215,12 @@ rasterio = ">=1.4.3,<2"
 shapely = ">=2.1.0,<3"
 
 [tool.pixi.feature.dev.dependencies]
+geopandas = ">=1.0.1,<2"
 ipython = ">=9.1.0,<10"
 jupyter = ">=1.1.1,<2"
+matplotlib = ">=3.10.1,<4"
 pipreqs = ">=0.4.13,<0.5"
+rioxarray = ">=0.18.2,<0.19"
 ruff = ">=0.11.5,<0.12"
 ruff-lsp = ">=0.0.62,<0.0.63"
 
@@ -306,5 +309,5 @@ omit = [
 addopts = "--cov=trev --cov-report=html --cov-report=xml:coverage.xml --disable-warnings --cov-fail-under=95"
 testpaths = [
     "tests/python/unit",
-    "tests/python/ntegration",
+    "tests/python/integration",
 ]
