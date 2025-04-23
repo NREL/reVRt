@@ -2,6 +2,9 @@
 
 import pytest
 
+from rasterstats import zonal_stats as rzs
+from rasterstats.utils import VALID_STATS
+
 from trev.spatial_characterization.zonal_stats import zonal_stats
 
 
@@ -166,3 +169,30 @@ def test_fractional_area(sc_dir, zonal_polygon_fp):
         copy_properties=["id"],
     )
     assert stats == expected
+
+
+@pytest.mark.parametrize("nodata", [None, 11])
+@pytest.mark.parametrize("stats", [None, VALID_STATS])
+@pytest.mark.parametrize("all_touched", [True, False])
+@pytest.mark.parametrize("zone_func", [None, lambda x: x**2 / 2])
+def test_against_rasterstats(
+    sc_dir, zonal_polygon_fp, nodata, stats, all_touched, zone_func
+):
+    """Test against the rasterstats zonal_stats function"""
+    test_stats = zonal_stats(
+        str(zonal_polygon_fp),
+        sc_dir / "layer_a.tif",
+        nodata=nodata,
+        stats=stats,
+        all_touched=all_touched,
+        zone_func=zone_func,
+    )
+    truth_stats = rzs(
+        str(zonal_polygon_fp),
+        sc_dir / "layer_a.tif",
+        nodata=nodata,
+        stats=stats,
+        all_touched=all_touched,
+        zone_func=zone_func,
+    )
+    assert test_stats == truth_stats
