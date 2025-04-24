@@ -196,3 +196,34 @@ def test_against_rasterstats(
         zone_func=zone_func,
     )
     assert test_stats == truth_stats
+
+
+def test_percentile_against_rasterstats(sc_dir, zonal_polygon_fp):
+    """Test percentile stats against rasterstats zonal_stats function"""
+    test_stats = zonal_stats(
+        str(zonal_polygon_fp),
+        sc_dir / "layer_a.tif",
+        stats=[
+            "percentile_10",
+            "percentile_15.3",
+            "percentile_25",
+            "percentile_50",
+            "percentile_75",
+            "percentile_90",
+        ],
+        all_touched=True,
+    )
+    truth_stats = rzs(
+        str(zonal_polygon_fp),
+        sc_dir / "layer_a.tif",
+        stats=[
+            "percentile_10",
+            "percentile_15.3",
+            "percentile_25",
+            "percentile_50",
+            "percentile_75",
+            "percentile_90",
+        ],
+        all_touched=True,
+    )
+    assert test_stats == truth_stats
