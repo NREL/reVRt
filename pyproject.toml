@@ -211,17 +211,17 @@ rust = ">=1.85.0,<1.86"
 # package
 affine = ">=2.4.0,<3"
 fiona = ">=1.10.1,<2"
+geopandas = ">=1.0.1,<2"
 numpy = ">=2.2.4,<3"
 rasterio = ">=1.4.3,<2"
+rioxarray = ">=0.18.2,<0.19"
 shapely = ">=2.1.0,<3"
 
 [tool.pixi.feature.dev.dependencies]
-geopandas = ">=1.0.1,<2"
 ipython = ">=9.1.0,<10"
 jupyter = ">=1.1.1,<2"
 matplotlib = ">=3.10.1,<4"
 pipreqs = ">=0.4.13,<0.5"
-rioxarray = ">=0.18.2,<0.19"
 ruff = ">=0.11.5,<0.12"
 ruff-lsp = ">=0.0.62,<0.0.63"
 
