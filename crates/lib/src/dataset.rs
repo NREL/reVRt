@@ -76,7 +76,14 @@ impl Dataset {
 
         trace!("Cost dataset contents: {:?}", cost.list().unwrap());
 
-        let cost_chunk_idx = ndarray::Array2::from_elem((2, 2), false).into();
+        let cost_chunk_idx = ndarray::Array2::from_elem(
+            (
+                array.chunk_grid_shape().unwrap()[0] as usize,
+                array.chunk_grid_shape().unwrap()[1] as usize,
+            ),
+            false,
+        )
+        .into();
 
         if cache_size < 1_000_000 {
             warn!("Cache size smalled than 1MB");
