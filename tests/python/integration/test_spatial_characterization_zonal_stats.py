@@ -5,7 +5,7 @@ import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point
 from rasterstats import zonal_stats as rzs
-from rasterstats.utils import VALID_STATS
+from rasterstats.utils import VALID_STATS, DEFAULT_STATS
 
 from trev.spatial_characterization.zonal_stats import zonal_stats
 
@@ -204,23 +204,26 @@ def test_against_rasterstats(
     )
     for out_test, out_expected in zip(test_stats, truth_stats, strict=True):
         out_test.pop("id", None)
+        assert len(out_test) == len(stats) if stats else len(DEFAULT_STATS)
+        assert len(out_expected) == len(stats) if stats else len(DEFAULT_STATS)
         for k, v in out_test.items():
             assert np.isclose(v, out_expected[k], rtol=1.0e-6, atol=1.0e-8)
 
 
 def test_percentile_against_rasterstats(sc_dir, zonal_polygon_fp):
     """Test percentile stats against rasterstats zonal_stats function"""
+    stats = [
+        "percentile_10",
+        "percentile_15.3",
+        "percentile_25",
+        "percentile_50",
+        "percentile_75",
+        "percentile_90",
+    ]
     test_stats = zonal_stats(
         zonal_polygon_fp,
         sc_dir / "layer_a.tif",
-        stats=[
-            "percentile_10",
-            "percentile_15.3",
-            "percentile_25",
-            "percentile_50",
-            "percentile_75",
-            "percentile_90",
-        ],
+        stats=stats,
         all_touched=True,
     )
     for stats in test_stats:
@@ -228,17 +231,12 @@ def test_percentile_against_rasterstats(sc_dir, zonal_polygon_fp):
     truth_stats = rzs(
         str(zonal_polygon_fp),
         sc_dir / "layer_a.tif",
-        stats=[
-            "percentile_10",
-            "percentile_15.3",
-            "percentile_25",
-            "percentile_50",
-            "percentile_75",
-            "percentile_90",
-        ],
+        stats=stats,
         all_touched=True,
     )
     assert test_stats == truth_stats
+    assert all(len(out_stats) == len(stats) for out_stats in test_stats)
+    assert all(len(out_stats) == len(stats) for out_stats in truth_stats)
 
 
 def test_pixel_count_against_rasterstats(sc_dir, zonal_polygon_fp):
@@ -279,18 +277,89 @@ def test_range_only_against_rasterstats(sc_dir, zonal_polygon_fp):
         all_touched=True,
     )
     assert test_stats == truth_stats
+    assert all(len(stats) == 1 for stats in test_stats)
+    assert all(len(stats) == 1 for stats in truth_stats)
 
 
-def test_no_intersection(sc_dir, tmp_path):
+@pytest.mark.parametrize(
+    "in_out",
+    [
+        (None, [{"count": 0, "min": None, "max": None, "mean": None}]),
+        (["range"], [{"range": None}]),
+    ],
+)
+def test_no_intersection(sc_dir, tmp_path, in_out):
     """Test stats for shape with no intersection with raster"""
+    stats, expected_out = in_out
     test_fp = tmp_path / "test.gpkg"
     gpd.GeoDataFrame(geometry=[Point(0, 0).buffer(10)]).to_file(
         test_fp, driver="GPKG"
     )
     test_stats = zonal_stats(
-        test_fp,
-        sc_dir / "layer_a.tif",
-        all_touched=True,
+        test_fp, sc_dir / "layer_a.tif", all_touched=True, stats=stats
     )
 
-    assert test_stats == [{"count": 0, "min": None, "max": None, "mean": None}]
+    assert test_stats == expected_out
+
+
+def test_add_stats_against_rasterstats(sc_dir, zonal_polygon_fp):
+    """Test range stat against rasterstats zonal_stats function"""
+    add_stats = {
+        "my_stat": lambda x, *_, **__: float(x.max() - x.min()),
+        "my_stat_2": lambda x, *_, **__: float(x.max() * 2),
+    }
+    test_stats = zonal_stats(
+        zonal_polygon_fp,
+        sc_dir / "layer_a.tif",
+        all_touched=True,
+        add_stats=add_stats,
+    )
+    for stats in test_stats:
+        stats.pop("id", None)
+    truth_stats = rzs(
+        str(zonal_polygon_fp),
+        sc_dir / "layer_a.tif",
+        all_touched=True,
+        add_stats=add_stats,
+    )
+    for out_test, out_expected in zip(test_stats, truth_stats, strict=True):
+        out_test.pop("id", None)
+        assert len(out_test) == len(DEFAULT_STATS) + len(add_stats)
+        assert len(out_expected) == len(DEFAULT_STATS) + len(add_stats)
+        for k, v in out_test.items():
+            assert np.isclose(v, out_expected[k], rtol=1.0e-6, atol=1.0e-8)
+
+
+def test_prefix_against_rasterstats(sc_dir, zonal_polygon_fp):
+    """Test pixel count against rasterstats zonal_stats function"""
+    stats = [*VALID_STATS, "percentile_10.5"]
+    add_stats = {
+        "my_stat": lambda x, *_, **__: float(x.max() - x.min()),
+        "my_stat_2": lambda x, *_, **__: float(x.max() * 2),
+    }
+    test_stats = zonal_stats(
+        zonal_polygon_fp,
+        sc_dir / "layer_a.tif",
+        stats=VALID_STATS,
+        all_touched=True,
+        prefix="test_",
+        add_stats=add_stats,
+    )
+    for stats in test_stats:
+        stats.pop("id", None)
+
+    truth_stats = rzs(
+        str(zonal_polygon_fp),
+        sc_dir / "layer_a.tif",
+        stats=VALID_STATS,
+        all_touched=True,
+        prefix="test_",
+        add_stats=add_stats,
+    )
+    for out_test, out_expected in zip(test_stats, truth_stats, strict=True):
+        out_test.pop("id", None)
+        assert len(out_test) == len(VALID_STATS) + len(add_stats)
+        assert len(out_expected) == len(VALID_STATS) + len(add_stats)
+        for k, v in out_test.items():
+            assert k.startswith("test_")
+            assert np.isclose(v, out_expected[k], rtol=1.0e-6, atol=1.0e-8)
