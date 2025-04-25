@@ -66,16 +66,16 @@ jobs:
       with:
         use-cross: ${{ matrix.use-cross }}
         command: build
-        args: --target ${{ matrix.target }} --release --locked -p revx-transmission-cli
+        args: --target ${{ matrix.target }} --release --locked -p reVX-transmission-cli
 
     - name: Strip binary
       if: matrix.strip
-      run: ${{ matrix.strip }} target/${{ matrix.target }}/release/revx-transmission-cli${{ matrix.binary_ext }}
+      run: ${{ matrix.strip }} target/${{ matrix.target }}/release/reVX-transmission-cli${{ matrix.binary_ext }}
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: target/${{ matrix.target }}/release/revx-transmission-cli${{ matrix.binary_ext }}
-        asset_name: revx-transmission-cli-${{ matrix.target }}${{ matrix.binary_ext }}
+        file: target/${{ matrix.target }}/release/reVX-transmission-cli${{ matrix.binary_ext }}
+        asset_name: reVX-transmission-cli-${{ matrix.target }}${{ matrix.binary_ext }}
         tag: ${{ github.ref }}
