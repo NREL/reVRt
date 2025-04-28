@@ -1,5 +1,7 @@
 """Zonal stats integration tests"""
 
+from pathlib import Path
+
 import pytest
 import numpy as np
 import geopandas as gpd
@@ -7,7 +9,10 @@ from shapely.geometry import Point
 from rasterstats import zonal_stats as rzs
 from rasterstats.utils import VALID_STATS, DEFAULT_STATS
 
-from trev.spatial_characterization.zonal_stats import zonal_stats
+from trev.spatial_characterization.zonal import zonal_stats
+
+
+VALID_STATS.remove("nan")
 
 
 @pytest.fixture(scope="module")
@@ -109,7 +114,6 @@ def test_categorization_multi_stat(sc_dir, zonal_polygon_fp):
     stats = zonal_stats(
         zonal_polygon_fp,
         sc_dir / "layer_a.tif",
-        categorical=True,
         stats=["fractional_area", "fractional_pixel_count"],
         all_touched=True,
         nodata=0,
@@ -139,7 +143,6 @@ def test_categorization_single_stat(sc_dir, zonal_polygon_fp):
     stats = zonal_stats(
         zonal_polygon_fp,
         sc_dir / "layer_b.tif",
-        categorical=True,
         stats=["fractional_area"],
         all_touched=True,
         nodata=0,
@@ -163,7 +166,6 @@ def test_fractional_area(sc_dir, zonal_polygon_fp):
     stats = zonal_stats(
         zonal_polygon_fp,
         sc_dir / "layer_c.tif",
-        categorical=False,
         zone_func=multiply_m2_to_acres_factor,
         stats=["value_multiplied_by_fractional_area"],
         all_touched=True,
@@ -363,3 +365,7 @@ def test_prefix_against_rasterstats(sc_dir, zonal_polygon_fp):
         for k, v in out_test.items():
             assert k.startswith("test_")
             assert np.isclose(v, out_expected[k], rtol=1.0e-6, atol=1.0e-8)
+
+
+if __name__ == "__main__":
+    pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
