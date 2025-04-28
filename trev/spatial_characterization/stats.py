@@ -1,12 +1,14 @@
 """TreV statistic computation functions"""
 
 import sys
-
 from itertools import chain
 from functools import partial
 from enum import StrEnum, auto
+from collections import defaultdict
 
 import numpy as np
+import rasterio.features
+from shapely.geometry import shape
 
 from trev.exceptions import TreVValueError, TreVNotImplementedError
 
@@ -323,6 +325,51 @@ class ComputableStats:
 
         return feature_stats
 
+    def computed_fractional_stats(
+        self, zone, processed_raster, transform, nodata=None, category_map=None
+    ):
+        """Compute fractional statistics on array
+
+        Parameters
+        ----------
+        zone : shapely.geometry
+            Geometry object representing the zone to compute statistics
+            over.
+        processed_raster : array-like
+            Array to compute statistics for. This collection can
+            contain NaN values, which will be ignored in the final
+            output.
+        transform : affine.Affine
+            Affine transform object representing the raster
+            transformation. This is used to compute the raster shapes
+            for statistics computations as well as the pixel area
+            for each pixel value in the raster.
+        nodata : int | float, optional
+            Value representing "nodata" in the array. These values in
+            the raster will be ignored and will not contribute to the
+            statistics and will not be reported. By default, ``None``.
+        category_map : dict, optional
+            Optional mapping for raster values. If given, the outputs
+            will be labeled using the categories in this mapping instead
+            of the raster values directly. The map does not have to
+            be exhaustive - missing values will just be reported using
+            the raw array value. By default, ``None``.
+
+        Returns
+        -------
+        dict
+            Dictionary of computed fractional statistics. The keys are
+            the names of the statistics in the :class:`FractionalStat`
+            enum and the values are the computed statistics.
+        """
+        if not self.fractional_stats:
+            return {}
+
+        frac_stats = _fractional_stats(
+            zone, processed_raster, transform, nodata, category_map
+        )
+        return {stat: frac_stats[stat] for stat in self.fractional_stats}
+
     def computed_percentiles(self, processed_raster):
         """Generate percentile statistics for array
 
@@ -338,8 +385,10 @@ class ComputableStats:
         int | float
             Value representing that percentile in the array.
         """
-        for stat, pct in self.percentiles.items():
-            yield stat, np.nanpercentile(processed_raster, pct)
+        return {
+            stat: np.nanpercentile(processed_raster, pct)
+            for stat, pct in self.percentiles.items()
+        }
 
     @classmethod
     def from_iter(cls, stats=None):
@@ -436,3 +485,58 @@ def _out_dtype_from_raster(raster):  # pragma: no cover
     if sys.maxsize > 2**32 and issubclass(raster.dtype.type, np.integer):
         return "int64"
     return None  # numpy default
+
+
+def _fractional_stats(
+    zonal_polygon, window_array, window_transform, nodata, category_map
+):
+    """Compute fractional statistics on array"""
+    value_multiplied_by_area = 0.0
+    category_map = category_map or {}
+    returned_value_pixel_count_dict = defaultdict(float)
+    returned_value_pixel_area_dict = defaultdict(float)
+    pixel_area = _compute_pixel_area(window_transform)
+
+    raster_shapes = rasterio.features.shapes(
+        window_array,
+        mask=((window_array != nodata) & (~np.isnan(window_array))),
+        connectivity=4,
+        transform=window_transform,
+    )
+    raster_shapes = list(raster_shapes)
+    for geom, value in raster_shapes:
+        raster_poly = shape(geom)
+        intersection = raster_poly.intersection(zonal_polygon)
+
+        if not intersection.is_empty:
+            intersection_area = intersection.area
+            returned_value_pixel_area_dict[value] += intersection_area
+
+            value_multiplied_by_area += value * intersection_area
+
+            pixel_fractional_count = intersection_area / pixel_area
+            returned_value_pixel_count_dict[value] += pixel_fractional_count
+
+    returned_value_pixel_count_dict = {
+        category_map.get(k, k): round(v, 2)
+        for k, v in returned_value_pixel_count_dict.items()
+    }
+
+    returned_value_pixel_area_dict = {
+        category_map.get(k, k): round(v, 2)
+        for k, v in returned_value_pixel_area_dict.items()
+    }
+
+    return {
+        FractionalStat.FRACTIONAL_PIXEL_COUNT: returned_value_pixel_count_dict,
+        FractionalStat.FRACTIONAL_AREA: returned_value_pixel_area_dict,
+        FractionalStat.VALUE_MULTIPLIED_BY_FRACTIONAL_AREA: round(
+            value_multiplied_by_area, 2
+        ),
+    }
+
+
+def _compute_pixel_area(affine):
+    """Compute the pixel area from the affine transform"""
+    width, _, _, _, height, *_ = affine
+    return abs(width) * abs(height)

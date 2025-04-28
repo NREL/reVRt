@@ -5,6 +5,8 @@ from pathlib import Path
 import pytest
 import numpy as np
 import xarray as xr
+from shapely.geometry import box
+from rasterio.transform import Affine
 
 from trev.spatial_characterization.stats import (
     Stat,
@@ -292,6 +294,91 @@ def test_computable_stats_base_stat_computation(in_obj):
     }
     test_out = cs.computed_base_stats(in_obj, nodata=3, masked_raster=in_obj)
     assert test_out == expected_out
+    assert not cs.computed_fractional_stats(None, None, None)
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        ((-5, -5, 5, 5), {1.0: 0.0, 4.0: 0.0, 5.0: 1.0, 9.0: 0.0}),
+        ((0, 0, 1, 1), {5.0: 0.01}),
+        ((-5, -5, 15, 15), {1.0: 1.0, 4.0: 0.0, 5.0: 3.0, 9.0: 0.0}),
+        ((-10, -10, 10, 10), {1.0: 0.75, 4.0: 0.5, 5.0: 1.75, 9.0: 1.0}),
+    ],
+)
+def test_basic_fractional_stats(test_case):
+    """Test basic execution of `computed_fractional_stats` function"""
+    box_bounds, expected_frac_pixels = test_case
+    raster = xr.DataArray(
+        np.array(
+            [
+                [1, 1, 5],
+                [4, 5, 5],
+                [9, 9, 9],
+            ],
+            dtype=np.float64,
+        ),
+    )
+    transform = Affine(10.0, 0.0, -15, 0.0, -10.0, 15)
+    zone = box(*box_bounds)
+
+    cs = ComputableStats.from_iter("*")
+    out = cs.computed_fractional_stats(
+        zone, raster, transform, nodata=None, category_map=None
+    )
+
+    assert out[FractionalStat.FRACTIONAL_PIXEL_COUNT] == expected_frac_pixels
+
+    expected_frac_area = {
+        val: pix * 100 for val, pix in expected_frac_pixels.items()
+    }
+    assert out[FractionalStat.FRACTIONAL_AREA] == expected_frac_area
+
+    assert out[FractionalStat.VALUE_MULTIPLIED_BY_FRACTIONAL_AREA] == sum(
+        k * v * 100 for k, v in expected_frac_pixels.items()
+    )
+
+
+@pytest.mark.parametrize("nodata", [1.0, 4.0, 5.0, 9.0])
+def test_fractional_stats_extra_args(nodata):
+    """Test execution of `computed_fractional_stats` extra params"""
+    cat_map = {1.0: "CAT_A", 5.0: "CAT_B", 9.0: "CAT_C"}
+    raster = xr.DataArray(
+        np.array(
+            [
+                [1, 1, 5],
+                [4, 5, 5],
+                [9, 9, 9],
+            ],
+            dtype=np.float64,
+        ),
+    )
+    transform = Affine(10.0, 0.0, -15, 0.0, -10.0, 15)
+    zone = box(-10, -10, 10, 10)
+
+    cs = ComputableStats.from_iter("*")
+    out = cs.computed_fractional_stats(
+        zone, raster, transform, nodata=nodata, category_map=cat_map
+    )
+
+    expected_frac_pixels = {1.0: 0.75, 4.0: 0.5, 5.0: 1.75, 9.0: 1.0}
+    expected_frac_pixels.pop(nodata)
+    expected_frac_pixels_with_keys = {
+        cat_map.get(k, k): v for k, v in expected_frac_pixels.items()
+    }
+    assert (
+        out[FractionalStat.FRACTIONAL_PIXEL_COUNT]
+        == expected_frac_pixels_with_keys
+    )
+
+    expected_frac_area = {
+        val: pix * 100 for val, pix in expected_frac_pixels_with_keys.items()
+    }
+    assert out[FractionalStat.FRACTIONAL_AREA] == expected_frac_area
+
+    assert out[FractionalStat.VALUE_MULTIPLIED_BY_FRACTIONAL_AREA] == sum(
+        k * v * 100 for k, v in expected_frac_pixels.items()
+    )
 
 
 @pytest.mark.parametrize(
@@ -303,7 +390,7 @@ def test_computable_stats_percentile_computation(in_obj):
     cs = ComputableStats.from_iter(f"{_PCT_PREFIX}25 {_PCT_PREFIX}50.5")
 
     expected_out = {f"{_PCT_PREFIX}25": 2.25, f"{_PCT_PREFIX}50.5": 2.505}
-    assert dict(cs.computed_percentiles(in_obj)) == expected_out
+    assert cs.computed_percentiles(in_obj) == expected_out
 
 
 if __name__ == "__main__":
