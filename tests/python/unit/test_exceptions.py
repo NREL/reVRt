@@ -9,6 +9,7 @@ from trev.exceptions import (
     TreVKeyError,
     TreVNotImplementedError,
     TreVRuntimeError,
+    TreVTypeError,
     TreVValueError,
 )
 
@@ -52,6 +53,7 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
         ),
         (TreVKeyError, [TreVError, TreVKeyError, KeyError]),
         (TreVRuntimeError, [TreVError, TreVRuntimeError, RuntimeError]),
+        (TreVTypeError, [TreVError, TreVTypeError, TypeError]),
         (TreVValueError, [TreVError, TreVValueError, ValueError]),
     ],
 )

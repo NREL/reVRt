@@ -28,5 +28,9 @@ class TreVRuntimeError(TreVError, RuntimeError):
     """TreV RuntimeError"""
 
 
+class TreVTypeError(TreVError, TypeError):
+    """TreV TypeError"""
+
+
 class TreVValueError(TreVError, ValueError):
     """TreV ValueError"""
