@@ -264,6 +264,24 @@ class ComputableStats:
             if not np.isnan(k)
         }
 
+    def computed_percentiles(self, processed_raster):
+        """Generate percentile statistics for array
+
+        Parameters
+        ----------
+        processed_raster : array-like
+            Array to compute percentiles for.
+
+        Yields
+        ------
+        str
+            Name of percentile stat
+        int | float
+            Value representing that percentile in the array.
+        """
+        for stat, pct in self.percentiles.items():
+            yield stat, np.nanpercentile(processed_raster, pct)
+
     @classmethod
     def from_iter(cls, stats=None):
         """Create a ComputableStats object from an iterable of stats

@@ -267,5 +267,17 @@ def test_computable_stats_bad_percentile():
     )
 
 
+@pytest.mark.parametrize(
+    "in_obj",
+    [[np.nan, 2, 3], np.array([2, np.nan, 3]), xr.DataArray([2, 3, np.nan])],
+)
+def test_computable_stats_percentile_computation(in_obj):
+    """Test that computing percentile for array"""
+    cs = ComputableStats.from_iter(f"{_PCT_PREFIX}25 {_PCT_PREFIX}50.5")
+
+    expected_out = {f"{_PCT_PREFIX}25": 2.25, f"{_PCT_PREFIX}50.5": 2.505}
+    assert dict(cs.computed_percentiles(in_obj)) == expected_out
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
