@@ -1,5 +1,7 @@
 """TreV statistic computation functions"""
 
+import sys
+
 from itertools import chain
 from functools import partial
 from enum import StrEnum, auto
@@ -264,6 +266,63 @@ class ComputableStats:
             if not np.isnan(k)
         }
 
+    def computed_base_stats(
+        self, processed_raster, category_map=None, **kwargs
+    ):
+        """Compute statistics on array
+
+        Parameters
+        ----------
+        processed_raster : array-like
+            Array to compute statistics for. This collection can
+            contain NaN values, which will be ignored in the final
+            output.
+        category_map : dict, optional
+            Dictionary mapping pixel values to new names. If given, this
+            mapping will be applied to the pixel count dictionary, so
+            you can use it to map pixel values to category names.
+            By default, ``None``.
+        **kwargs
+            Extra keyword-argument pairs to pass to statistic
+            computation functions. Currently this is only necessary for
+            the `nodata` stat, which requires the following extra
+            parameters:
+
+                - `masked_raster`: Raster masked to zone, but still
+                                   containing the "nodata" value (i.e.
+                                   it's not masked out with NaNs).
+                - `nodata`: Value representing `nodata` that will be
+                            counted for this statistic.
+
+        Returns
+        -------
+        dict
+            Dictionary of computed statistics.
+        """
+        category_map = category_map or {}
+
+        pixel_count = self.lazy_pixel_count(processed_raster)
+        pixel_count = {
+            category_map.get(k, k): v for k, v in pixel_count.items()
+        }
+        out_dtype = _out_dtype_from_raster(processed_raster)
+
+        feature_stats = {}
+        for stat in self.base_stats:
+            if stat == Stat.PIXEL_COUNT:
+                feature_stats[stat] = pixel_count
+                continue
+
+            feature_stats[stat] = stat.compute(
+                processed_raster=processed_raster,
+                pixel_count=pixel_count,
+                feature_stats=feature_stats,
+                out_dtype=out_dtype,
+                **kwargs,
+            )
+
+        return feature_stats
+
     def computed_percentiles(self, processed_raster):
         """Generate percentile statistics for array
 
@@ -365,3 +424,15 @@ def _get_percentile(stat):
         msg = f"Percentiles must be between 0 and 100 (inclusive). Got: {q}"
         raise TreVValueError(msg)
     return q
+
+
+def _out_dtype_from_raster(raster):  # pragma: no cover
+    """Get the output dtype for stats like mean and std
+
+    If we're on a 64 bit platform and the array is an integer type, this
+    function ensures that the array is cast to 64 bit to avoid overflow
+    for certain numpy ops
+    """
+    if sys.maxsize > 2**32 and issubclass(raster.dtype.type, np.integer):
+        return "int64"
+    return None  # numpy default

@@ -269,10 +269,37 @@ def test_computable_stats_bad_percentile():
 
 @pytest.mark.parametrize(
     "in_obj",
+    [np.array([2, np.nan, 3, 3, 4, 2]), xr.DataArray([2, 3, np.nan, 3, 4, 2])],
+)
+def test_computable_stats_base_stat_computation(in_obj):
+    """Test computing base stats for array"""
+    cs = ComputableStats.from_iter(list(Stat))
+
+    expected_out = {
+        Stat.COUNT: 5,
+        Stat.MAJORITY: 2.0,
+        Stat.MAX: 4.0,
+        Stat.MEAN: 2.8,
+        Stat.MEDIAN: 3.0,
+        Stat.MIN: 2.0,
+        Stat.MINORITY: 4.0,
+        Stat.NODATA: 2.0,
+        Stat.PIXEL_COUNT: {2.0: 2, 3.0: 2, 4.0: 1},
+        Stat.RANGE: 2.0,
+        Stat.STD: 0.7483314773547882,
+        Stat.SUM: 14.0,
+        Stat.UNIQUE: 3,
+    }
+    test_out = cs.computed_base_stats(in_obj, nodata=3, masked_raster=in_obj)
+    assert test_out == expected_out
+
+
+@pytest.mark.parametrize(
+    "in_obj",
     [[np.nan, 2, 3], np.array([2, np.nan, 3]), xr.DataArray([2, 3, np.nan])],
 )
 def test_computable_stats_percentile_computation(in_obj):
-    """Test that computing percentile for array"""
+    """Test computing percentile for array"""
     cs = ComputableStats.from_iter(f"{_PCT_PREFIX}25 {_PCT_PREFIX}50.5")
 
     expected_out = {f"{_PCT_PREFIX}25": 2.25, f"{_PCT_PREFIX}50.5": 2.505}
