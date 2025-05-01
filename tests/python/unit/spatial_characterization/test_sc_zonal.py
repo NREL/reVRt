@@ -10,12 +10,12 @@ from shapely.geometry import box
 from rasterio.transform import Affine
 
 from trev.spatial_characterization.stats import _PCT_PREFIX  # noqa: PLC2701
-from trev.spatial_characterization.zonal import gen_zonal_stats
+from trev.spatial_characterization.zonal import ZonalStats
 from trev.exceptions import TreVTypeError
 
 
-def test_basic_gen_zonal_stats():
-    """Test basic execution of `gen_zonal_stats`"""
+def test_basic_zonal_stats_from_array():
+    """Test basic execution of `from_array` method"""
 
     raster = xr.DataArray(
         np.array(
@@ -43,10 +43,7 @@ def test_basic_gen_zonal_stats():
     cat_map = {1.0: "CAT_A", 5.0: "CAT_B", 9.0: "CAT_C"}
     nodata = 9
 
-    stats = gen_zonal_stats(
-        zones,
-        raster,
-        transform,
+    zs = ZonalStats(
         nodata=nodata,
         stats="All",
         category_map=cat_map,
@@ -54,6 +51,7 @@ def test_basic_gen_zonal_stats():
         copy_properties=["id"],
         all_touched=True,
     )
+    stats = zs.from_array(zones, raster, transform)
     stats = list(stats)
 
     assert len(stats) == 5
@@ -183,8 +181,8 @@ def test_basic_gen_zonal_stats():
 
 
 @pytest.mark.parametrize("prefix", [None, "test_"])
-def test_gen_zonal_stats_extra_params(prefix):
-    """Test execution of `gen_zonal_stats` with extra params"""
+def test_zonal_stats_from_array_extra_params(prefix):
+    """Test execution of `from_array` method with extra params"""
 
     raster = xr.DataArray(
         np.array(
@@ -212,16 +210,14 @@ def test_gen_zonal_stats_extra_params(prefix):
     def _count_twenty_fives(processed_raster, *__, **___):
         return np.sum(processed_raster == 25)
 
-    stats = gen_zonal_stats(
-        zones,
-        raster,
-        transform,
+    zs = ZonalStats(
         stats=f"{_PCT_PREFIX}50 median",
         all_touched=False,
         zone_func=_squared,
         prefix=prefix,
         add_stats={"ones_count": _count_ones, "other": _count_twenty_fives},
     )
+    stats = zs.from_array(zones, raster, transform)
     stats = list(stats)
     prefix = prefix or ""
 
@@ -249,7 +245,7 @@ def test_gen_zonal_stats_extra_params(prefix):
 
 
 def test_bad_callable():
-    """Test `gen_zonal_stats` with bad zone function"""
+    """Test `from_array` method with bad zone function"""
 
     raster = xr.DataArray(
         np.array(
@@ -274,7 +270,8 @@ def test_bad_callable():
         ],
     )
 
-    stats = gen_zonal_stats(zones, raster, transform, zone_func=1)
+    zs = ZonalStats(zone_func=1)
+    stats = zs.from_array(zones, raster, transform)
     with pytest.raises(TreVTypeError) as exc_info:
         stats = list(stats)
 
@@ -282,6 +279,53 @@ def test_bad_callable():
         str(exc_info.value) == "zone_func must be a callable function "
         "which accepts a single `raster` arg."
     )
+
+
+def test_parallel_zonal_stats_no_client():
+    """Test parallel compute of zonal stats without a dask client"""
+
+    raster = xr.DataArray(
+        np.array(
+            [
+                [1, 1, 5],
+                [4, 5, 5],
+                [9, 9, 9],
+            ],
+            dtype=np.float64,
+        ),
+        dims=("y", "x"),
+    )
+    transform = Affine(10.0, 0.0, -15, 0.0, -10.0, 15)
+    zones = gpd.GeoDataFrame(
+        {"id": [1, 2, 3, 4, 5], "A": ["a", "b", "c", "d", "e"]},
+        geometry=[
+            box(-5, -5, 5, 5),
+            box(0, 0, 1, 1),
+            box(100, 100, 200, 200),
+            box(-5, -5, 15, 15),
+            box(-10, -10, 10, 10),
+        ],
+    )
+
+    cat_map = {1.0: "CAT_A", 5.0: "CAT_B", 9.0: "CAT_C"}
+    nodata = 9
+
+    zs = ZonalStats(
+        nodata=nodata,
+        stats="All",
+        category_map=cat_map,
+        prefix="test_",
+        copy_properties=["id"],
+        all_touched=True,
+    )
+    truth_stats = zs.from_array(zones, raster, transform)
+    truth_stats = list(truth_stats)
+
+    zs.parallel = True
+    test_stats = zs.from_array(zones, raster, transform)
+    test_stats = list(test_stats)
+
+    assert test_stats == truth_stats
 
 
 if __name__ == "__main__":
