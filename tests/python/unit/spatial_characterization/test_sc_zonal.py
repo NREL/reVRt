@@ -14,10 +14,10 @@ from trev.spatial_characterization.zonal import ZonalStats
 from trev.exceptions import TreVTypeError
 
 
-def test_basic_zonal_stats_from_array():
-    """Test basic execution of `from_array` method"""
-
-    raster = xr.DataArray(
+@pytest.fixture
+def sample_raster():
+    """Sample raster data for testing"""
+    return xr.DataArray(
         np.array(
             [
                 [1, 1, 5],
@@ -27,9 +27,14 @@ def test_basic_zonal_stats_from_array():
             dtype=np.float64,
         ),
         dims=("y", "x"),
+        attrs={"affine": Affine(10.0, 0.0, -15, 0.0, -10.0, 15)},
     )
-    transform = Affine(10.0, 0.0, -15, 0.0, -10.0, 15)
-    zones = gpd.GeoDataFrame(
+
+
+@pytest.fixture
+def five_sample_zones():
+    """GeoDataFrame with 5 zones for testing on sample raster"""
+    return gpd.GeoDataFrame(
         {"id": [1, 2, 3, 4, 5], "A": ["a", "b", "c", "d", "e"]},
         geometry=[
             box(-5, -5, 5, 5),
@@ -39,6 +44,10 @@ def test_basic_zonal_stats_from_array():
             box(-10, -10, 10, 10),
         ],
     )
+
+
+def test_basic_zonal_stats_from_array(sample_raster, five_sample_zones):
+    """Test basic execution of `from_array` method"""
 
     cat_map = {1.0: "CAT_A", 5.0: "CAT_B", 9.0: "CAT_C"}
     nodata = 9
@@ -51,7 +60,9 @@ def test_basic_zonal_stats_from_array():
         copy_properties=["id"],
         all_touched=True,
     )
-    stats = zs.from_array(zones, raster, transform)
+    stats = zs.from_array(
+        five_sample_zones, sample_raster, sample_raster.attrs["affine"]
+    )
     stats = list(stats)
 
     assert len(stats) == 5
@@ -181,21 +192,9 @@ def test_basic_zonal_stats_from_array():
 
 
 @pytest.mark.parametrize("prefix", [None, "test_"])
-def test_zonal_stats_from_array_extra_params(prefix):
+def test_zonal_stats_from_array_extra_params(prefix, sample_raster):
     """Test execution of `from_array` method with extra params"""
 
-    raster = xr.DataArray(
-        np.array(
-            [
-                [1, 1, 5],
-                [4, 5, 5],
-                [9, 9, 9],
-            ],
-            dtype=np.float64,
-        ),
-        dims=("y", "x"),
-    )
-    transform = Affine(10.0, 0.0, -15, 0.0, -10.0, 15)
     zones = gpd.GeoDataFrame(
         {"id": [1, 2], "A": ["a", "b"]},
         geometry=[box(100, 100, 200, 200), box(-9, -9, 9, 9)],
@@ -217,7 +216,7 @@ def test_zonal_stats_from_array_extra_params(prefix):
         prefix=prefix,
         add_stats={"ones_count": _count_ones, "other": _count_twenty_fives},
     )
-    stats = zs.from_array(zones, raster, transform)
+    stats = zs.from_array(zones, sample_raster, sample_raster.attrs["affine"])
     stats = list(stats)
     prefix = prefix or ""
 
@@ -244,34 +243,13 @@ def test_zonal_stats_from_array_extra_params(prefix):
     assert stats[1] == second_expected
 
 
-def test_bad_callable():
+def test_bad_callable(sample_raster, five_sample_zones):
     """Test `from_array` method with bad zone function"""
 
-    raster = xr.DataArray(
-        np.array(
-            [
-                [1, 1, 5],
-                [4, 5, 5],
-                [9, 9, 9],
-            ],
-            dtype=np.float64,
-        ),
-        dims=("y", "x"),
-    )
-    transform = Affine(10.0, 0.0, -15, 0.0, -10.0, 15)
-    zones = gpd.GeoDataFrame(
-        {"id": [1, 2, 3, 4, 5], "A": ["a", "b", "c", "d", "e"]},
-        geometry=[
-            box(-5, -5, 5, 5),
-            box(0, 0, 1, 1),
-            box(100, 100, 200, 200),
-            box(-5, -5, 15, 15),
-            box(-10, -10, 10, 10),
-        ],
-    )
-
     zs = ZonalStats(zone_func=1)
-    stats = zs.from_array(zones, raster, transform)
+    stats = zs.from_array(
+        five_sample_zones, sample_raster, sample_raster.attrs["affine"]
+    )
     with pytest.raises(TreVTypeError) as exc_info:
         stats = list(stats)
 
@@ -281,31 +259,8 @@ def test_bad_callable():
     )
 
 
-def test_parallel_zonal_stats_no_client():
+def test_parallel_zonal_stats_no_client(sample_raster, five_sample_zones):
     """Test parallel compute of zonal stats without a dask client"""
-
-    raster = xr.DataArray(
-        np.array(
-            [
-                [1, 1, 5],
-                [4, 5, 5],
-                [9, 9, 9],
-            ],
-            dtype=np.float64,
-        ),
-        dims=("y", "x"),
-    )
-    transform = Affine(10.0, 0.0, -15, 0.0, -10.0, 15)
-    zones = gpd.GeoDataFrame(
-        {"id": [1, 2, 3, 4, 5], "A": ["a", "b", "c", "d", "e"]},
-        geometry=[
-            box(-5, -5, 5, 5),
-            box(0, 0, 1, 1),
-            box(100, 100, 200, 200),
-            box(-5, -5, 15, 15),
-            box(-10, -10, 10, 10),
-        ],
-    )
 
     cat_map = {1.0: "CAT_A", 5.0: "CAT_B", 9.0: "CAT_C"}
     nodata = 9
@@ -318,11 +273,15 @@ def test_parallel_zonal_stats_no_client():
         copy_properties=["id"],
         all_touched=True,
     )
-    truth_stats = zs.from_array(zones, raster, transform)
+    truth_stats = zs.from_array(
+        five_sample_zones, sample_raster, sample_raster.attrs["affine"]
+    )
     truth_stats = list(truth_stats)
 
     zs.parallel = True
-    test_stats = zs.from_array(zones, raster, transform)
+    test_stats = zs.from_array(
+        five_sample_zones, sample_raster, sample_raster.attrs["affine"]
+    )
     test_stats = list(test_stats)
 
     assert test_stats == truth_stats
