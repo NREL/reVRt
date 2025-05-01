@@ -41,7 +41,8 @@ mod sample {
             "multiplier_scalar": 2}
 ]
         }
-        "#.to_string()
+        "#
+        .to_string()
     }
 }
 
