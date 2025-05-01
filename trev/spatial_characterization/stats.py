@@ -503,7 +503,6 @@ def _fractional_stats(
         connectivity=4,
         transform=window_transform,
     )
-    raster_shapes = list(raster_shapes)
     for geom, value in raster_shapes:
         raster_poly = shape(geom)
         intersection = raster_poly.intersection(zonal_polygon)
