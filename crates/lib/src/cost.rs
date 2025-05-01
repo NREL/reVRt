@@ -17,7 +17,6 @@ struct CostLayer {
 }
 
 impl Cost {
-
     pub(super) fn from_json(json: &str) -> Result<Self> {
         trace!("Parsing cost definition from json: {}", json);
         let cost: Cost = serde_json::from_str(json).unwrap();
@@ -29,7 +28,7 @@ impl Cost {
 mod sample {
 
     pub(crate) fn as_text_v1() -> String {
-    r#"
+        r#"
       {
         "cost_layers": [
           {"layer_name": "layer_1_in_zarr"},
@@ -56,9 +55,15 @@ mod test {
         assert_eq!(cost.cost_layers[1].layer_name, "layer_2_in_zarr");
         assert_eq!(cost.cost_layers[1].multiplier_scalar, Some(100.0));
         assert_eq!(cost.cost_layers[2].layer_name, "layer_3_in_zarr");
-        assert_eq!(cost.cost_layers[2].multiplier_layer, Some("another_layer_in_zarr".to_string()));
+        assert_eq!(
+            cost.cost_layers[2].multiplier_layer,
+            Some("another_layer_in_zarr".to_string())
+        );
         assert_eq!(cost.cost_layers[3].layer_name, "layer_4_in_zarr");
-        assert_eq!(cost.cost_layers[3].multiplier_layer, Some("another_layer_in_zarr".to_string()));
+        assert_eq!(
+            cost.cost_layers[3].multiplier_layer,
+            Some("another_layer_in_zarr".to_string())
+        );
         assert_eq!(cost.cost_layers[3].multiplier_scalar, Some(2.0));
     }
 }
