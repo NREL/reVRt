@@ -9,7 +9,7 @@ from shapely.geometry import Point
 from rasterstats import zonal_stats as rzs
 from rasterstats.utils import VALID_STATS, DEFAULT_STATS
 
-from trev.spatial_characterization.zonal import zonal_stats
+from trev.spatial_characterization.zonal import ZonalStats
 
 
 VALID_STATS.remove("nan")
@@ -17,13 +17,13 @@ VALID_STATS.remove("nan")
 
 @pytest.fixture(scope="module")
 def sc_dir(test_data_dir):
-    """Return Path to test data directory."""
+    """Return Path to test data directory"""
     return test_data_dir / "spatial_characterization"
 
 
 @pytest.fixture(scope="module")
 def zonal_polygon_fp(sc_dir):
-    """Return Path to test data directory."""
+    """Return Path to test data directory"""
     return sc_dir / "polygons.shp"
 
 
@@ -111,15 +111,14 @@ def test_categorization_multi_stat(sc_dir, zonal_polygon_fp):
             "id": 3,
         },
     ]
-    stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_a.tif",
+    zs = ZonalStats(
         stats=["fractional_area", "fractional_pixel_count"],
         all_touched=True,
         nodata=0,
         category_map=category_names,
         copy_properties=["id"],
     )
+    stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
     assert stats == expected
 
 
@@ -140,15 +139,14 @@ def test_categorization_single_stat(sc_dir, zonal_polygon_fp):
         {"fractional_area": {"medium": 1144540.09}, "id": 2},
         {"fractional_area": {"medium": 49737.77}, "id": 3},
     ]
-    stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_b.tif",
+    zs = ZonalStats(
         stats=["fractional_area"],
         all_touched=True,
         nodata=0,
         category_map=categories,
         copy_properties=["id"],
     )
+    stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_b.tif")
     assert stats == expected
 
 
@@ -163,15 +161,14 @@ def test_fractional_area(sc_dir, zonal_polygon_fp):
     def multiply_m2_to_acres_factor(area_in_m2):
         return area_in_m2.astype("float64") / 4046.85
 
-    stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_c.tif",
+    zs = ZonalStats(
         zone_func=multiply_m2_to_acres_factor,
         stats=["value_multiplied_by_fractional_area"],
         all_touched=True,
         nodata=0,
         copy_properties=["id"],
     )
+    stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_c.tif")
     assert stats == expected
 
 
@@ -186,15 +183,14 @@ def test_against_rasterstats(
 ):
     """Test against the rasterstats zonal_stats function"""
     test_map = {11: "Cat 1", -1: "Unknown"}
-    test_stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_a.tif",
+    zs = ZonalStats(
         nodata=nodata,
         stats=stats,
         all_touched=all_touched,
         zone_func=zone_func,
         category_map=test_map,
     )
+    test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
     truth_stats = rzs(
         str(zonal_polygon_fp),
         sc_dir / "layer_a.tif",
@@ -222,12 +218,8 @@ def test_percentile_against_rasterstats(sc_dir, zonal_polygon_fp):
         "percentile_75",
         "percentile_90",
     ]
-    test_stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_a.tif",
-        stats=stats,
-        all_touched=True,
-    )
+    zs = ZonalStats(stats=stats, all_touched=True)
+    test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
     for stats in test_stats:
         stats.pop("id", None)
     truth_stats = rzs(
@@ -243,12 +235,8 @@ def test_percentile_against_rasterstats(sc_dir, zonal_polygon_fp):
 
 def test_pixel_count_against_rasterstats(sc_dir, zonal_polygon_fp):
     """Test pixel count against rasterstats zonal_stats function"""
-    test_stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_a.tif",
-        stats=["count", "pixel_count"],
-        all_touched=True,
-    )
+    zs = ZonalStats(stats=["count", "pixel_count"], all_touched=True)
+    test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
     for stats in test_stats:
         stats.pop("id", None)
         stats.update(stats.pop("pixel_count"))
@@ -264,12 +252,8 @@ def test_pixel_count_against_rasterstats(sc_dir, zonal_polygon_fp):
 
 def test_range_only_against_rasterstats(sc_dir, zonal_polygon_fp):
     """Test range stat against rasterstats zonal_stats function"""
-    test_stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_a.tif",
-        stats=["range"],
-        all_touched=True,
-    )
+    zs = ZonalStats(stats=["range"], all_touched=True)
+    test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
     for stats in test_stats:
         stats.pop("id", None)
     truth_stats = rzs(
@@ -297,9 +281,8 @@ def test_no_intersection(sc_dir, tmp_path, in_out):
     gpd.GeoDataFrame(geometry=[Point(0, 0).buffer(10)]).to_file(
         test_fp, driver="GPKG"
     )
-    test_stats = zonal_stats(
-        test_fp, sc_dir / "layer_a.tif", all_touched=True, stats=stats
-    )
+    zs = ZonalStats(stats=stats, all_touched=True)
+    test_stats = zs.from_files(test_fp, sc_dir / "layer_a.tif")
 
     assert test_stats == expected_out
 
@@ -310,12 +293,8 @@ def test_add_stats_against_rasterstats(sc_dir, zonal_polygon_fp):
         "my_stat": lambda x, *_, **__: float(x.max() - x.min()),
         "my_stat_2": lambda x, *_, **__: float(x.max() * 2),
     }
-    test_stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_a.tif",
-        all_touched=True,
-        add_stats=add_stats,
-    )
+    zs = ZonalStats(add_stats=add_stats, all_touched=True)
+    test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
     for stats in test_stats:
         stats.pop("id", None)
     truth_stats = rzs(
@@ -339,14 +318,13 @@ def test_prefix_against_rasterstats(sc_dir, zonal_polygon_fp):
         "my_stat": lambda x, *_, **__: float(x.max() - x.min()),
         "my_stat_2": lambda x, *_, **__: float(x.max() * 2),
     }
-    test_stats = zonal_stats(
-        zonal_polygon_fp,
-        sc_dir / "layer_a.tif",
+    zs = ZonalStats(
         stats=VALID_STATS,
         all_touched=True,
         prefix="test_",
         add_stats=add_stats,
     )
+    test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
     for stats in test_stats:
         stats.pop("id", None)
 
