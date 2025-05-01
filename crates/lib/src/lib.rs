@@ -2,6 +2,7 @@
 //!
 //!
 
+mod cost;
 mod dataset;
 mod error;
 
