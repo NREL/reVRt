@@ -34,8 +34,11 @@ mod sample {
         "cost_layers": [
           {"layer_name": "layer_1_in_zarr"},
           {"layer_name": "layer_2_in_zarr", "multiplier_scalar": 100},
-          {"layer_name": "layer_3_in_zarr", "multiplier_layer": "another_layer_in_zarr"},
-          {"layer_name": "layer_4_in_zarr", "multiplier_layer": "another_layer_in_zarr", "multiplier_scalar": 2}
+          {"layer_name": "layer_3_in_zarr",
+            "multiplier_layer": "another_layer_in_zarr"},
+          {"layer_name": "layer_4_in_zarr",
+            "multiplier_layer": "another_layer_in_zarr",
+            "multiplier_scalar": 2}
 ]
         }
         "#.to_string()
