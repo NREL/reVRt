@@ -5,7 +5,7 @@ use tracing::trace;
 use crate::error::Result;
 
 #[derive(Debug, serde::Deserialize)]
-struct Cost {
+struct CostFunction {
     cost_layers: Vec<CostLayer>,
 }
 
@@ -16,10 +16,10 @@ struct CostLayer {
     multiplier_layer: Option<String>,
 }
 
-impl Cost {
+impl CostFunction {
     pub(super) fn from_json(json: &str) -> Result<Self> {
         trace!("Parsing cost definition from json: {}", json);
-        let cost: Cost = serde_json::from_str(json).unwrap();
+        let cost = serde_json::from_str(json).unwrap();
         Ok(cost)
     }
 }
@@ -27,6 +27,7 @@ impl Cost {
 #[cfg(test)]
 mod sample {
 
+    /// Sample cost definition
     pub(crate) fn as_text_v1() -> String {
         r#"
       {
@@ -48,7 +49,7 @@ mod test {
     #[test]
     fn test_cost() {
         let json = sample::as_text_v1();
-        let cost = Cost::from_json(&json).unwrap();
+        let cost = CostFunction::from_json(&json).unwrap();
 
         assert_eq!(cost.cost_layers.len(), 4);
         assert_eq!(cost.cost_layers[0].layer_name, "layer_1_in_zarr");
