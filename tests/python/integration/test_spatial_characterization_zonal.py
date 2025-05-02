@@ -6,6 +6,7 @@ import pytest
 import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point
+from dask.distributed import Client
 from rasterstats import zonal_stats as rzs
 from rasterstats.utils import VALID_STATS, DEFAULT_STATS
 
@@ -343,6 +344,23 @@ def test_prefix_against_rasterstats(sc_dir, zonal_polygon_fp):
         for k, v in out_test.items():
             assert k.startswith("test_")
             assert np.isclose(v, out_expected[k], rtol=1.0e-6, atol=1.0e-8)
+
+
+def test_parallel_zonal_stats_with_client(sc_dir, zonal_polygon_fp):
+    """Test parallel compute of zonal stats without a dask client"""
+
+    zs = ZonalStats(stats=VALID_STATS, all_touched=True)
+    truth_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
+    truth_stats = list(truth_stats)
+
+    zs.parallel = True
+    with Client() as client:
+        client.get_task_stream()
+        test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
+        test_stats = list(test_stats)
+        assert client.get_task_stream()
+
+    assert test_stats == truth_stats
 
 
 if __name__ == "__main__":
