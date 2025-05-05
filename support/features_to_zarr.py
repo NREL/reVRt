@@ -17,27 +17,35 @@ from zarr.codecs import BloscCodec
 import zarr
 
 cluster = LocalCluster(
-        n_workers=2,
-        memory_limit=0.15,
-        processes=True,
-        threads_per_worker=4,
-        # security=True,
-    )
+    n_workers=2,
+    memory_limit=0.15,
+    processes=True,
+    threads_per_worker=4,
+    # security=True,
+)
 ProgressBar().register()
 
-h5filename = Path("/projects/rev/data/transmission/north_america/conus/fy25/nrel_build/build/costs/outputs/transmission_costs.h5")
-output_dir = Path("/projects/rev/data/transmission/north_america/conus/fy25/dev")
+h5filename = Path(
+    "/projects/rev/data/transmission/north_america/conus/fy25/nrel_build/build/costs/outputs/transmission_costs.h5"
+)
+output_dir = Path(
+    "/projects/rev/data/transmission/north_america/conus/fy25/dev"
+)
 outfilename = output_dir / h5filename.name.replace(".h5", ".zarr")
 
 
-ds = xr.open_mfdataset(h5filename, decode_cf=False, mask_and_scale=False, engine="netcdf4")
+ds = xr.open_mfdataset(
+    h5filename, decode_cf=False, mask_and_scale=False, engine="netcdf4"
+)
 ds = ds.rename({"phony_dim_1": "y", "phony_dim_2": "x"})
 
 ds = ds.set_coords(["latitude", "longitude"])
 
 ds.attrs = {}
 
-compressors = zarr.codecs.BloscCodec(cname="zstd", clevel=9, shuffle=zarr.codecs.BloscShuffle.shuffle)
+compressors = zarr.codecs.BloscCodec(
+    cname="zstd", clevel=9, shuffle=zarr.codecs.BloscShuffle.shuffle
+)
 # from numcodecs.blosc import Blosc
 # compressor = Blosc(cname="zstd", clevel=9, shuffle=2)
 encoding = {}
@@ -78,7 +86,7 @@ ds.chunk({"x": 2_000, "y": 1_000}).to_zarr(
     # If activate encoding, the created zarr has fill_value with 0.0 instead of the default_fill_value
     # encoding=encoding,
     # write_empty_chunks=False,
-    )
+)
 
 # ==== Verify the created zarr file ====
 zs = xr.open_zarr(outfilename)
@@ -90,4 +98,6 @@ for v in ds:
         delta = zs[v] - ds[v]
         delta.compute()
         print(f"==== {v} ====")
-        print(f"min: {delta.min().compute()}, median: {delta.median().compute()}, max: {delta.max().compute()}")
+        print(
+            f"min: {delta.min().compute()}, median: {delta.median().compute()}, max: {delta.max().compute()}"
+        )
