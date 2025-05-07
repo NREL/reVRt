@@ -214,6 +214,21 @@ class ComputableStats:
     def __init__(
         self, base_stats=None, percentiles=None, fractional_stats=None
     ):
+        """
+
+        Parameters
+        ----------
+        base_stats : iterable of str, optional
+            Iterable of "base" statistics to compute (i.e. not
+            fractional or percentile). By default, ``None``.
+        percentiles : dict, optional
+            Dictionary mapping the percentile stat name to the int or
+            float representing the percentile that can be passed to
+            :func:`np.percentile`. By default, ``None``.
+        fractional_stats : iterable of str, optional
+            One or mre stats from the :class:`FractionalStat` enum to
+            compute. By default, ``None``.
+        """
         self.base_stats = base_stats or []
         self.percentiles = percentiles or {}
         self.fractional_stats = fractional_stats or []
@@ -280,10 +295,10 @@ class ComputableStats:
             contain NaN values, which will be ignored in the final
             output.
         category_map : dict, optional
-            Dictionary mapping pixel values to new names. If given, this
-            mapping will be applied to the pixel count dictionary, so
-            you can use it to map pixel values to category names.
-            By default, ``None``.
+            Dictionary mapping raster values to new names. If given,
+            this mapping will be applied to the pixel count dictionary,
+            so you can use it to map raster values to human-readable
+            category names. By default, ``None``.
         **kwargs
             Extra keyword-argument pairs to pass to statistic
             computation functions. Currently this is only necessary for
@@ -398,18 +413,18 @@ class ComputableStats:
         ----------
         stats : str | iterable of str, optional
             Names of all statistics to compute. Statistics must be one
-            of the members of :class`Stat` or :class:`FractionalStat`,
-            or must start with the "percentile_" prefix and ent with an
+            of the members of :class:`Stat` or :class:`FractionalStat`,
+            or must start with the "percentile_" prefix and end with an
             int or float representing the percentile to compute (e.g.
             ``percentile_10.5``). If only one statistic is to be
             computed, you can provide it directly as a string.
             Otherwise, provide a list of statistic names or a string
             with the names separated by a space. You can also provide
-            the string "ALL" or "*" to specify that all statistics
-            should be computed. If no input, empty input, or ``None`` is
-            provided, then only the base stats ("count", "min", "max",
-            "mean") are configured. To summarize, all of the following
-            are valid inputs:
+            the string ``"ALL"`` or ``"*"`` to specify that all
+            statistics should be computed. If no input, empty input, or
+            ``None`` is provided, then only the base stats ("count",
+            "min", "max", "mean") are configured. To summarize, all of
+            the following are valid inputs:
 
                 - ``stats="*"`` or ``stats="ALL"`` or ``stats="All"``
                 - ``stats="min"``
