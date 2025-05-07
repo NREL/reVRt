@@ -117,9 +117,10 @@ def test_categorization_multi_stat(sc_dir, zonal_polygon_fp):
         all_touched=True,
         nodata=0,
         category_map=category_names,
-        copy_properties=["id"],
     )
-    stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
+    stats = zs.from_files(
+        zonal_polygon_fp, sc_dir / "layer_a.tif", copy_properties=["id"]
+    )
     assert stats == expected
 
 
@@ -145,9 +146,10 @@ def test_categorization_single_stat(sc_dir, zonal_polygon_fp):
         all_touched=True,
         nodata=0,
         category_map=categories,
-        copy_properties=["id"],
     )
-    stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_b.tif")
+    stats = zs.from_files(
+        zonal_polygon_fp, sc_dir / "layer_b.tif", copy_properties=["id"]
+    )
     assert stats == expected
 
 
@@ -167,9 +169,10 @@ def test_fractional_area(sc_dir, zonal_polygon_fp):
         stats=["value_multiplied_by_fractional_area"],
         all_touched=True,
         nodata=0,
-        copy_properties=["id"],
     )
-    stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_c.tif")
+    stats = zs.from_files(
+        zonal_polygon_fp, sc_dir / "layer_c.tif", copy_properties=["id"]
+    )
     assert stats == expected
 
 
@@ -319,13 +322,10 @@ def test_prefix_against_rasterstats(sc_dir, zonal_polygon_fp):
         "my_stat": lambda x, *_, **__: float(x.max() - x.min()),
         "my_stat_2": lambda x, *_, **__: float(x.max() * 2),
     }
-    zs = ZonalStats(
-        stats=VALID_STATS,
-        all_touched=True,
-        prefix="test_",
-        add_stats=add_stats,
+    zs = ZonalStats(stats=VALID_STATS, all_touched=True, add_stats=add_stats)
+    test_stats = zs.from_files(
+        zonal_polygon_fp, sc_dir / "layer_a.tif", prefix="test_"
     )
-    test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
     for stats in test_stats:
         stats.pop("id", None)
 
@@ -350,13 +350,16 @@ def test_parallel_zonal_stats_with_client(sc_dir, zonal_polygon_fp):
     """Test parallel compute of zonal stats without a dask client"""
 
     zs = ZonalStats(stats=VALID_STATS, all_touched=True)
-    truth_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
+    truth_stats = zs.from_files(
+        zonal_polygon_fp, sc_dir / "layer_a.tif", parallel=False
+    )
     truth_stats = list(truth_stats)
 
-    zs.parallel = True
     with Client() as client:
         client.get_task_stream()
-        test_stats = zs.from_files(zonal_polygon_fp, sc_dir / "layer_a.tif")
+        test_stats = zs.from_files(
+            zonal_polygon_fp, sc_dir / "layer_a.tif", parallel=True
+        )
         test_stats = list(test_stats)
         assert client.get_task_stream()
 

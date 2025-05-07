@@ -53,15 +53,14 @@ def test_basic_zonal_stats_from_array(sample_raster, five_sample_zones):
     nodata = 9
 
     zs = ZonalStats(
-        nodata=nodata,
-        stats="All",
-        category_map=cat_map,
-        prefix="test_",
-        copy_properties=["id"],
-        all_touched=True,
+        nodata=nodata, stats="All", category_map=cat_map, all_touched=True
     )
     stats = zs.from_array(
-        five_sample_zones, sample_raster, sample_raster.attrs["affine"]
+        five_sample_zones,
+        sample_raster,
+        sample_raster.attrs["affine"],
+        prefix="test_",
+        copy_properties=["id"],
     )
     stats = list(stats)
 
@@ -213,10 +212,11 @@ def test_zonal_stats_from_array_extra_params(prefix, sample_raster):
         stats=f"{_PCT_PREFIX}50 median",
         all_touched=False,
         zone_func=_squared,
-        prefix=prefix,
         add_stats={"ones_count": _count_ones, "other": _count_twenty_fives},
     )
-    stats = zs.from_array(zones, sample_raster, sample_raster.attrs["affine"])
+    stats = zs.from_array(
+        zones, sample_raster, sample_raster.attrs["affine"], prefix=prefix
+    )
     stats = list(stats)
     prefix = prefix or ""
 
@@ -266,21 +266,25 @@ def test_parallel_zonal_stats_no_client(sample_raster, five_sample_zones):
     nodata = 9
 
     zs = ZonalStats(
-        nodata=nodata,
-        stats="All",
-        category_map=cat_map,
-        prefix="test_",
-        copy_properties=["id"],
-        all_touched=True,
+        nodata=nodata, stats="All", category_map=cat_map, all_touched=True
     )
     truth_stats = zs.from_array(
-        five_sample_zones, sample_raster, sample_raster.attrs["affine"]
+        five_sample_zones,
+        sample_raster,
+        sample_raster.attrs["affine"],
+        prefix="test_",
+        copy_properties=["id"],
+        parallel=False,
     )
     truth_stats = list(truth_stats)
 
-    zs.parallel = True
     test_stats = zs.from_array(
-        five_sample_zones, sample_raster, sample_raster.attrs["affine"]
+        five_sample_zones,
+        sample_raster,
+        sample_raster.attrs["affine"],
+        prefix="test_",
+        copy_properties=["id"],
+        parallel=True,
     )
     test_stats = list(test_stats)
 
