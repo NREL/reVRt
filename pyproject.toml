@@ -39,6 +39,7 @@ dependencies = [
   "distributed>=2025.4.1,<2026",
   "geopandas>=1.0.1,<2",
   "numpy>=2.2.4,<3",
+  "NREL-gaps>=0.8.2,<0.9",
   "rasterio>=1.4.3,<2",
   "rioxarray>=0.18.2,<0.19",
   "shapely>=2.0.7,<2.1.0",  # bump back to >2.1.0 when This PR is merged and released: https://github.com/shapely/shapely/pull/2283
@@ -208,6 +209,7 @@ tests-i = "pytest --durations=20 -rapP -vv --cov=trev --cov-report=html --cov-re
 
 
 [tool.pixi.pypi-dependencies]
+NREL-gaps = ">=0.8.2,<0.9"
 reVX-transmission = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
@@ -223,6 +225,9 @@ numpy = ">=2.2.4,<3"
 rasterio = ">=1.4.3,<2"
 rioxarray = ">=0.18.2,<0.19"
 shapely = ">=2.0.7,<2.1.0"  # bump back to >2.1.0 when This PR is merged and released: https://github.com/shapely/shapely/pull/2283
+
+# for gaps
+packaging = ">=24.2,<25"
 
 [tool.pixi.feature.dev.dependencies]
 ipython = ">=9.1.0,<10"
