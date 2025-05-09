@@ -27,7 +27,7 @@ def sample_raster():
             dtype=np.float64,
         ),
         dims=("y", "x"),
-        attrs={"affine": Affine(10.0, 0.0, -15, 0.0, -10.0, 15)},
+        attrs={"transform": Affine(10.0, 0.0, -15, 0.0, -10.0, 15)},
     )
 
 
@@ -58,7 +58,7 @@ def test_basic_zonal_stats_from_array(sample_raster, five_sample_zones):
     stats = zs.from_array(
         five_sample_zones,
         sample_raster,
-        sample_raster.attrs["affine"],
+        sample_raster.attrs["transform"],
         prefix="test_",
         copy_properties=["id"],
     )
@@ -215,7 +215,7 @@ def test_zonal_stats_from_array_extra_params(prefix, sample_raster):
         add_stats={"ones_count": _count_ones, "other": _count_twenty_fives},
     )
     stats = zs.from_array(
-        zones, sample_raster, sample_raster.attrs["affine"], prefix=prefix
+        zones, sample_raster, sample_raster.attrs["transform"], prefix=prefix
     )
     stats = list(stats)
     prefix = prefix or ""
@@ -248,7 +248,7 @@ def test_bad_callable(sample_raster, five_sample_zones):
 
     zs = ZonalStats(zone_func=1)
     stats = zs.from_array(
-        five_sample_zones, sample_raster, sample_raster.attrs["affine"]
+        five_sample_zones, sample_raster, sample_raster.attrs["transform"]
     )
     with pytest.raises(TreVTypeError) as exc_info:
         stats = list(stats)
@@ -271,7 +271,7 @@ def test_parallel_zonal_stats_no_client(sample_raster, five_sample_zones):
     truth_stats = zs.from_array(
         five_sample_zones,
         sample_raster,
-        sample_raster.attrs["affine"],
+        sample_raster.attrs["transform"],
         prefix="test_",
         copy_properties=["id"],
         parallel=False,
@@ -281,7 +281,7 @@ def test_parallel_zonal_stats_no_client(sample_raster, five_sample_zones):
     test_stats = zs.from_array(
         five_sample_zones,
         sample_raster,
-        sample_raster.attrs["affine"],
+        sample_raster.attrs["transform"],
         prefix="test_",
         copy_properties=["id"],
         parallel=True,
