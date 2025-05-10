@@ -25,9 +25,9 @@ def _not_implemented(stat_name, *__, **___):
 def _calc_count(processed_raster, **__):
     """Compute number of non-NaN elements"""
     try:
-        return processed_raster.count()
+        return int(processed_raster.count())
     except (AttributeError, TypeError):
-        return np.count_nonzero(~np.isnan(processed_raster))
+        return int(np.count_nonzero(~np.isnan(processed_raster)))
 
 
 def _calc_min(processed_raster, **__):
