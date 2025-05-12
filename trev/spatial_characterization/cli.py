@@ -1,5 +1,6 @@
 """TreV zonal stats command line interface (CLI)"""
 
+import logging
 from pathlib import Path
 
 import rioxarray
@@ -10,6 +11,9 @@ from gaps.config import load_config
 from gaps.cli import CLICommandFromFunction
 
 from trev.spatial_characterization.zonal import ZonalStats
+
+
+logger = logging.getLogger(__name__)
 
 
 def buffered_lcp_characterizations(
@@ -69,7 +73,9 @@ def buffered_lcp_characterizations(
     half_row = lcp[row_width_key].astype("str").map(row_widths) / 2
     lcp["geometry"] = lcp.buffer(half_row, cap_style="flat")
 
+    logger.info("Initializing zonal stats with kwargs:\n%s", kwargs)
     zs = ZonalStats(**kwargs)
+    logger.info("Computing stats...")
     stats = zs.from_array(
         zones=lcp,
         raster_array=rds,
