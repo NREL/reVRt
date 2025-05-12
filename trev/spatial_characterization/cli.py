@@ -24,6 +24,7 @@ def buffered_lcp_characterizations(
     copy_properties=None,
     parallel=False,
     row_width_key="voltage",
+    chunks="auto",
     **kwargs,
 ):
     """Compute LCP characterizations/statistics
@@ -58,13 +59,17 @@ def buffered_lcp_characterizations(
     row_width_key : str, default="voltage"
         Name of column in vector file of LCP routes used to map to the
         ROW widths. By default, ``"voltage"``.
+    chunks : tuple or str, default="auto"
+        ``chunks`` keyword argument to pass down to
+        :func:`rioxarray.open_rasterio`. Use this to control the Dask
+        chunk size. By default, ``"auto"``.
 
     Returns
     -------
     pd.DataFrame
         Pandas DataFrame containing computed characteristics/stats.
     """
-    rds = rioxarray.open_rasterio(geotiff_fp, chunks="auto")
+    rds = rioxarray.open_rasterio(geotiff_fp, chunks=chunks)
 
     lcp = gpd.read_file(lcp_fp)
     lcp = lcp.to_crs(rds.rio.crs)
@@ -195,6 +200,9 @@ def _preprocess_stats_config(config, layers, row_widths):
             - row_width_key: (OPTIONAL) Name of column in vector file of
               LCP routes used to map to the ROW widths.
               By default, ``"voltage"``.
+            - chunks : (OPTIONAL) ``chunks`` keyword argument to pass
+              down to :func:`rioxarray.open_rasterio`. Use this to
+              control the Dask chunk size.
 
     row_widths : dict or path-like
         A dictionary specifying the row widths in the following format:
