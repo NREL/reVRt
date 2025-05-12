@@ -90,8 +90,9 @@ def _lcp_characterizations_from_config(
     ----------
     max_workers : int, optional
         Number of parallel workers to use for computation. If ``None``
-        or >1, processing is performed in parallel (using Dask).
-        By default, ``1``.
+        or >1, processing is performed in parallel (using Dask). If your
+        paths span large areas, keep this value low (~10) to avoid
+        running into memory errors. By default, ``1``.
     """
     tag = tag or ""
     raster_name = _stat_kwargs.get("geotiff_fp")
