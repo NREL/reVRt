@@ -1,16 +1,23 @@
 """Zonal stats integration tests"""
 
+import json
 from pathlib import Path
 
 import pytest
 import numpy as np
+import pandas as pd
+import xarray as xr
 import geopandas as gpd
 from shapely.geometry import Point
 from dask.distributed import Client
+from rasterio.transform import Affine
 from rasterstats import zonal_stats as rzs
 from rasterstats.utils import VALID_STATS, DEFAULT_STATS
+from shapely.geometry import box, LineString
 
+from trev.spatial_characterization.stats import Stat
 from trev.spatial_characterization.zonal import ZonalStats
+from trev._cli import main
 
 
 VALID_STATS.remove("nan")
@@ -364,6 +371,110 @@ def test_parallel_zonal_stats_with_client(sc_dir, zonal_polygon_fp):
         assert client.get_task_stream()
 
     assert test_stats == truth_stats
+
+
+def test_cli_command_parallel(tmp_cwd, cli_runner):
+    """Test running from config with multiple workers"""
+    sample_raster = xr.DataArray(
+        np.array(
+            [
+                [1, 1, 5],
+                [4, 5, 5],
+                [9, 9, 9],
+            ],
+            dtype=np.float64,
+        ),
+        dims=("y", "x"),
+        attrs={
+            "transform": Affine(10.0, 0.0, -15, 0.0, -10.0, 15),
+            "crs": "ESRI:102008",
+        },
+    )
+    raster_fp = tmp_cwd / "raster.tif"
+    zones_fp = tmp_cwd / "lcp.gpkg"
+
+    zones = gpd.GeoDataFrame(
+        {"voltage": [1, 2], "A": ["a", "b"]},
+        geometry=[box(-5, -5, 5, 5), LineString([(10, -7), (10, 13)])],
+    )
+    zones = zones.set_crs(sample_raster.attrs["crs"])
+
+    sample_raster.rio.to_raster(raster_fp)
+    zones.to_file(zones_fp, driver="GPKG")
+
+    row_widths = {"1": 200, "2": 8}
+    row_widths_fp = tmp_cwd / "row_widths.json"
+    with row_widths_fp.open("w", encoding="utf-8") as f:
+        json.dump(row_widths, f)
+
+    config = {
+        "execution_control": {"option": "local", "max_workers": 2},
+        "layers": [
+            {
+                "geotiff_fp": str(raster_fp),
+                "lcp_fp": str(zones_fp),
+                "stats": "count min",
+            },
+            {
+                "geotiff_fp": str(raster_fp),
+                "lcp_fp": str(zones_fp),
+                "prefix": "test_",
+                "stats": "max mean",
+                "copy_properties": ["A"],
+            },
+        ],
+        "row_widths": str(row_widths_fp),
+    }
+    config_fp = tmp_cwd / "config.json"
+    with config_fp.open("w", encoding="utf-8") as f:
+        json.dump(config, f)
+
+    assert not list(tmp_cwd.glob("*.csv"))
+    cli_runner.invoke(
+        main, ["lcp-characterization", "-c", config_fp.as_posix()]
+    )
+
+    out_files = sorted(tmp_cwd.glob("*.csv"))
+    assert len(out_files) == 2
+
+    out_fp = Path(out_files[0])
+    assert out_fp.name == "stats_raster_lcp_j0.csv"
+
+    out_stats = pd.read_csv(out_fp)
+    sub_arr = sample_raster.isel(x=2)
+
+    assert np.allclose(
+        out_stats[Stat.COUNT], [sample_raster.count(), sub_arr.count()]
+    )
+    assert np.allclose(
+        out_stats[Stat.MIN], [sample_raster.min(), sub_arr.min()]
+    )
+    assert np.allclose(out_stats["voltage"], [1, 2])
+    assert out_stats["A"].to_list() == ["a", "b"]
+    assert not any(c in out_stats for c in [Stat.MAX, Stat.MEAN])
+
+    out_fp = Path(out_files[1])
+    assert out_fp.name == "stats_raster_lcp_j1.csv"
+
+    out_stats = pd.read_csv(out_fp)
+
+    assert np.allclose(
+        out_stats[f"test_{Stat.MAX}"], [sample_raster.max(), sub_arr.max()]
+    )
+    assert np.allclose(
+        out_stats[f"test_{Stat.MEAN}"], [sample_raster.mean(), sub_arr.mean()]
+    )
+    assert out_stats["A"].to_list() == ["a", "b"]
+    assert not any(
+        c in out_stats
+        for c in [
+            Stat.COUNT,
+            Stat.MIN,
+            f"test_{Stat.COUNT}",
+            f"test_{Stat.MIN}",
+            "voltage",
+        ]
+    )
 
 
 if __name__ == "__main__":
