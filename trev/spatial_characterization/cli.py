@@ -88,7 +88,12 @@ def buffered_lcp_characterizations(
 
 
 def _lcp_characterizations_from_config(
-    out_dir, _row_widths, _stat_kwargs, max_workers=1, tag=None
+    out_dir,
+    _row_widths,
+    _stat_kwargs,
+    max_workers=1,
+    tag=None,
+    memory_limit_per_worker="auto",
 ):
     """Compute LCP characterizations/statistics
 
@@ -99,6 +104,14 @@ def _lcp_characterizations_from_config(
         or >1, processing is performed in parallel (using Dask). If your
         paths span large areas, keep this value low (~10) to avoid
         running into memory errors. By default, ``1``.
+    memory_limit_per_worker : str, float, int, or None, default="auto"
+        Sets the memory limit *per worker*. This only applies if
+        ``max_workers != 1``. If ``None`` or ``0``, no limit is applied.
+        If ``"auto"``, the total system memory is split evenly between
+        the workers. If a float, that fraction of the system memory is
+        used *per worker*. If a string giving a number  of bytes (like
+        "1GiB"), that amount is used *per worker*. If an int, that
+        number of bytes is used *per worker*. By default, ``"auto"``
     """
     tag = tag or ""
     raster_name = _stat_kwargs.get("geotiff_fp")
@@ -110,7 +123,9 @@ def _lcp_characterizations_from_config(
     parallel = False
     if max_workers != 1:
         parallel = True
-        __ = Client(n_workers=max_workers)
+        __ = Client(
+            n_workers=max_workers, memory_limit=memory_limit_per_worker
+        )
 
     out_data = buffered_lcp_characterizations(
         row_widths=_row_widths, parallel=parallel, **_stat_kwargs
