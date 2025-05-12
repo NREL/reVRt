@@ -93,7 +93,7 @@ class ZonalStats:
         """
         self.nodata = nodata
         self.all_touched = all_touched
-        self.category_map = category_map
+        self._category_map = category_map or {}
         self.add_stats = add_stats
         self.zone_func = zone_func
         self._stats_input = stats
@@ -102,6 +102,19 @@ class ZonalStats:
     def computable_stats(self):
         """:class:`~trev.spatial_characterization.stats.ComputableStats`"""
         return ComputableStats.from_iter(self._stats_input)
+
+    @cached_property
+    def category_map(self):
+        """dict: Map of values to category names"""
+        out = {}
+        out.update(self._category_map)
+        for k, v in self._category_map.items():
+            try:
+                float_key = float(k)
+            except ValueError:
+                continue
+            out[float_key] = v
+        return out
 
     def from_files(
         self,

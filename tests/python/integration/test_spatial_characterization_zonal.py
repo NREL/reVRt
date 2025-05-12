@@ -35,7 +35,10 @@ def zonal_polygon_fp(sc_dir):
     return sc_dir / "polygons.shp"
 
 
-def test_categorization_multi_stat(sc_dir, zonal_polygon_fp):
+@pytest.mark.parametrize(
+    "key_type", [int, float, str, lambda x: str(float(x))]
+)
+def test_categorization_multi_stat(sc_dir, zonal_polygon_fp, key_type):
     """Test `zonal_stats` with categorical data and multiple stats"""
     category_names = {
         11: "Cat 1",
@@ -55,6 +58,7 @@ def test_categorization_multi_stat(sc_dir, zonal_polygon_fp):
         90: "Cat 15",
         95: "Cat 16",
     }
+    category_names = {key_type(k): v for k, v in category_names.items()}
 
     expected = [
         {
