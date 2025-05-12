@@ -9,7 +9,7 @@ import geopandas as gpd
 from shapely.geometry import box
 from rasterio.transform import Affine
 
-from trev.spatial_characterization.stats import _PCT_PREFIX  # noqa: PLC2701
+from trev.spatial_characterization.stats import _PCT_PREFIX
 from trev.spatial_characterization.zonal import ZonalStats
 from trev.exceptions import TreVTypeError
 

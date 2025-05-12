@@ -12,7 +12,7 @@ from trev.spatial_characterization.stats import (
     Stat,
     FractionalStat,
     ComputableStats,
-    _PCT_PREFIX,  # noqa: PLC2701
+    _PCT_PREFIX,
 )
 from trev.exceptions import TreVNotImplementedError, TreVValueError
 
