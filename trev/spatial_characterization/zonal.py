@@ -58,10 +58,10 @@ class ZonalStats:
             By default, ``None``.
         nodata : int | float, optional
             Value in the raster that represents `nodata`. This value
-            will not show up in any statistics expect for `nodata`,
-            which computes the number of `nodata` values within the
-            zone. Note that this value is used **in addition to** any
-            `NODATA` value in the raster's metadata.
+            will not show up in any statistics except for the `nodata`
+            statistic itself, which computes the number of `nodata`
+            values within the zone. Note that this value is used **in
+            addition to** any `NODATA` value in the raster's metadata.
             By default, ``None``.
         all_touched : bool, optional
             Flag indicating whether to include every raster cell touched
