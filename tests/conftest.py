@@ -1,8 +1,10 @@
 """Fixtures for use across all tests"""
 
+import os
 from pathlib import Path
 
 import pytest
+from click.testing import CliRunner
 
 
 LOGGING_META_FILES = {"log.py", "exceptions.py", "warnings.py"}
@@ -53,3 +55,20 @@ def assert_message_was_logged(caplog):
             caplog.clear()
 
     return assert_message
+
+
+@pytest.fixture
+def tmp_cwd(tmp_path):
+    """Change working dir to temporary dir"""
+    original_directory = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+        yield tmp_path
+    finally:
+        os.chdir(original_directory)
+
+
+@pytest.fixture(scope="session")
+def cli_runner():
+    """Cli runner helper utility"""
+    return CliRunner()
