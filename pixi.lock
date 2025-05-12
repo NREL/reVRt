@@ -17431,7 +17431,7 @@ packages:
   requires_python: '>=3.9'
 - pypi: .
   name: revx-transmission
-  version: 0.1.dev56+gd7f6651.d20250512
+  version: 0.1.dev63+g469fd54.d20250512
   sha256: 3c841eb787f406ab04cb3ceea9c55dc49837691839c3de115e9688dff7bc9742
   requires_dist:
   - affine>=2.4.0,<3
