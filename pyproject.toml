@@ -87,6 +87,9 @@ build = [
 # documentation = ""
 # repository = ""
 
+[project.scripts]
+trev = "trev._cli:main"
+
 [tool.ruff]
 line-length = 79
 
