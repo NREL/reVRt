@@ -1,5 +1,6 @@
 """TreV zonal characterization module"""
 
+import logging
 import warnings
 from functools import cached_property
 
@@ -14,6 +15,7 @@ from trev.exceptions import TreVTypeError
 
 
 _GPKG_GEOM_COL = "geometry"
+logger = logging.getLogger(__name__)
 
 
 class ZonalStats:
@@ -220,8 +222,15 @@ class ZonalStats:
 
     def _compute_stats_serial(self, zones, raster_array, affine):
         """Compute all stats sequentially"""
-        for __, feat in zones.iterrows():
+        total_num_zones = len(zones)
+        for ind, (__, feat) in enumerate(zones.iterrows(), start=1):
             yield feat, self._compile_stats(feat, raster_array, affine)
+            logger.debug(
+                "Computed stats for %d/%d zones (%.2f%)",
+                ind,
+                total_num_zones,
+                ind / total_num_zones * 100,
+            )
 
     def _compute_stats_parallel(self, zones, raster_array, affine):
         """Use dask delayed to compute stats in parallel"""
