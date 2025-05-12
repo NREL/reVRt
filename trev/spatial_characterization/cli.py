@@ -12,7 +12,7 @@ from gaps.cli import CLICommandFromFunction
 from trev.spatial_characterization.zonal import ZonalStats
 
 
-def buffered_lcp_stats(
+def buffered_lcp_characterizations(
     geotiff_fp,
     lcp_fp,
     row_widths,
@@ -81,7 +81,7 @@ def buffered_lcp_stats(
     return pd.json_normalize(list(stats), sep="_")
 
 
-def _lcp_stats_from_config(
+def _lcp_characterizations_from_config(
     out_dir, _row_widths, _stat_kwargs, max_workers=1, tag=None
 ):
     """Compute LCP characterizations/statistics
@@ -105,21 +105,21 @@ def _lcp_stats_from_config(
         parallel = True
         __ = Client(n_workers=max_workers)
 
-    out_data = buffered_lcp_stats(
+    out_data = buffered_lcp_characterizations(
         row_widths=_row_widths, parallel=parallel, **_stat_kwargs
     )
     out_data.to_csv(out_fp, index=False)
     return str(out_fp)
 
 
-def _preprocess_stats_config(config, stats, row_widths):
+def _preprocess_stats_config(config, layers, row_widths):
     """Preprocess user config
 
     Parameters
     ----------
     config : dict
         User configuration parsed as (nested) dict.
-    stats : dict or list of dict
+    layers : dict or list of dict
         A single dictionary or a list of dictionaries specifying the
         statistics to compute. Each dictionary should contain the
         following keys:
@@ -189,16 +189,16 @@ def _preprocess_stats_config(config, stats, row_widths):
 
     config["_row_widths"] = row_widths
 
-    if isinstance(stats, dict):
-        stats = [stats]
+    if isinstance(layers, dict):
+        layers = [layers]
 
-    config["_stat_kwargs"] = stats
+    config["_stat_kwargs"] = layers
     return config
 
 
-stats_command = CLICommandFromFunction(
-    _lcp_stats_from_config,
-    name="stats",
+lcp_characterizations_command = CLICommandFromFunction(
+    _lcp_characterizations_from_config,
+    name="lcp-characterization",
     add_collect=False,
     split_keys=["_stat_kwargs"],
     config_preprocessor=_preprocess_stats_config,
