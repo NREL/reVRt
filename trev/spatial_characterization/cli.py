@@ -70,6 +70,9 @@ def buffered_lcp_characterizations(
         Pandas DataFrame containing computed characteristics/stats.
     """
     rds = rioxarray.open_rasterio(geotiff_fp, chunks=chunks)
+    logger.debug("Tiff properties:\n%r", rds)
+    # cspell:disable-next-line
+    logger.debug("Tiff chunksizes:\n%r", rds.chunksizes)
 
     lcp = gpd.read_file(lcp_fp)
     lcp = lcp.to_crs(rds.rio.crs)
@@ -125,6 +128,11 @@ def _lcp_characterizations_from_config(
     lcp_name = f"_{Path(lcp_name).stem}" if lcp_name else ""
     out_fp = Path(out_dir) / f"stats{raster_name}{lcp_name}{tag}.csv"
 
+    logger.debug(
+        "Running with max_workers=%r and memory_limit_per_worker=%r",
+        max_workers,
+        memory_limit_per_worker,
+    )
     parallel = False
     if max_workers != 1:
         parallel = True
