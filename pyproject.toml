@@ -169,6 +169,7 @@ convention = "numpy"
 "tests/**.py" = [
   "ARG001", # unused-function-argument
   "INP001", # implicit-namespace-package
+  "PLC2701", # import-private-name
   "PLR0914", # too-many-locals
   "PLR0915", # too-many-statements
   "PLR2004", # magic-value-comparison
