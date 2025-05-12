@@ -210,7 +210,7 @@ def test_cli_command_minimal(tmp_cwd, sample_raster, cli_runner):
     assert len(out_files) == 1
 
     out_fp = Path(out_files[0])
-    assert out_fp.name == "stats_test_raster_test_zones.csv"
+    assert out_fp.name == "characterized_test_raster_test_zones.csv"
 
     out_stats = pd.read_csv(out_fp)
 
@@ -281,7 +281,7 @@ def test_cli_command_multiple_rasters(tmp_cwd, sample_raster, cli_runner):
     assert len(out_files) == 2
 
     out_fp = Path(out_files[0])
-    assert out_fp.name == "stats_raster_lcp_j0.csv"
+    assert out_fp.name == "characterized_raster_lcp_j0.csv"
 
     out_stats = pd.read_csv(out_fp)
     sub_arr = sample_raster.isel(x=2)
@@ -297,7 +297,7 @@ def test_cli_command_multiple_rasters(tmp_cwd, sample_raster, cli_runner):
     assert not any(c in out_stats for c in [Stat.MAX, Stat.MEAN])
 
     out_fp = Path(out_files[1])
-    assert out_fp.name == "stats_raster_lcp_j1.csv"
+    assert out_fp.name == "characterized_raster_lcp_j1.csv"
 
     out_stats = pd.read_csv(out_fp)
 

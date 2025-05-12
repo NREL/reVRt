@@ -126,7 +126,7 @@ def _lcp_characterizations_from_config(
     raster_name = f"_{Path(raster_name).stem}" if raster_name else ""
     lcp_name = _stat_kwargs.get("lcp_fp")
     lcp_name = f"_{Path(lcp_name).stem}" if lcp_name else ""
-    out_fp = Path(out_dir) / f"stats{raster_name}{lcp_name}{tag}.csv"
+    out_fp = Path(out_dir) / f"characterized{raster_name}{lcp_name}{tag}.csv"
 
     logger.debug(
         "Running with max_workers=%r and memory_limit_per_worker=%r",
