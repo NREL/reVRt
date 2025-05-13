@@ -532,20 +532,20 @@ def _fractional_stats(
             returned_value_pixel_count_dict[value] += pixel_fractional_count
 
     returned_value_pixel_count_dict = {
-        category_map.get(k, k): round(v, 2)
+        category_map.get(k, k): v
         for k, v in returned_value_pixel_count_dict.items()
     }
 
     returned_value_pixel_area_dict = {
-        category_map.get(k, k): round(v, 2)
+        category_map.get(k, k): v
         for k, v in returned_value_pixel_area_dict.items()
     }
 
     return {
         FractionalStat.FRACTIONAL_PIXEL_COUNT: returned_value_pixel_count_dict,
         FractionalStat.FRACTIONAL_AREA: returned_value_pixel_area_dict,
-        FractionalStat.VALUE_MULTIPLIED_BY_FRACTIONAL_AREA: round(
-            value_multiplied_by_area, 2
+        FractionalStat.VALUE_MULTIPLIED_BY_FRACTIONAL_AREA: (
+            value_multiplied_by_area
         ),
     }
 

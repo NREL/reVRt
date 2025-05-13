@@ -132,6 +132,11 @@ def test_categorization_multi_stat(sc_dir, zonal_polygon_fp, key_type):
     stats = zs.from_files(
         zonal_polygon_fp, sc_dir / "layer_a.tif", copy_properties=["id"]
     )
+    for zone_stats in stats:
+        for key in ["fractional_area", "fractional_pixel_count"]:
+            for sub_key, value in zone_stats[key].items():
+                zone_stats[key][sub_key] = round(value, 2)
+
     assert stats == expected
 
 
@@ -161,6 +166,9 @@ def test_categorization_single_stat(sc_dir, zonal_polygon_fp):
     stats = zs.from_files(
         zonal_polygon_fp, sc_dir / "layer_b.tif", copy_properties=["id"]
     )
+    for zone_stats in stats:
+        for key, value in zone_stats["fractional_area"].items():
+            zone_stats["fractional_area"][key] = round(value, 2)
     assert stats == expected
 
 
@@ -184,6 +192,10 @@ def test_fractional_area(sc_dir, zonal_polygon_fp):
     stats = zs.from_files(
         zonal_polygon_fp, sc_dir / "layer_c.tif", copy_properties=["id"]
     )
+    for zone_stats in stats:
+        zone_stats["value_multiplied_by_fractional_area"] = round(
+            zone_stats["value_multiplied_by_fractional_area"], 2
+        )
     assert stats == expected
 
 
