@@ -261,27 +261,32 @@ class ZonalStats:
         """Compile stats for a single zone"""
 
         zone = feat[_GPKG_GEOM_COL]
+        logger.debug("Sub-setting raster to zone window")
         windowed_raster, window_transform = _subset_raster_to_window(
             raster_array, zone.bounds, affine
         )
+        logger.debug("Windowed raster shape=%r", windowed_raster.shape)
 
         if windowed_raster.size == 0:
             feature_stats = self.computable_stats.empty
             feature_stats.update(_empty_extra_user_stats(self.add_stats))
             return feature_stats
 
+        logger.debug("Applying zone mask to raster")
         masked_raster, rasterized_zone = _mask_to_zone(
             windowed_raster, window_transform, zone, self.all_touched
         )
         processed_raster = _mask_nodata(masked_raster, self.nodata)
         processed_raster = _safe_apply_func(self.zone_func, processed_raster)
 
+        logger.debug("Computing basic stats")
         feature_stats = self.computable_stats.computed_base_stats(
             processed_raster=processed_raster,
             category_map=self.category_map,
             masked_raster=masked_raster,
             nodata=self.nodata,
         )
+        logger.debug("Computing fractional stats")
         feature_stats.update(
             self.computable_stats.computed_fractional_stats(
                 zone,
@@ -291,6 +296,7 @@ class ZonalStats:
                 self.category_map,
             )
         )
+        logger.debug("Computing percentile stats")
         feature_stats.update(
             self.computable_stats.computed_percentiles(processed_raster)
         )
