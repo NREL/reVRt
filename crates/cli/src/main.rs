@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use tracing::{info, debug, trace};
+use tracing::{debug, info, trace};
 
 use nrel_transmission::resolve;
 

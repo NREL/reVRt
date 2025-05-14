@@ -2,7 +2,9 @@ use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
 use zarrs::array::ArrayChunkCacheExt;
-use zarrs::storage::{ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage};
+use zarrs::storage::{
+    ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
+};
 
 use crate::Point;
 use crate::cost::CostFunction;
