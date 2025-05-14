@@ -293,7 +293,7 @@ pub(crate) mod samples {
                 .unwrap();
         }
 
-        tmp_path.into_path()
+        tmp_path.keep()
     }
 }
 
