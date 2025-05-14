@@ -103,6 +103,7 @@ impl Dataset {
             cost_path: tmp_path,
             cost,
             cost_chunk_idx,
+            cost_function,
             cache,
         })
     }
