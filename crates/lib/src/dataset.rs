@@ -2,7 +2,7 @@ use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
 use zarrs::array::ArrayChunkCacheExt;
-use zarrs::storage::{ReadableListableStorage, ReadableWritableListableStorage};
+use zarrs::storage::{ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage};
 
 use crate::Point;
 use crate::cost::CostFunction;
@@ -62,7 +62,11 @@ impl Dataset {
             .unwrap();
 
         // -- Temporary solution to specify cost storage --
-        let tmp = zarrs::array::Array::open(source.clone(), "/A").unwrap();
+        // Assume all variables have the same shape and chunk shape.
+        // Find the name of the first variable and use it.
+        let varname = source.list().unwrap()[0].to_string();
+        let varname = varname.split("/").collect::<Vec<_>>()[0];
+        let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
         let cost_shape = tmp.shape();
         let chunk_shape = tmp.chunk_grid().clone();
         // ----
