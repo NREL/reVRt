@@ -45,7 +45,7 @@ impl Dataset {
 
         // ==== Create the cost dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
-        trace!(
+        debug!(
             "Initializing a temporary cost dataset at {:?}",
             tmp_path.path()
         );
@@ -76,8 +76,8 @@ impl Dataset {
         )
         .build(cost.clone(), "/cost")
         .unwrap();
-        warn!("Cost shape: {:?}", array.shape().to_vec());
-        warn!("Cost chunk shape: {:?}", array.chunk_grid());
+        trace!("Cost shape: {:?}", array.shape().to_vec());
+        trace!("Cost chunk shape: {:?}", array.chunk_grid());
         array.store_metadata().unwrap();
 
         trace!("Cost dataset contents: {:?}", cost.list().unwrap());
