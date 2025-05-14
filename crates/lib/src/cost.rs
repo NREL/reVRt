@@ -44,6 +44,11 @@ mod sample {
         "#
         .to_string()
     }
+
+    pub(crate) fn cost_function() -> CostFunction {
+        let json = as_text_v1();
+        CostFunction::from_json(&json).unwrap()
+    }
 }
 
 #[cfg(test)]
