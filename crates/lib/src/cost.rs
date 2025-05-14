@@ -32,12 +32,12 @@ mod sample {
         r#"
       {
         "cost_layers": [
-          {"layer_name": "layer_1_in_zarr"},
-          {"layer_name": "layer_2_in_zarr", "multiplier_scalar": 100},
-          {"layer_name": "layer_3_in_zarr",
-            "multiplier_layer": "another_layer_in_zarr"},
-          {"layer_name": "layer_4_in_zarr",
-            "multiplier_layer": "another_layer_in_zarr",
+          {"layer_name": "A"},
+          {"layer_name": "B", "multiplier_scalar": 100},
+          {"layer_name": "A",
+            "multiplier_layer": "B"},
+          {"layer_name": "C",
+            "multiplier_layer": "A",
             "multiplier_scalar": 2}
 ]
         }
@@ -56,18 +56,18 @@ mod test {
         let cost = CostFunction::from_json(&json).unwrap();
 
         assert_eq!(cost.cost_layers.len(), 4);
-        assert_eq!(cost.cost_layers[0].layer_name, "layer_1_in_zarr");
-        assert_eq!(cost.cost_layers[1].layer_name, "layer_2_in_zarr");
+        assert_eq!(cost.cost_layers[0].layer_name, "A");
+        assert_eq!(cost.cost_layers[1].layer_name, "B");
         assert_eq!(cost.cost_layers[1].multiplier_scalar, Some(100.0));
-        assert_eq!(cost.cost_layers[2].layer_name, "layer_3_in_zarr");
+        assert_eq!(cost.cost_layers[2].layer_name, "A");
         assert_eq!(
             cost.cost_layers[2].multiplier_layer,
-            Some("another_layer_in_zarr".to_string())
+            Some("B".to_string())
         );
-        assert_eq!(cost.cost_layers[3].layer_name, "layer_4_in_zarr");
+        assert_eq!(cost.cost_layers[3].layer_name, "C");
         assert_eq!(
             cost.cost_layers[3].multiplier_layer,
-            Some("another_layer_in_zarr".to_string())
+            Some("A".to_string())
         );
         assert_eq!(cost.cost_layers[3].multiplier_scalar, Some(2.0));
     }
