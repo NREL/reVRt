@@ -26,8 +26,12 @@ struct Simulation {
 }
 
 impl Simulation {
-    fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
-        let dataset = dataset::Dataset::open(store_path, cache_size)?;
+    fn new<P: AsRef<std::path::Path>>(
+        store_path: P,
+        cost_function: CostFunction,
+        cache_size: u64,
+    ) -> Result<Self> {
+        let dataset = dataset::Dataset::open(store_path, cost_function, cache_size)?;
 
         Ok(Self { dataset })
     }
