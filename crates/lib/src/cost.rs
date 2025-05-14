@@ -22,6 +22,48 @@ impl CostFunction {
         let cost = serde_json::from_str(json).unwrap();
         Ok(cost)
     }
+
+    pub(crate) fn calculate_chunk(&self, features: &zarrs::storage::ReadableListableStorage, i: u64, j: u64) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+        debug!("Calculating cost for chunk ({}, {})", i, j);
+
+        let cost = self.cost_layers.iter().map(|layer| {
+            let layer_name = &layer.layer_name;
+            trace!("Layer name: {}", layer_name);
+
+            let array = zarrs::array::Array::open(features.clone(), &format!("/{layer_name}")).unwrap();
+            let cost = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
+
+            if let Some(multiplier_scalar) = layer.multiplier_scalar {
+                trace!("Layer {} has multiplier scalar {}", layer_name, multiplier_scalar);
+                // Apply the multiplier scalar to the value
+                let cost = cost.clone() * multiplier_scalar;
+                trace!("Cost for chunk ({}, {}) in layer {}: {}", i, j, layer_name, cost);
+            }
+
+            if let Some(multiplier_layer) = &layer.multiplier_layer {
+                trace!("Layer {} has multiplier layer {}", layer_name, multiplier_layer);
+                let multiplier_array = zarrs::array::Array::open(features.clone(), &format!("/{layer_name}")).unwrap();
+                let multiplier_value = multiplier_array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
+
+                // Apply the multiplier layer to the value
+                let cost = cost.clone() * multiplier_value;
+                trace!("Cost for chunk ({}, {}) in layer {}: {}", i, j, layer_name, cost);
+
+            }
+            cost
+        }).collect::<Vec<_>>();
+
+
+        let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
+        let stack = stack(Axis(0), &views).unwrap();
+        //let cost = stack![Axis(3), &cost];
+        trace!("Stack shape: {:?}", stack.shape());
+        let cost = stack.sum_axis(Axis(0));
+        trace!("Stack shape: {:?}", stack.shape());
+
+        cost
+
+    }
 }
 
 #[cfg(test)]
