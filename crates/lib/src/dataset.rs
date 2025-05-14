@@ -5,6 +5,7 @@ use zarrs::array::ArrayChunkCacheExt;
 use zarrs::storage::{ReadableListableStorage, ReadableWritableListableStorage};
 
 use crate::Point;
+use crate::cost::CostFunction;
 use crate::error::Result;
 
 /// Manages the features datasets and calculated total cost
@@ -25,6 +26,8 @@ pub(super) struct Dataset {
     cost: ReadableWritableListableStorage,
     /// Index of cost chunks already calculated
     cost_chunk_idx: RwLock<ndarray::Array2<bool>>,
+    /// Custom cost function definition
+    cost_function: CostFunction,
     /// Cache for the cost
     cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
@@ -287,7 +290,8 @@ mod tests {
     #[test]
     fn test_single_variable_zarr() {
         let path = samples::single_variable_zarr();
-        let dataset = Dataset::open(path, 250_000_000).unwrap();
+        let cost_function = crate::cost::sample::cost_function();
+        let dataset = Dataset::open(path, cost_function, 250_000_000).unwrap();
 
         let results = dataset.get_3x3(3, 2);
         dbg!(&results);
