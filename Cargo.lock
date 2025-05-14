@@ -746,7 +746,7 @@ dependencies = [
 
 [[package]]
 name = "nrel-transmission"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "ndarray",
  "pathfinding",
@@ -1041,7 +1041,7 @@ dependencies = [
 
 [[package]]
 name = "reVX-transmission-cli"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "clap",
  "nrel-transmission",
