@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use tracing::{info, trace};
+use tracing::{info, debug, trace};
 
 use nrel_transmission::resolve;
 
@@ -41,7 +41,7 @@ fn main() {
     tracing_subscriber::fmt()
         .with_max_level(tracing_level)
         .init();
-    info!("Verbose level: {}", cli.verbose);
+    debug!("Verbose level: {}", cli.verbose);
 
     trace!("User given dataset: {:?}", cli.dataset);
 
