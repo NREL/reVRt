@@ -8,7 +8,7 @@ mod error;
 
 use pathfinding::prelude::dijkstra;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::trace;
+use tracing::{debug, trace};
 
 use cost::CostFunction;
 use error::Result;
