@@ -109,14 +109,18 @@ impl Dataset {
     }
 
     fn calculate_chunk_cost(&self, i: u64, j: u64) {
-        debug!("Calculating cost for chunk ({}, {})", i, j);
+        let output = self.cost_function.calculate_chunk(&self.source, i, j);
+        let output = 1e2 * output;
+        trace!("Cost function: {:?}", self.cost_function);
 
+        /*
         trace!("Getting '/A' variable");
         let array = zarrs::array::Array::open(self.source.clone(), "/A").unwrap();
         let value = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
         trace!("Value: {:?}", value);
         trace!("Calculating cost for chunk ({}, {})", i, j);
         let output = value * 10.0;
+        */
 
         let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
