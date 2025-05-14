@@ -5,7 +5,7 @@ use tracing::trace;
 use crate::error::Result;
 
 #[derive(Debug, serde::Deserialize)]
-struct CostFunction {
+pub(crate) struct CostFunction {
     cost_layers: Vec<CostLayer>,
 }
 
