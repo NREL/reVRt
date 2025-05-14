@@ -25,7 +25,8 @@ impl CostFunction {
 }
 
 #[cfg(test)]
-mod sample {
+pub(crate) mod sample {
+    use super::*;
 
     /// Sample cost definition
     pub(crate) fn as_text_v1() -> String {
