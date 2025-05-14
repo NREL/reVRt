@@ -43,7 +43,7 @@ fn main() {
         .init();
     info!("Verbose level: {}", cli.verbose);
 
-    trace!("Loading dataset: {:?}", cli.dataset);
+    trace!("User given dataset: {:?}", cli.dataset);
 
     assert_eq!(cli.start.len(), 2);
     let start = &nrel_transmission::Point::new(cli.start[0] as u64, cli.start[1] as u64);
