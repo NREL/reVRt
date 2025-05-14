@@ -16,6 +16,9 @@ struct Cli {
     #[arg(short, long, value_name = "DATASET")]
     dataset: PathBuf,
 
+    #[arg(long = "cost-function", value_name = "COST_FUNCTION")]
+    cost_function: String,
+
     #[arg(long = "start", value_delimiter = ',', value_name = "START")]
     start: Vec<usize>,
 
@@ -53,7 +56,14 @@ fn main() {
     )];
     trace!("Ending point: {:?}", end);
 
-    let result = resolve(cli.dataset, 250_000_000, &[start.clone()], end).unwrap();
+    let result = resolve(
+        cli.dataset,
+        &cli.cost_function,
+        250_000_000,
+        &[start.clone()],
+        end,
+    )
+    .unwrap();
     println!("Results: {:?}", result);
     info!("Final solutions: {:?}", result);
 }
