@@ -12,7 +12,7 @@ struct CostFunction {
 #[derive(Debug, serde::Deserialize)]
 struct CostLayer {
     layer_name: String,
-    multiplier_scalar: Option<f64>,
+    multiplier_scalar: Option<f32>,
     multiplier_layer: Option<String>,
 }
 
