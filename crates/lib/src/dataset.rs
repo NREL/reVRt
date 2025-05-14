@@ -33,9 +33,12 @@ pub(super) struct Dataset {
 }
 
 impl Dataset {
-    pub(super) fn open<P: AsRef<std::path::Path>>(path: P, cache_size: u64) -> Result<Self> {
-        trace!("Opening dataset");
-        trace!("Building FilesystemStore with path: {:?}", path.as_ref());
+    pub(super) fn open<P: AsRef<std::path::Path>>(
+        path: P,
+        cost_function: CostFunction,
+        cache_size: u64,
+    ) -> Result<Self> {
+        debug!("Opening dataset: {:?}", path.as_ref());
         let filesystem =
             zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
         let source = std::sync::Arc::new(filesystem);
