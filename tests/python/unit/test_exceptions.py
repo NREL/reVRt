@@ -1,16 +1,16 @@
-"""TreV exception tests"""
+"""reVRt exception tests"""
 
 from pathlib import Path
 
 import pytest
 
-from trev.exceptions import (
-    TreVError,
-    TreVKeyError,
-    TreVNotImplementedError,
-    TreVRuntimeError,
-    TreVTypeError,
-    TreVValueError,
+from reVRt.exceptions import (
+    reVRtError,
+    reVRtKeyError,
+    reVRtNotImplementedError,
+    reVRtRuntimeError,
+    reVRtTypeError,
+    reVRtValueError,
 )
 
 
@@ -21,15 +21,15 @@ def test_exceptions_log_error(caplog, assert_message_was_logged):
     """Test that a raised exception logs message, if any."""
 
     try:
-        raise TreVError  # noqa: TRY301
-    except TreVError:
+        raise reVRtError  # noqa: TRY301
+    except reVRtError:
         pass
 
     assert not caplog.records
 
     try:
-        raise TreVError(BASIC_ERROR_MESSAGE)  # noqa: TRY301
-    except TreVError:
+        raise reVRtError(BASIC_ERROR_MESSAGE)  # noqa: TRY301
+    except reVRtError:
         pass
 
     assert_message_was_logged(BASIC_ERROR_MESSAGE, "ERROR")
@@ -38,8 +38,8 @@ def test_exceptions_log_error(caplog, assert_message_was_logged):
 def test_exceptions_log_uncaught_error(assert_message_was_logged):
     """Test that a raised exception logs message if uncaught."""
 
-    with pytest.raises(TreVError):
-        raise TreVError(BASIC_ERROR_MESSAGE)
+    with pytest.raises(reVRtError):
+        raise reVRtError(BASIC_ERROR_MESSAGE)
 
     assert_message_was_logged(BASIC_ERROR_MESSAGE, "ERROR")
 
@@ -48,13 +48,13 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
     "raise_type, catch_types",
     [
         (
-            TreVNotImplementedError,
-            [TreVError, TreVNotImplementedError, NotImplementedError],
+            reVRtNotImplementedError,
+            [reVRtError, reVRtNotImplementedError, NotImplementedError],
         ),
-        (TreVKeyError, [TreVError, TreVKeyError, KeyError]),
-        (TreVRuntimeError, [TreVError, TreVRuntimeError, RuntimeError]),
-        (TreVTypeError, [TreVError, TreVTypeError, TypeError]),
-        (TreVValueError, [TreVError, TreVValueError, ValueError]),
+        (reVRtKeyError, [reVRtError, reVRtKeyError, KeyError]),
+        (reVRtRuntimeError, [reVRtError, reVRtRuntimeError, RuntimeError]),
+        (reVRtTypeError, [reVRtError, reVRtTypeError, TypeError]),
+        (reVRtValueError, [reVRtError, reVRtValueError, ValueError]),
     ],
 )
 def test_catching_error_by_type(

@@ -15,9 +15,9 @@ from rasterstats import zonal_stats as rzs
 from rasterstats.utils import VALID_STATS, DEFAULT_STATS
 from shapely.geometry import box, LineString
 
-from trev.spatial_characterization.stats import Stat
-from trev.spatial_characterization.zonal import ZonalStats
-from trev._cli import main
+from reVRt.spatial_characterization.stats import Stat
+from reVRt.spatial_characterization.zonal import ZonalStats
+from reVRt._cli import main
 
 
 VALID_STATS.remove("nan")
@@ -209,7 +209,7 @@ def test_against_rasterstats(
     sc_dir, zonal_polygon_fp, nodata, stats, all_touched, zone_func
 ):
     """Test against the rasterstats zonal_stats function"""
-    test_map = {11: "Cat 1", -1: "Unknown"}
+    test_map = {11: "Cat 1", -1: "Unknown", "no_float": "unreachable cat"}
     zs = ZonalStats(
         nodata=nodata,
         stats=stats,
