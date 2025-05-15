@@ -6,7 +6,7 @@ requires = [
 build-backend = 'setuptools.build_meta'
 
 [project]
-name="reVX-transmission"
+name="reVRt"
 dynamic = ["version"]
 description = "National Renewable Energy Laboratory's (NREL's) Transmission for reVX tool"
 readme = "README.rst"
@@ -19,7 +19,7 @@ maintainers = [
   {name = "Paul Pinchuk", email = "ppinchuk@nrel.gov"},
 ]
 # license = {text = "BSD-3-Clause"}
-keywords = ["NREL", "transmission", "reV", "reVX", "TreV"]
+keywords = ["NREL", "routing", "transmission", "reVRt", "reV", "reVX"]
 requires-python = ">= 3.11"
 classifiers=[
   "Development Status :: 2 - Pre-Alpha",
@@ -88,7 +88,7 @@ build = [
 # repository = ""
 
 [project.scripts]
-trev = "trev._cli:main"
+reVRt = "reVRt._cli:main"
 
 [tool.ruff]
 line-length = 79
@@ -186,13 +186,13 @@ max-args = 10
 max-positional-args = 10
 
 [tool.setuptools]
-packages = ["trev"]
+packages = ["reVRt"]
 
 [tool.setuptools_scm]
 # Default git command uses "*[0-9]*", which breaks with cX.X.X tags.
 # This spec below forces setuptools_scm to look strictly for vX.X.X tags
 git_describe_command = [ "git", "describe", "--dirty", "--tags", "--long", "--match", "v*[0-9]*" ]
-version_file = "trev/_version.py"
+version_file = "reVRt/_version.py"
 
 [tool.pixi.project]
 channels = ["conda-forge", "anaconda", "main"]
@@ -210,14 +210,14 @@ build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 make-html = { cmd = "make html", cwd = "docs"}
-tests = "pytest --durations=20 -rapP -vv --cov=trev --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
-tests-u = "pytest --durations=20 -rapP -vv --cov=trev --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
-tests-i = "pytest --durations=20 -rapP -vv --cov=trev --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
+tests = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
+tests-u = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
+tests-i = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
 
 
 [tool.pixi.pypi-dependencies]
 NREL-gaps = ">=0.8.4,<0.9"
-reVX-transmission = { path = ".", editable = true }
+reVRt = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
 # system
