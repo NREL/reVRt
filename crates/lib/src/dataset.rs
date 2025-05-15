@@ -2,9 +2,12 @@ use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
 use zarrs::array::ArrayChunkCacheExt;
-use zarrs::storage::{ReadableListableStorage, ReadableWritableListableStorage};
+use zarrs::storage::{
+    ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
+};
 
 use crate::Point;
+use crate::cost::CostFunction;
 use crate::error::Result;
 
 /// Manages the features datasets and calculated total cost
@@ -25,21 +28,26 @@ pub(super) struct Dataset {
     cost: ReadableWritableListableStorage,
     /// Index of cost chunks already calculated
     cost_chunk_idx: RwLock<ndarray::Array2<bool>>,
+    /// Custom cost function definition
+    cost_function: CostFunction,
     /// Cache for the cost
     cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
 
 impl Dataset {
-    pub(super) fn open<P: AsRef<std::path::Path>>(path: P, cache_size: u64) -> Result<Self> {
-        trace!("Opening dataset");
-        trace!("Building FilesystemStore with path: {:?}", path.as_ref());
+    pub(super) fn open<P: AsRef<std::path::Path>>(
+        path: P,
+        cost_function: CostFunction,
+        cache_size: u64,
+    ) -> Result<Self> {
+        debug!("Opening dataset: {:?}", path.as_ref());
         let filesystem =
             zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
         let source = std::sync::Arc::new(filesystem);
 
         // ==== Create the cost dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
-        trace!(
+        debug!(
             "Initializing a temporary cost dataset at {:?}",
             tmp_path.path()
         );
@@ -56,7 +64,11 @@ impl Dataset {
             .unwrap();
 
         // -- Temporary solution to specify cost storage --
-        let tmp = zarrs::array::Array::open(source.clone(), "/A").unwrap();
+        // Assume all variables have the same shape and chunk shape.
+        // Find the name of the first variable and use it.
+        let varname = source.list().unwrap()[0].to_string();
+        let varname = varname.split("/").collect::<Vec<_>>()[0];
+        let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
         let cost_shape = tmp.shape();
         let chunk_shape = tmp.chunk_grid().clone();
         // ----
@@ -70,8 +82,8 @@ impl Dataset {
         )
         .build(cost.clone(), "/cost")
         .unwrap();
-        warn!("Cost shape: {:?}", array.shape().to_vec());
-        warn!("Cost chunk shape: {:?}", array.chunk_grid());
+        trace!("Cost shape: {:?}", array.shape().to_vec());
+        trace!("Cost chunk shape: {:?}", array.chunk_grid());
         array.store_metadata().unwrap();
 
         trace!("Cost dataset contents: {:?}", cost.list().unwrap());
@@ -97,19 +109,24 @@ impl Dataset {
             cost_path: tmp_path,
             cost,
             cost_chunk_idx,
+            cost_function,
             cache,
         })
     }
 
     fn calculate_chunk_cost(&self, i: u64, j: u64) {
-        debug!("Calculating cost for chunk ({}, {})", i, j);
+        let output = self.cost_function.calculate_chunk(&self.source, i, j);
+        let output = 1e2 * output;
+        trace!("Cost function: {:?}", self.cost_function);
 
+        /*
         trace!("Getting '/A' variable");
         let array = zarrs::array::Array::open(self.source.clone(), "/A").unwrap();
         let value = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
         trace!("Value: {:?}", value);
         trace!("Calculating cost for chunk ({}, {})", i, j);
         let output = value * 10.0;
+        */
 
         let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
@@ -276,7 +293,7 @@ pub(crate) mod samples {
                 .unwrap();
         }
 
-        tmp_path.into_path()
+        tmp_path.keep()
     }
 }
 
@@ -287,7 +304,8 @@ mod tests {
     #[test]
     fn test_single_variable_zarr() {
         let path = samples::single_variable_zarr();
-        let dataset = Dataset::open(path, 250_000_000).unwrap();
+        let cost_function = crate::cost::sample::cost_function();
+        let dataset = Dataset::open(path, cost_function, 250_000_000).unwrap();
 
         let results = dataset.get_3x3(3, 2);
         dbg!(&results);

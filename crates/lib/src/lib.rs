@@ -2,6 +2,7 @@
 //!
 //!
 
+mod cost;
 mod dataset;
 mod error;
 
@@ -9,6 +10,7 @@ use pathfinding::prelude::dijkstra;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::trace;
 
+use cost::CostFunction;
 use error::Result;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -25,8 +27,12 @@ struct Simulation {
 }
 
 impl Simulation {
-    fn new<P: AsRef<std::path::Path>>(store_path: P, cache_size: u64) -> Result<Self> {
-        let dataset = dataset::Dataset::open(store_path, cache_size)?;
+    fn new<P: AsRef<std::path::Path>>(
+        store_path: P,
+        cost_function: CostFunction,
+        cache_size: u64,
+    ) -> Result<Self> {
+        let dataset = dataset::Dataset::open(store_path, cost_function, cache_size)?;
 
         Ok(Self { dataset })
     }
@@ -64,11 +70,16 @@ impl Simulation {
 
 pub fn resolve<P: AsRef<std::path::Path>>(
     store_path: P,
+    cost_function: &str,
     cache_size: u64,
     start: &[Point],
     end: Vec<Point>,
 ) -> Result<Vec<(Vec<Point>, usize)>> {
-    let mut simulation: Simulation = Simulation::new(store_path, cache_size).unwrap();
+    tracing::trace!("Cost function: {}", cost_function);
+    let cost_function = CostFunction::from_json(cost_function)?;
+    tracing::trace!("Cost function: {:?}", cost_function);
+    let mut simulation: Simulation =
+        Simulation::new(store_path, cost_function, cache_size).unwrap();
     let result = simulation.scout(start, end);
     Ok(result)
 }
@@ -80,7 +91,9 @@ mod tests {
     #[test]
     fn minimalist() {
         let store_path = dataset::samples::single_variable_zarr();
-        let mut simulation = Simulation::new(&store_path, 250_000_000).unwrap();
+        let cost_function = cost::sample::cost_function();
+        //let cost_function = CostFunction::from_json(&cost::sample::as_text_v1()).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![Point(2, 3)];
         let end = vec![Point(6, 6)];
         let solutions = simulation.scout(&start, end);

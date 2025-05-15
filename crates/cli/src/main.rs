@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use tracing::{info, trace};
+use tracing::{debug, info, trace};
 
 use nrel_transmission::resolve;
 
@@ -15,6 +15,9 @@ struct Cli {
 
     #[arg(short, long, value_name = "DATASET")]
     dataset: PathBuf,
+
+    #[arg(long = "cost-function", value_name = "COST_FUNCTION")]
+    cost_function: String,
 
     #[arg(long = "start", value_delimiter = ',', value_name = "START")]
     start: Vec<usize>,
@@ -38,9 +41,9 @@ fn main() {
     tracing_subscriber::fmt()
         .with_max_level(tracing_level)
         .init();
-    info!("Verbose level: {}", cli.verbose);
+    debug!("Verbose level: {}", cli.verbose);
 
-    trace!("Loading dataset: {:?}", cli.dataset);
+    trace!("User given dataset: {:?}", cli.dataset);
 
     assert_eq!(cli.start.len(), 2);
     let start = &nrel_transmission::Point::new(cli.start[0] as u64, cli.start[1] as u64);
@@ -53,7 +56,14 @@ fn main() {
     )];
     trace!("Ending point: {:?}", end);
 
-    let result = resolve(cli.dataset, 250_000_000, &[start.clone()], end).unwrap();
+    let result = resolve(
+        cli.dataset,
+        &cli.cost_function,
+        250_000_000,
+        &[start.clone()],
+        end,
+    )
+    .unwrap();
     println!("Results: {:?}", result);
     info!("Final solutions: {:?}", result);
 }
