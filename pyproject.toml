@@ -50,6 +50,7 @@ dependencies = [
 dev = [
   "ipython>=9.1.0,<10",
   "jupyter>=1.1.1,<2",
+  "maturin>=1.8.6,<2",
   "pipreqs>=0.4.13,<0.5",
   "ruff>=0.11.5,<0.12",
   "ruff-lsp>=0.0.62,<0.0.63",
@@ -241,9 +242,14 @@ packaging = ">=24.2,<25"
 ipython = ">=9.1.0,<10"
 jupyter = ">=1.1.1,<2"
 matplotlib = ">=3.10.1,<4"
+maturin = ">=1.8.6,<2"
+pip = ">=25.1.1,<26"
 pipreqs = ">=0.4.13,<0.5"
 ruff = ">=0.11.5,<0.12"
 ruff-lsp = ">=0.0.62,<0.0.63"
+
+[tool.pixi.feature.dev.pypi-dependencies]
+patchelf = ">=0.17.2.2,<0.18"
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=8.3.5,<9"
