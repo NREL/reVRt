@@ -49,7 +49,7 @@ def assert_message_was_logged(caplog):
             assert record.levelname == log_level  # cspell:disable-line
         assert record.filename not in LOGGING_META_FILES
         assert record.funcName != "__init__"
-        assert "trev" in record.name
+        assert "reVRt" in record.name
 
         if clear_records:
             caplog.clear()

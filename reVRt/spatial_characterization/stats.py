@@ -1,4 +1,4 @@
-"""TreV statistic computation functions"""
+"""reVRt statistic computation functions"""
 
 import sys
 from itertools import chain
@@ -10,7 +10,7 @@ import numpy as np
 import rasterio.features
 from shapely.geometry import shape
 
-from trev.exceptions import TreVValueError, TreVNotImplementedError
+from reVRt.exceptions import reVRtValueError, reVRtNotImplementedError
 
 
 _PCT_PREFIX = "percentile_"
@@ -19,7 +19,7 @@ _PCT_PREFIX = "percentile_"
 def _not_implemented(stat_name, *__, **___):
     """Default function for stats which may not have a computation"""
     msg = f"Default computation unavailable for {stat_name!r}"
-    raise TreVNotImplementedError(msg)
+    raise reVRtNotImplementedError(msg)
 
 
 def _calc_count(processed_raster, **__):
@@ -441,7 +441,7 @@ class ComputableStats:
 
         Raises
         ------
-        TreVValueError
+        reVRtValueError
             If one or more input stats are not known.
         """
         if not stats:
@@ -476,7 +476,7 @@ class ComputableStats:
                     f"Stat {stat!r} not valid; must be one of:\n"
                     f"{valid_stats!r}"
                 )
-                raise TreVValueError(msg)
+                raise reVRtValueError(msg)
 
         return cls(base_stats, percentiles, fractional_stats)
 
@@ -486,7 +486,7 @@ def _get_percentile(stat):
     q = float(stat.replace(_PCT_PREFIX, ""))
     if not (0 <= q <= 100):  # noqa: PLR2004
         msg = f"Percentiles must be between 0 and 100 (inclusive). Got: {q}"
-        raise TreVValueError(msg)
+        raise reVRtValueError(msg)
     return q
 
 

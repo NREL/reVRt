@@ -17430,9 +17430,9 @@ packages:
   - requests>=1.1
   requires_python: '>=3.9'
 - pypi: .
-  name: revx-transmission
-  version: 0.0.2.dev5+gcb9c771.d20250512
-  sha256: 6e77a7648e56baf1c65fbefe16e0167915d8e2fa442156c9f8caab5f19df4264
+  name: revrt
+  version: 0.1.1.dev0+g0cdde5b.d20250515
+  sha256: 0e2aac1fc591526c1cef28753f551aa4228684a9dbf25f58366b6a16ec38a22e
   requires_dist:
   - affine>=2.4.0,<3
   - dask>=2025.4.1,<2026
