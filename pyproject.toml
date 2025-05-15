@@ -1,0 +1,330 @@
+[build-system]
+requires = [
+  "setuptools >= 78.1",
+  "setuptools_scm[toml] >= 8",
+]
+build-backend = 'setuptools.build_meta'
+
+[project]
+name="reVX-transmission"
+dynamic = ["version"]
+description = "National Renewable Energy Laboratory's (NREL's) Transmission for reVX tool"
+readme = "README.rst"
+authors = [
+  {name = "Guilherme Castelão", email = "gpimenta@nrel.gov"},
+  {name = "Paul Pinchuk", email = "ppinchuk@nrel.gov"},
+]
+maintainers = [
+  {name = "Guilherme Castelão", email = "gpimenta@nrel.gov"},
+  {name = "Paul Pinchuk", email = "ppinchuk@nrel.gov"},
+]
+# license = {text = "BSD-3-Clause"}
+keywords = ["NREL", "transmission", "reV", "reVX", "TreV"]
+requires-python = ">= 3.11"
+classifiers=[
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+#   "License :: OSI Approved :: BSD License",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+  "affine>=2.4.0,<3",
+  "dask>=2025.4.1,<2026",
+  "distributed>=2025.4.1,<2026",
+  "geopandas>=1.0.1,<2",
+  "numpy>=2.2.4,<3",
+  "NREL-gaps>=0.8.4,<0.9",
+  "rasterio>=1.4.3,<2",
+  "rioxarray>=0.18.2,<0.19",
+  "shapely>=2.0.7,<2.1.0",  # bump back to >2.1.0 when This PR is merged and released: https://github.com/shapely/shapely/pull/2283
+]
+
+[project.optional-dependencies]
+dev = [
+  "ipython>=9.1.0,<10",
+  "jupyter>=1.1.1,<2",
+  "pipreqs>=0.4.13,<0.5",
+  "ruff>=0.11.5,<0.12",
+  "ruff-lsp>=0.0.62,<0.0.63",
+]
+test = [
+  "pytest>=8.3.5,<9",
+  "pytest-cases>=3.8.6,<4",
+  "pytest-cov>=6.1.1,<7",
+  "pytest-mock>=3.14.0,<4",
+  "pytest-profiling>=1.8.1,<2",
+  "pytest-xdist>=3.6.1,<4",
+  "rasterstats>=0.20.0,<0.21",
+  "snakeviz>=2.2.2,<3",
+  "tox>=4.25.0,<5",
+]
+doc = [
+  "ghp-import>=2.1.0,<3",
+  "myst-parser>=4.0.1,<5",
+  "numpydoc>=1.8.0,<2",
+  "pydata-sphinx-theme>=0.16.1,<0.17",
+  "sphinx>=8.2.3,<9",
+  "sphinx-click>=6.0.0,<7",
+  "sphinx-copybutton>=0.5.2,<0.6",
+  "sphinx-tabs>=3.4.1,<4",
+  "sphinxcontrib-mermaid>=1.0.0,<2",
+]
+build = [
+  "build>=1.2.2,<2",
+  "pkginfo>=1.12.1.2,<2",
+  "twine>=6.1.0,<7",
+]
+
+
+[project.urls]
+# homepage = ""
+# documentation = ""
+# repository = ""
+
+[project.scripts]
+trev = "trev._cli:main"
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+preview = true
+select = [
+  "A", # flake8-builtins
+  "B", # flake8-bugbear
+  "ARG", # flake8-unused-arguments
+  "BLE", # flake8-blind-except
+  "C4", # flake8-comprehensions
+  "C90", # mccabe
+  "COM", # flake8-commas
+  "D", # pydocstyle
+  "E", # pycodestyle
+  "EM", # flake8-errmsg
+  "F", # Pyflakes
+  "FURB", # refurb
+  "FLY", #  flynt
+  "G", # flake8-logging-format
+  "I", # isort
+  "INP", # flake8-no-pep420
+  "ISC", # flake8-implicit-str-concat
+  "LOG", # flake8-logging
+  "N", # pep8-naming
+  "NPY", # numpy-specific
+  "PD", # pandas-vet
+  "PERF", # Perflint
+  "PIE", # flake8-pie
+  "PL", # Pylint
+  "PTH", # flake8-use-pathlib
+  "PYI", # flake8-pyi
+  "Q", # flake8-quotes
+  "RET", # flake8-return
+  "RSE", # flake8-raise
+  "RUF", # Ruff-specific rules
+  "S", # flake8-bandit
+  "SLF", # flake8-self
+  "SIM", # flake8-simplify
+  "TID", # flake8-tidy-imports (absolute imports)
+  "TRY", # tryceratops
+  "UP", # pyupgrade
+  "W", # Warning
+]
+ignore = [
+  "B028", # no-explicit-stacklevel
+  "COM812", # missing-trailing-comma (incompatible with formatter)
+  "D105", # undocumented-magic-method
+  "D205", # blank-line-after-summary
+  "D202", # no-blank-lines-after-function
+  "D210", # surrounded-whitespace
+  "D400", # first-line-should-end-with-a-period
+  "D401", # non-imperative-mood
+  "D403", # first-line-capitalized
+  "FURB140", # reimplemented-starmap
+  "I001", # unsorted-imports
+  "PYI024", # collections-named-tuple
+  "RUF012", # mutable-class-default
+  "RUF031", # incorrectly-parenthesized-tuple-in-subscript
+  "S101", # assert
+  "S324", # hashlib-insecure-hash-function
+  "S403", # suspicious-pickle-import
+  "TRY003", # raise-vanilla-args
+]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 72
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+  "F401", # unused-import
+]
+"tests/**.py" = [
+  "ARG001", # unused-function-argument
+  "INP001", # implicit-namespace-package
+  "PLC2701", # import-private-name
+  "PLR0914", # too-many-locals
+  "PLR0915", # too-many-statements
+  "PLR2004", # magic-value-comparison
+  "PLR6301", # no-self-use
+  "SLF001", # private-member-access
+  "W505", # doc-line-too-long
+]
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-positional-args = 10
+
+[tool.setuptools]
+packages = ["trev"]
+
+[tool.setuptools_scm]
+version_file = "trev/_version.py"
+
+[tool.pixi.project]
+channels = ["conda-forge", "anaconda", "main"]
+platforms = ["osx-arm64", "osx-64", "win-64", "linux-64"]
+
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev", "doc", "test", "build"], solve-group = "default" }
+doc = { features = ["doc"], solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }
+build = { features = ["build"], solve-group = "default" }
+
+[tool.pixi.tasks]
+
+[tool.pixi.feature.dev.tasks]
+make-html = { cmd = "make html", cwd = "docs"}
+tests = "pytest --durations=20 -rapP -vv --cov=trev --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
+tests-u = "pytest --durations=20 -rapP -vv --cov=trev --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
+tests-i = "pytest --durations=20 -rapP -vv --cov=trev --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
+
+
+[tool.pixi.pypi-dependencies]
+NREL-gaps = ">=0.8.4,<0.9"
+reVX-transmission = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+# system
+python = ">=3.11"
+rust = ">=1.85.0,<1.86"
+# package
+affine = ">=2.4.0,<3"
+dask = ">=2025.4.1,<2026"
+distributed = ">=2025.4.1,<2026"
+geopandas = ">=1.0.1,<2"
+numpy = ">=2.2.4,<3"
+rasterio = ">=1.4.3,<2"
+rioxarray = ">=0.18.2,<0.19"
+shapely = ">=2.0.7,<2.1.0"  # bump back to >2.1.0 when This PR is merged and released: https://github.com/shapely/shapely/pull/2283
+
+# for gaps
+packaging = ">=24.2,<25"
+
+[tool.pixi.feature.dev.dependencies]
+ipython = ">=9.1.0,<10"
+jupyter = ">=1.1.1,<2"
+matplotlib = ">=3.10.1,<4"
+pipreqs = ">=0.4.13,<0.5"
+ruff = ">=0.11.5,<0.12"
+ruff-lsp = ">=0.0.62,<0.0.63"
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=8.3.5,<9"
+pytest-cases = ">=3.8.6,<4"
+pytest-cov = ">=6.1.1,<7"
+pytest-mock = ">=3.14.0,<4"
+pytest-profiling = ">=1.8.1,<2"
+pytest-xdist = ">=3.6.1,<4"
+rasterstats = ">=0.20.0,<0.21"
+snakeviz = ">=2.2.2,<3"
+tox = ">=4.25.0,<5"
+
+[tool.pixi.feature.doc.dependencies]
+ghp-import = ">=2.1.0,<3"
+make = ">=4.4.1,<5"
+myst-parser = ">=4.0.1,<5"
+numpydoc = ">=1.8.0,<2"
+pandoc = ">=3.6.4,<4"
+pydata-sphinx-theme = ">=0.16.1,<0.17"
+sphinx = ">=8.2.3,<9"
+sphinx-click = ">=6.0.0,<7"
+sphinx-copybutton = ">=0.5.2,<0.6"
+sphinx-tabs = ">=3.4.1,<4"
+sphinxcontrib-mermaid = ">=1.0.0,<2"
+
+[tool.pixi.feature.build.dependencies]
+python-build = ">=1.2.2.post1,<2"
+pkginfo = ">=1.12.1.2,<2"
+twine = ">=6.1.0,<7"
+
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_also = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+
+    # Don't complain about missing debug-only code:
+    "if self\\.debug",
+
+    # Don't complain about repr methods
+    "def __repr__",
+    "def _repr_markdown_",
+
+    # Don't complain about data I/O code
+    "def load*",
+    "def _load*",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+
+    # Don't complain if non-runnable code isn't run:
+    "if __name__ == .__main__.:",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+
+    # Don't complain about logging debugging functions
+    "def print_logging_info*",
+    "def __cls_name",
+]
+
+omit = [
+    # omit test files
+    "tests/*",
+    # omit setup file
+    "setup.py",
+    # omit plotting utilities
+    "plotting.py",
+    # omit init files
+    "__init__.py",
+    # omit version file
+    "_version.py",
+    # omit pixi files
+    ".pixi/*",
+]
+
+
+[tool.pytest.ini_options]
+addopts = "--disable-warnings"
+testpaths = [
+    "tests/python/unit",
+    "tests/python/integration",
+]
