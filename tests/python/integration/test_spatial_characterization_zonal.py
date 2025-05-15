@@ -209,7 +209,7 @@ def test_against_rasterstats(
     sc_dir, zonal_polygon_fp, nodata, stats, all_touched, zone_func
 ):
     """Test against the rasterstats zonal_stats function"""
-    test_map = {11: "Cat 1", -1: "Unknown"}
+    test_map = {11: "Cat 1", -1: "Unknown", "no_float": "unreachable cat"}
     zs = ZonalStats(
         nodata=nodata,
         stats=stats,
