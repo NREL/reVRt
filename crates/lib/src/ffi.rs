@@ -30,13 +30,13 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 fn find_path(
     zarr_fp: PathBuf,
     cost_layers: String,
-    start: (u64, u64),
+    start: Vec<(u64, u64)>,
     end: Vec<(u64, u64)>,
     cache_size: u64,
 ) -> Result<Vec<(Vec<(u64, u64)>, usize)>> {
-    let start: Point = start.into();
+    let start: Vec<Point> = start.into_iter().map(Into::into).collect();
     let end: Vec<Point> = end.into_iter().map(Into::into).collect();
-    let paths = resolve(zarr_fp, &cost_layers, cache_size, &[start], end)?;
+    let paths = resolve(zarr_fp, &cost_layers, cache_size, &start, end)?;
     Ok(paths
         .into_iter()
         .map(|(path, cost)| (path.into_iter().map(Into::into).collect(), cost))
