@@ -29,6 +29,12 @@ impl From<(u64, u64)> for Point {
     }
 }
 
+impl From<Point> for (u64, u64) {
+    fn from(Point(x, y): Point) -> (u64, u64) {
+        (x, y)
+    }
+}
+
 struct Simulation {
     dataset: dataset::Dataset,
 }
@@ -107,6 +113,20 @@ mod tests {
         let point: Point = (2, 3).into();
         assert_eq!(point.0, 2);
         assert_eq!(point.1, 3);
+    }
+
+    #[test]
+    fn tuple_from_point() {
+        let point_tuple: (u64, u64) = From::from(Point(2, 3));
+        assert_eq!(point_tuple.0, 2);
+        assert_eq!(point_tuple.1, 3);
+    }
+
+    #[test]
+    fn point_into_tuple() {
+        let point_tuple: (u64, u64) = Point(2, 3).into();
+        assert_eq!(point_tuple.0, 2);
+        assert_eq!(point_tuple.1, 3);
     }
 
     #[test]
