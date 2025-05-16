@@ -1,4 +1,8 @@
 """Routing analysis library for the reV model"""
 
+import importlib.metadata
+
 from ._rust import find_path  # type: ignore
-from ._version import __version__
+
+
+__version__ = version = importlib.metadata.version("reVRt")
