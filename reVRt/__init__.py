@@ -2,7 +2,7 @@
 
 import importlib.metadata
 
-from ._rust import find_paths  # type: ignore
+from ._rust import find_paths  # noqa: F401 type: ignore
 
 
 __version__ = version = importlib.metadata.version("reVRt")
