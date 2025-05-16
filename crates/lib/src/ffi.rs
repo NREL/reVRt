@@ -67,7 +67,7 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     route cost.
 #[pyfunction]
 #[pyo3(signature = (zarr_fp, cost_layers, start, end, cache_size=250_000_000))]
-fn find_path(
+fn find_paths(
     zarr_fp: PathBuf,
     cost_layers: String,
     start: Vec<(u64, u64)>,

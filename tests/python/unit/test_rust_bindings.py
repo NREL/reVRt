@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 import xarray as xr
 
-from reVRt import find_path
+from reVRt import find_paths
 
 
 def test_basic_single_route(tmp_path):
@@ -34,7 +34,7 @@ def test_basic_single_route(tmp_path):
     ds.chunk({"x": 4, "y": 3}).to_zarr(test_cost_fp, mode="w", zarr_format=3)
 
     cost_definition = {"cost_layers": [{"layer_name": "test_costs"}]}
-    results = find_path(
+    results = find_paths(
         zarr_fp=test_cost_fp,
         cost_layers=json.dumps(cost_definition),
         start=[(1, 1)],
