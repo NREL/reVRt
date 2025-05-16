@@ -33,14 +33,12 @@ fn find_path(
     start: (u64, u64),
     end: Vec<(u64, u64)>,
     cache_size: u64,
-) -> Result<()> {
+) -> Result<Vec<(Vec<(u64, u64)>, usize)>> {
+    let start: Point = start.into();
     let end: Vec<Point> = end.into_iter().map(Into::into).collect();
-    println!("Hello from Rust!");
-    println!("Got zarr path: {:?}", &zarr_fp);
-    println!("Got cost layers: {:?}", &cost_layers);
-    println!("Got stating point: {:?}", &start);
-    println!("Got ending points: {:?}", &end);
-    println!("Got cache size: {:?}", &cache_size);
-    Err(Error::Undefined("This is an error".into()))
-    // Ok(())
+    let paths = resolve(zarr_fp, &cost_layers, cache_size, &[start], end)?;
+    Ok(paths
+        .into_iter()
+        .map(|(path, cost)| (path.into_iter().map(Into::into).collect(), cost))
+        .collect())
 }
