@@ -20,7 +20,7 @@ impl From<Error> for PyErr {
 /// A Python module implemented in Rust
 #[pymodule]
 fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(find_path, m)?)?;
+    m.add_function(wrap_pyfunction!(find_paths, m)?)?;
     m.add("reVRtRustError", py.get_type::<reVRtRustError>())?;
     Ok(())
 }
