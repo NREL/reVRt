@@ -8,6 +8,6 @@ rust-version.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-nrel_transmission = { workspace = true }
+nrel-transmission = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
