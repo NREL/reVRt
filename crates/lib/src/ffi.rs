@@ -26,7 +26,47 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 /// A Python module implemented in Rust
+///
+/// Testing this
+///
+/// Parameters
+/// ----------
+/// zarr_fp : path-like
+///     Path to zarr file containing cost layers.
+/// cost_layers : str
+///     JSON string representation of a list of dictionaries
+///     that define the cost layer computation. Each dictionary
+///     must have at least one key: "layer_name". This key points
+///     to the layer in the Zarr file that should be read in. The
+///     other optional keys are "multiplier_layer", which is the
+///     name of a layer in the Zarr file that should be multiplied
+///     onto the original layer and "multiplier_scalar", which
+///     should be a float that should be applied to scale the layer.
+///     All of the layers in the list are processed this way and then
+///     summed to obtain the final cost layer for routing.
+/// start : list of (int, int)
+///     List of two-tuples containing non-negative integers representing
+///     the indices in the array for the pixel from which routing should
+///     begin. A unique path will be returned for each of the starting
+///     points.
+/// end : list of (int, int)
+///     List of two-tuples containing non-negative integers representing
+///     the indices in the array for the any allowed final pixel.
+///     When the algorithm reaches any of these points, the routing
+///     is terminated and the final path + cost is returned.
+/// cache_size : int, default=250_000_000
+///     Cache size to use for computation, in bytes.
+///     By default, `250,000,000` (250MB).
+///
+/// Returns
+/// -------
+/// list of tuples
+///     List of path routing results. Each result is a tuple
+///     where the first element is a list of points that the
+///     route goes through and the second element is the final
+///     route cost.
 #[pyfunction]
+#[pyo3(signature = (zarr_fp, cost_layers, start, end, cache_size=250_000_000))]
 fn find_path(
     zarr_fp: PathBuf,
     cost_layers: String,
