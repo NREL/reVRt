@@ -25,9 +25,14 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-/// A Python module implemented in Rust
+/// Find least-cost paths for one or more starting points.
 ///
-/// Testing this
+/// This function determined the least cost path for one or more starting
+/// points to one or more ending points. A unique path is returned for
+/// every starting point, but each route terminates when any of the ending
+/// points are found. To ensure that a path is found to every end point,
+/// call this function N times if you have N end points and pass a single
+/// end point each time.
 ///
 /// Parameters
 /// ----------
