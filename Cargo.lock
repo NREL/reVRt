@@ -760,6 +760,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "nrel_transmission"
+version = "0.0.4"
+dependencies = [
+ "ndarray",
+ "pathfinding",
+ "pyo3",
+ "rand",
+ "rayon",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.12",
+ "tracing",
+ "zarrs",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1101,28 +1118,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "reVRt"
-version = "0.0.4"
-dependencies = [
- "ndarray",
- "pathfinding",
- "pyo3",
- "rand",
- "rayon",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.12",
- "tracing",
- "zarrs",
-]
-
-[[package]]
 name = "reVX-transmission-cli"
 version = "0.0.4"
 dependencies = [
  "clap",
- "reVRt",
+ "nrel_transmission",
  "tracing",
  "tracing-subscriber",
 ]

@@ -1,5 +1,5 @@
 [package]
-name = "reVRt"
+name = "nrel_transmission"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
