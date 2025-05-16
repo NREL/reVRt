@@ -22,7 +22,3 @@ tempfile = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 zarrs = { workspace = true }
-
-
-[package.metadata.maturin]
-name = "reVRt"
