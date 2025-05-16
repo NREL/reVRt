@@ -4,7 +4,7 @@ import logging
 
 from gaps.cli import make_cli
 
-from reVRt._version import __version__
+from reVRt import __version__
 from reVRt.spatial_characterization.cli import lcp_characterizations_command
 
 
