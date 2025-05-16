@@ -17542,7 +17542,7 @@ packages:
 - pypi: .
   name: revrt
   version: 0.1.0
-  sha256: f8c26a23f5021fb18475cde615297d8cbbcc343ebe7a8df5f9752688fb2c51a8
+  sha256: 3fe4c9045fea291915591175bf68bc08a18b6670f058dfbd3e04530e318f278d
   requires_dist:
   - affine>=2.4.0,<3
   - dask>=2025.4.1,<2026

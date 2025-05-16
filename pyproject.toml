@@ -89,9 +89,11 @@ build = [
 [project.scripts]
 reVRt = "reVRt._cli:main"
 
+
 [tool.maturin]
 manifest-path = "crates/lib/Cargo.toml"
-module-name = "reVRt"
+module-name = "reVRt._rust"
+
 
 [tool.ruff]
 line-length = 79

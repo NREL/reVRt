@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use crate::error::{Error, Result};
 use crate::{Point, resolve};
 
-pyo3::create_exception!(reVRt, reVRtRustError, PyException);
+pyo3::create_exception!(_rust, reVRtRustError, PyException);
 
 impl From<Error> for PyErr {
     fn from(err: Error) -> PyErr {
@@ -19,7 +19,7 @@ impl From<Error> for PyErr {
 
 /// A Python module implemented in Rust
 #[pymodule]
-fn reVRt(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_path, m)?)?;
     m.add("reVRtRustError", py.get_type::<reVRtRustError>())?;
     Ok(())
