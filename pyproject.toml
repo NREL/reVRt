@@ -1,13 +1,10 @@
 [build-system]
-requires = [
-  "setuptools >= 78.1",
-  "setuptools_scm[toml] >= 8",
-]
-build-backend = 'setuptools.build_meta'
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
 
 [project]
-name="reVRt"
-dynamic = ["version"]
+name = "reVRt"
+version = "0.1.0"
 description = "National Renewable Energy Laboratory's (NREL's) Transmission for reVX tool"
 readme = "README.rst"
 authors = [
@@ -91,6 +88,10 @@ build = [
 
 [project.scripts]
 reVRt = "reVRt._cli:main"
+
+[tool.maturin]
+manifest-path = "crates/lib/Cargo.toml"
+module-name = "reVRt"
 
 [tool.ruff]
 line-length = 79
@@ -188,14 +189,6 @@ convention = "numpy"
 max-args = 10
 max-positional-args = 10
 
-[tool.setuptools]
-packages = ["reVRt"]
-
-[tool.setuptools_scm]
-# Default git command uses "*[0-9]*", which breaks with cX.X.X tags.
-# This spec below forces setuptools_scm to look strictly for vX.X.X tags
-git_describe_command = [ "git", "describe", "--dirty", "--tags", "--long", "--match", "v*[0-9]*" ]
-version_file = "reVRt/_version.py"
 
 [tool.pixi.project]
 channels = ["conda-forge", "anaconda", "main"]
