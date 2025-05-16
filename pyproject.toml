@@ -152,6 +152,7 @@ ignore = [
   "D403", # first-line-capitalized
   "FURB140", # reimplemented-starmap
   "I001", # unsorted-imports
+  "N999", # invalid-module-name
   "PYI024", # collections-named-tuple
   "RUF012", # mutable-class-default
   "RUF031", # incorrectly-parenthesized-tuple-in-subscript
