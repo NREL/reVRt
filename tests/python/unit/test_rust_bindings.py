@@ -39,7 +39,6 @@ def test_basic_single_route(tmp_path):
         cost_layers=json.dumps(cost_definition),
         start=(1, 1),
         end=[(2, 6)],
-        cache_size=250_000_000,
     )
 
     assert len(results) == 1
