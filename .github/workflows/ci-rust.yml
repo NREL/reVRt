@@ -86,9 +86,11 @@ jobs:
           cache: true
           frozen: true
 
-      - run: pixi install python
+      - run: pixi install
 
       - run: pixi run python --version
+
+      - run: pixi run which python
 
       - uses: Swatinem/rust-cache@v2
         with:
