@@ -138,7 +138,9 @@ impl Dataset {
         cost.store_chunks_ndarray(chunk_subset, output).unwrap();
     }
 
-    pub(super) fn get_3x3(&self, x: u64, y: u64) -> Vec<(Point, f32)> {
+    pub(super) fn get_3x3(&self, point: &Point) -> Vec<(Point, f32)> {
+        let &Point(x, y) = point;
+
         trace!("Getting 3x3 neighborhood for ({}, {})", x, y);
 
         trace!("Cost dataset contents: {:?}", self.cost.list().unwrap());

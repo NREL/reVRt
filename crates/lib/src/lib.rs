@@ -59,12 +59,8 @@ impl Simulation {
     ///   thus a diagnonal move has to calculate consider the longer
     ///   distance.
     fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
-        trace!("Successors of {:?}", position);
-
-        let &Point(x, y) = position;
-        trace!("Position {} {}", x, y);
-
-        let neighbors = self.dataset.get_3x3(x, y);
+        trace!("Position {:?}", position);
+        let neighbors = self.dataset.get_3x3(position);
         let neighbors = neighbors
             .into_iter()
             .map(|(p, c)| (p, (1e4 * c) as usize))
