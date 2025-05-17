@@ -56,7 +56,7 @@ impl Simulation {
     /// - Handle the edges of the array.
     /// - Include diagonal moves.
     /// - Weight the cost. Remember that the cost is for a side,
-    ///   thus a diagnonal move has to calculate consider the longer
+    ///   thus a diagonal move has to calculate consider the longer
     ///   distance.
     fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
         trace!("Position {:?}", position);
