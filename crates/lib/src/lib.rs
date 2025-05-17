@@ -1,4 +1,4 @@
-//! # Path optimization with weigthed costs
+//! # Path optimization with weighted costs
 //!
 //!
 
