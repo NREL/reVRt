@@ -71,7 +71,7 @@ impl Simulation {
         neighbors
     }
 
-    fn scout(&mut self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, usize)> {
+    fn scout(&mut self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, f32)> {
         start
             .into_par_iter()
             .filter_map(|s| dijkstra(s, |p| self.successors(p), |p| end.contains(p)))
@@ -85,7 +85,7 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     cache_size: u64,
     start: &[Point],
     end: Vec<Point>,
-) -> Result<Vec<(Vec<Point>, usize)>> {
+) -> Result<Vec<(Vec<Point>, f32)>> {
     tracing::trace!("Cost function: {}", cost_function);
     let cost_function = CostFunction::from_json(cost_function)?;
     tracing::trace!("Cost function: {:?}", cost_function);
@@ -139,7 +139,7 @@ mod tests {
         assert!(solutions.len() == 1);
         let (track, cost) = &solutions[0];
         assert!(track.len() > 1);
-        assert!(cost > &0);
+        assert!(cost > &0.);
         dbg!(&solutions);
     }
 }
