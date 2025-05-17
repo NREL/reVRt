@@ -41,7 +41,7 @@ impl CostFunction {
 
                 let array =
                     zarrs::array::Array::open(features.clone(), &format!("/{layer_name}")).unwrap();
-                let cost = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
+                let mut cost = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
 
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
@@ -49,7 +49,7 @@ impl CostFunction {
                         layer_name, multiplier_scalar
                     );
                     // Apply the multiplier scalar to the value
-                    let cost = cost.clone() * multiplier_scalar;
+                    cost *= multiplier_scalar;
                     trace!(
                         "Cost for chunk ({}, {}) in layer {}: {}",
                         i, j, layer_name, cost
@@ -69,7 +69,7 @@ impl CostFunction {
                         .unwrap();
 
                     // Apply the multiplier layer to the value
-                    let cost = cost.clone() * multiplier_value;
+                    cost = cost * multiplier_value;
                     trace!(
                         "Cost for chunk ({}, {}) in layer {}: {}",
                         i, j, layer_name, cost
