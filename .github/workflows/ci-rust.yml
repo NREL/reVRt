@@ -90,4 +90,4 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - run: pixi run --frozen cargo test --workspace --no-fail-fast --no-default-features
+      - run: pixi run --frozen cargo test --workspace --no-fail-fast
