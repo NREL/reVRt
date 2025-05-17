@@ -61,6 +61,7 @@ test = [
   "pytest-profiling>=1.8.1,<2",
   "pytest-xdist>=3.6.1,<4",
   "rasterstats>=0.20.0,<0.21",
+  "scikit-image>=0.25.2,<0.26",
   "snakeviz>=2.2.2,<3",
   "tox>=4.25.0,<5",
 ]
@@ -257,6 +258,7 @@ pytest-mock = ">=3.14.0,<4"
 pytest-profiling = ">=1.8.1,<2"
 pytest-xdist = ">=3.6.1,<4"
 rasterstats = ">=0.20.0,<0.21"
+scikit-image = ">=0.25.2,<0.26"
 snakeviz = ">=2.2.2,<3"
 tox = ">=4.25.0,<5"
 
