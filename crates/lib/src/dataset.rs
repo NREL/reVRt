@@ -116,7 +116,6 @@ impl Dataset {
 
     fn calculate_chunk_cost(&self, i: u64, j: u64) {
         let output = self.cost_function.calculate_chunk(&self.source, i, j);
-        let output = 1e2 * output;
         trace!("Cost function: {:?}", self.cost_function);
 
         /*
