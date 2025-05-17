@@ -304,14 +304,72 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_single_variable_zarr() {
+    fn test_simple_cost_function_get_3x3() {
+        let path = samples::single_variable_zarr();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let test_points = vec![Point(3, 1), Point(2, 2)];
+        let array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
+        for point in test_points {
+            let results = dataset.get_3x3(&point);
+
+            for (Point(x, y), val) in results {
+                println!("Point: ({}, {}), Value: {}", x, y, val);
+                let subset =
+                    zarrs::array_subset::ArraySubset::new_with_ranges(&[x..(x + 1), y..(y + 1)]);
+                let subset_elements: Vec<f32> = array
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements.len(), 1);
+                assert_eq!(subset_elements[0], val)
+            }
+        }
+    }
+
+    #[test]
+    fn test_sample_cost_function_get_3x3() {
         let path = samples::single_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
-        let dataset = Dataset::open(path, cost_function, 250_000_000).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
 
-        let results = dataset.get_3x3(3, 2);
-        dbg!(&results);
-        let results = dataset.get_3x3(2, 2);
-        dbg!(&results);
+        let test_points = vec![Point(3, 1), Point(2, 2)];
+        let array_a = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
+        let array_b = zarrs::array::Array::open(dataset.source.clone(), "/B").unwrap();
+        let array_c = zarrs::array::Array::open(dataset.source.clone(), "/C").unwrap();
+        for point in test_points {
+            let results = dataset.get_3x3(&point);
+
+            for (Point(x, y), val) in results {
+                println!("Point: ({}, {}), Value: {}", x, y, val);
+                let subset =
+                    zarrs::array_subset::ArraySubset::new_with_ranges(&[x..(x + 1), y..(y + 1)]);
+                let subset_elements_a: Vec<f32> = array_a
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements_a.len(), 1);
+
+                let subset_elements_b: Vec<f32> = array_b
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements_b.len(), 1);
+
+                let subset_elements_c: Vec<f32> = array_c
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements_c.len(), 1);
+
+                assert_eq!(
+                    subset_elements_a[0]
+                        + subset_elements_b[0] * 100.
+                        + subset_elements_a[0] * subset_elements_b[0]
+                        + subset_elements_c[0] * subset_elements_a[0] * 2.,
+                    val
+                )
+            }
+        }
     }
 }
