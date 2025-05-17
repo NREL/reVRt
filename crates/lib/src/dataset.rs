@@ -202,12 +202,12 @@ impl Dataset {
 
         let neighbors = vec![
             (Point(x - 1, y - 1), value[0]),
-            (Point(x, y - 1), value[1]),
-            (Point(x + 1, y - 1), value[2]),
-            (Point(x - 1, y), value[3]),
-            (Point(x + 1, y), value[5]),
-            (Point(x - 1, y + 1), value[6]),
-            (Point(x, y + 1), value[7]),
+            (Point(x - 1, y), value[1]),
+            (Point(x - 1, y + 1), value[2]),
+            (Point(x, y - 1), value[3]),
+            (Point(x, y + 1), value[5]),
+            (Point(x + 1, y - 1), value[6]),
+            (Point(x + 1, y), value[7]),
             (Point(x + 1, y + 1), value[8]),
         ];
         trace!("Neighbors {:?}", neighbors);
