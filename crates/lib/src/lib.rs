@@ -40,6 +40,8 @@ struct Simulation {
 }
 
 impl Simulation {
+    const PRECISION_SCALAR: f32 = 1e4;
+
     fn new<P: AsRef<std::path::Path>>(
         store_path: P,
         cost_function: CostFunction,
