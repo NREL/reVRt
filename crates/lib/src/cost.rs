@@ -61,9 +61,11 @@ impl CostFunction {
                         "Layer {} has multiplier layer {}",
                         layer_name, multiplier_layer
                     );
-                    let multiplier_array =
-                        zarrs::array::Array::open(features.clone(), &format!("/{layer_name}"))
-                            .unwrap();
+                    let multiplier_array = zarrs::array::Array::open(
+                        features.clone(),
+                        &format!("/{multiplier_layer}"),
+                    )
+                    .unwrap();
                     let multiplier_value = multiplier_array
                         .retrieve_chunk_ndarray::<f32>(&[i, j])
                         .unwrap();
