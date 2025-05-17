@@ -22,6 +22,8 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 zarrs = { workspace = true }
 
+[build-dependencies]
+pyo3-build-config = "0.25.0"
 
 # [features]
 # extension-module = ["pyo3/extension-module"]
