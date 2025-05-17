@@ -98,7 +98,7 @@ impl Dataset {
         .into();
 
         if cache_size < 1_000_000 {
-            warn!("Cache size smalled than 1MB");
+            warn!("Cache size smaller than 1MB");
         }
         trace!("Creating cache with size {}MB", cache_size / 1_000_000);
         let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
