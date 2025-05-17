@@ -86,7 +86,7 @@ jobs:
           cache: true
           frozen: true
 
-      - run: pixi install python@3.11.4
+      - run: pixi install python
 
       - run: pixi run python --version
 
