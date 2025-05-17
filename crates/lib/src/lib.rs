@@ -65,7 +65,7 @@ impl Simulation {
         let neighbors = self.dataset.get_3x3(position);
         let neighbors = neighbors
             .into_iter()
-            .map(|(p, c)| (p, (1e4 * c) as usize))
+            .map(|(p, c)| (p, cost_as_usize(c)))
             .collect();
         trace!("Adjusting neighbors' types: {:?}", neighbors);
         neighbors
@@ -75,7 +75,25 @@ impl Simulation {
         start
             .into_par_iter()
             .filter_map(|s| dijkstra(s, |p| self.successors(p), |p| end.contains(p)))
-            .collect::<Vec<_>>()
+            .map(|(path, final_cost)| (path, unscaled_cost(final_cost)))
+            .collect()
+    }
+}
+
+fn cost_as_usize(cost: f32) -> usize {
+    let cost = cost * Simulation::PRECISION_SCALAR;
+    if cost.is_finite() && cost <= (usize::MAX as f32) {
+        cost as usize
+    } else {
+        usize::MAX
+    }
+}
+
+fn unscaled_cost(cost: usize) -> f32 {
+    if cost == usize::MAX {
+        cost as f32
+    } else {
+        (cost as f32) / Simulation::PRECISION_SCALAR
     }
 }
 
