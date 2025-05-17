@@ -56,7 +56,6 @@ impl Simulation {
     ///
     /// ToDo:
     /// - Handle the edges of the array.
-    /// - Include diagonal moves.
     /// - Weight the cost. Remember that the cost is for a side,
     ///   thus a diagonal move has to calculate consider the longer
     ///   distance.
