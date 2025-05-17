@@ -316,7 +316,6 @@ mod tests {
             let results = dataset.get_3x3(&point);
 
             for (Point(x, y), val) in results {
-                println!("Point: ({}, {}), Value: {}", x, y, val);
                 let subset =
                     zarrs::array_subset::ArraySubset::new_with_ranges(&[x..(x + 1), y..(y + 1)]);
                 let subset_elements: Vec<f32> = array
@@ -343,7 +342,6 @@ mod tests {
             let results = dataset.get_3x3(&point);
 
             for (Point(x, y), val) in results {
-                println!("Point: ({}, {}), Value: {}", x, y, val);
                 let subset =
                     zarrs::array_subset::ArraySubset::new_with_ranges(&[x..(x + 1), y..(y + 1)]);
                 let subset_elements_a: Vec<f32> = array_a
