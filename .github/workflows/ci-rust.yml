@@ -90,6 +90,4 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - run: pixi run --frozen cargo test --workspace --no-fail-fast
-        env:
-          PYTHON_SYS_EXECUTABLE: ${{ github.workspace }}/.pixi/envs/default/bin/python
+      - run: pixi run --frozen cargo test --workspace --no-fail-fast --no-default-features

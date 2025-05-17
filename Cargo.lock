@@ -766,7 +766,6 @@ dependencies = [
  "ndarray",
  "pathfinding",
  "pyo3",
- "pyo3-build-config",
  "rand",
  "rayon",
  "serde",

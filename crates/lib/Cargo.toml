@@ -21,6 +21,3 @@ tempfile = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 zarrs = { workspace = true }
-
-[build-dependencies]
-pyo3-build-config = "0.25.0"
