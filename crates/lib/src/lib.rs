@@ -60,6 +60,9 @@ impl Simulation {
     /// - Weight the cost. Remember that the cost is for a side,
     ///   thus a diagonal move has to calculate consider the longer
     ///   distance.
+    /// - Add starting cell cost by adding a is_start parameter and
+    ///   passing it down to the get_3x3 function so that it can add
+    ///   the center pixel to all successor cost values
     fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
         trace!("Position {:?}", position);
         let neighbors = self.dataset.get_3x3(position);
