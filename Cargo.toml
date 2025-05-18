@@ -20,8 +20,9 @@ pathfinding = "4.14.0"
 pyo3 = { version = "0.25.0", features = [
     "abi3-py311",
     "extension-module",
-    "multiple-pymethods",
+    "macros",
     "chrono",
+    "chrono-tz",
 ] }
 rand = "0.9.0"
 rayon = "1.10.0"
