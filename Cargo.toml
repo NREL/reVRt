@@ -10,7 +10,7 @@ authors = [
   "Paul Pinchuk <Pavlo.Pinchuk@nrel.gov>",
 ]
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.87.0"
 
 [workspace.dependencies]
 nrel-transmission = { version = "0.0.4", path = "crates/lib" }
@@ -25,4 +25,4 @@ tempfile = "3.19.1"
 thiserror = "2.0.12"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
-zarrs = { version = "0.19.2", features = ["async", "filesystem"] }
+zarrs = { version = "0.20.0", features = ["async", "filesystem"] }
