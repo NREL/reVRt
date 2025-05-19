@@ -10,7 +10,7 @@ authors = [
   "Paul Pinchuk <Pavlo.Pinchuk@nrel.gov>",
 ]
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.87.0"
 
 [workspace.dependencies]
 nrel-transmission = { version = "0.0.4", path = "crates/lib" }
