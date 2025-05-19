@@ -1,5 +1,5 @@
 [package]
-name = "reVX-transmission-cli"
+name = "revrt-cli"
 version = "0.0.4"
 authors.workspace = true
 edition.workspace = true
@@ -8,6 +8,6 @@ rust-version.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-reVRt = { workspace = true }
+revrt = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
