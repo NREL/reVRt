@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use tracing::{debug, info, trace};
 
-use reVRt::resolve;
+use revrt::resolve;
 
 #[derive(Parser)]
 #[command(version, about, author, long_about = None)]
@@ -46,11 +46,11 @@ fn main() {
     trace!("User given dataset: {:?}", cli.dataset);
 
     assert_eq!(cli.start.len(), 2);
-    let start = &reVRt::Point::new(cli.start[0] as u64, cli.start[1] as u64);
+    let start = &revrt::Point::new(cli.start[0] as u64, cli.start[1] as u64);
     trace!("Starting point: {:?}", start);
 
     assert_eq!(cli.end.len(), 2);
-    let end = vec![reVRt::Point::new(cli.end[0] as u64, cli.end[1] as u64)];
+    let end = vec![revrt::Point::new(cli.end[0] as u64, cli.end[1] as u64)];
     trace!("Ending point: {:?}", end);
 
     let result = resolve(
