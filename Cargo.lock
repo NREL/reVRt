@@ -1290,7 +1290,9 @@ version = "0.0.4"
 dependencies = [
  "ndarray",
  "pathfinding",
- "rand",
+ "pyo3",
+ "pyo3-build-config",
+ "rand 0.9.1",
  "rayon",
  "serde",
  "serde_json",
