@@ -80,8 +80,8 @@ fn find_paths(
     end: Vec<(u64, u64)>,
     cache_size: u64,
 ) -> Result<Vec<(Vec<(u64, u64)>, usize)>> {
-    let start: Vec<Point> = start.into_iter().map(Into::into).collect();
-    let end: Vec<Point> = end.into_iter().map(Into::into).collect();
+    let start: Vec<Point> = start.into_iter().map(|(x, y)| Point(x, y)).collect();
+    let end: Vec<Point> = end.into_iter().map(|(x, y)| Point(x, y)).collect();
     let paths = resolve(zarr_fp, &cost_layers, cache_size, &start, end)?;
     Ok(paths
         .into_iter()

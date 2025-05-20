@@ -23,12 +23,6 @@ impl Point {
     }
 }
 
-impl From<(u64, u64)> for Point {
-    fn from((x, y): (u64, u64)) -> Self {
-        Self(x, y)
-    }
-}
-
 impl From<Point> for (u64, u64) {
     fn from(Point(x, y): Point) -> (u64, u64) {
         (x, y)
@@ -100,20 +94,6 @@ pub fn resolve<P: AsRef<std::path::Path>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn point_from_tuple() {
-        let point = Point::from((2, 3));
-        assert_eq!(point.0, 2);
-        assert_eq!(point.1, 3);
-    }
-
-    #[test]
-    fn tuple_into_point() {
-        let point: Point = (2, 3).into();
-        assert_eq!(point.0, 2);
-        assert_eq!(point.1, 3);
-    }
 
     #[test]
     fn tuple_from_point() {
