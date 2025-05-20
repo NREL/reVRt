@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use tracing::{debug, info, trace};
 
-use nrel_transmission::resolve;
+use revrt::resolve;
 
 #[derive(Parser)]
 #[command(version, about, author, long_about = None)]
@@ -46,11 +46,17 @@ fn main() {
     trace!("User given dataset: {:?}", cli.dataset);
 
     assert_eq!(cli.start.len(), 2);
-    let start = &nrel_transmission::Point::new(cli.start[0] as u64, cli.start[1] as u64);
+    let start = &revrt::ArrayIndex {
+        i: cli.start[0] as u64,
+        j: cli.start[1] as u64,
+    };
     trace!("Starting point: {:?}", start);
 
     assert_eq!(cli.end.len(), 2);
-    let end = vec![nrel_transmission::Point::new(cli.end[0] as u64, cli.end[1] as u64)];
+    let end = vec![revrt::ArrayIndex {
+        i: cli.end[0] as u64,
+        j: cli.end[1] as u64,
+    }];
     trace!("Ending point: {:?}", end);
 
     let result = resolve(

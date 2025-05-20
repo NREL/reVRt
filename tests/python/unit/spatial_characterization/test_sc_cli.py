@@ -1,4 +1,4 @@
-"""Test reVRt spatial characterization CLI"""
+"""Test revrt spatial characterization CLI"""
 
 import json
 from pathlib import Path
@@ -11,13 +11,13 @@ import geopandas as gpd
 from rasterio.transform import Affine
 from shapely.geometry import box, LineString
 
-from reVRt.spatial_characterization.stats import (
+from revrt.spatial_characterization.stats import (
     Stat,
     FractionalStat,
     _PCT_PREFIX,
 )
-from reVRt.spatial_characterization.cli import buffered_lcp_characterizations
-from reVRt._cli import main
+from revrt.spatial_characterization.cli import buffered_lcp_characterizations
+from revrt._cli import main
 
 
 @pytest.fixture

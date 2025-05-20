@@ -15,23 +15,14 @@ use cost::CostFunction;
 use error::Result;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Point(u64, u64);
-
-impl Point {
-    pub fn new(x: u64, y: u64) -> Self {
-        Self(x, y)
-    }
+pub struct ArrayIndex {
+    pub i: u64,
+    pub j: u64,
 }
 
-impl From<(u64, u64)> for Point {
-    fn from((x, y): (u64, u64)) -> Self {
-        Self(x, y)
-    }
-}
-
-impl From<Point> for (u64, u64) {
-    fn from(Point(x, y): Point) -> (u64, u64) {
-        (x, y)
+impl From<ArrayIndex> for (u64, u64) {
+    fn from(ArrayIndex { i, j }: ArrayIndex) -> (u64, u64) {
+        (i, j)
     }
 }
 
@@ -62,7 +53,7 @@ impl Simulation {
     /// - Add starting cell cost by adding a is_start parameter and
     ///   passing it down to the get_3x3 function so that it can add
     ///   the center pixel to all successor cost values
-    fn successors(&self, position: &Point) -> Vec<(Point, usize)> {
+    fn successors(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, usize)> {
         trace!("Position {:?}", position);
         let neighbors = self.dataset.get_3x3(position);
         let neighbors = neighbors
@@ -73,7 +64,7 @@ impl Simulation {
         neighbors
     }
 
-    fn scout(&mut self, start: &[Point], end: Vec<Point>) -> Vec<(Vec<Point>, f32)> {
+    fn scout(&mut self, start: &[ArrayIndex], end: Vec<ArrayIndex>) -> Vec<(Vec<ArrayIndex>, f32)> {
         start
             .into_par_iter()
             .filter_map(|s| dijkstra(s, |p| self.successors(p), |p| end.contains(p)))
@@ -103,9 +94,9 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     store_path: P,
     cost_function: &str,
     cache_size: u64,
-    start: &[Point],
-    end: Vec<Point>,
-) -> Result<Vec<(Vec<Point>, f32)>> {
+    start: &[ArrayIndex],
+    end: Vec<ArrayIndex>,
+) -> Result<Vec<(Vec<ArrayIndex>, f32)>> {
     tracing::trace!("Cost function: {}", cost_function);
     let cost_function = CostFunction::from_json(cost_function)?;
     tracing::trace!("Cost function: {:?}", cost_function);
@@ -120,31 +111,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn point_from_tuple() {
-        let point = Point::from((2, 3));
-        assert_eq!(point.0, 2);
-        assert_eq!(point.1, 3);
+    fn tuple_from_index() {
+        let index_tuple: (u64, u64) = From::from(ArrayIndex { i: 2, j: 3 });
+        assert_eq!(index_tuple.0, 2);
+        assert_eq!(index_tuple.1, 3);
     }
 
     #[test]
-    fn tuple_into_point() {
-        let point: Point = (2, 3).into();
-        assert_eq!(point.0, 2);
-        assert_eq!(point.1, 3);
+    fn index_into_tuple() {
+        let index_tuple: (u64, u64) = ArrayIndex { i: 2, j: 3 }.into();
+        assert_eq!(index_tuple.0, 2);
+        assert_eq!(index_tuple.1, 3);
     }
 
     #[test]
-    fn tuple_from_point() {
-        let point_tuple: (u64, u64) = From::from(Point(2, 3));
-        assert_eq!(point_tuple.0, 2);
-        assert_eq!(point_tuple.1, 3);
-    }
-
-    #[test]
-    fn point_into_tuple() {
-        let point_tuple: (u64, u64) = Point(2, 3).into();
-        assert_eq!(point_tuple.0, 2);
-        assert_eq!(point_tuple.1, 3);
+    fn vec_contains_index() {
+        let vec_of_indices = [ArrayIndex { i: 2, j: 3 }, ArrayIndex { i: 5, j: 6 }];
+        assert!(vec_of_indices.contains(&ArrayIndex { i: 5, j: 6 }));
+        assert!(!vec_of_indices.contains(&ArrayIndex { i: 8, j: 9 }));
     }
 
     #[test]
@@ -153,13 +137,13 @@ mod tests {
         let cost_function = cost::sample::cost_function();
         //let cost_function = CostFunction::from_json(&cost::sample::as_text_v1()).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
-        let start = vec![Point(2, 3)];
-        let end = vec![Point(6, 6)];
+        let start = vec![ArrayIndex { i: 2, j: 3 }];
+        let end = vec![ArrayIndex { i: 6, j: 6 }];
         let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
         assert!(solutions.len() == 1);
         let (track, cost) = &solutions[0];
         assert!(track.len() > 1);
         assert!(cost > &0.);
-        dbg!(&solutions);
     }
 }

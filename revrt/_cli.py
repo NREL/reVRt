@@ -1,11 +1,11 @@
-"""reVRt command line interface (CLI)"""
+"""revrt command line interface (CLI)"""
 
 import logging
 
 from gaps.cli import make_cli
 
-from reVRt import __version__
-from reVRt.spatial_characterization.cli import lcp_characterizations_command
+from revrt import __version__
+from revrt.spatial_characterization.cli import lcp_characterizations_command
 
 
 logger = logging.getLogger(__name__)

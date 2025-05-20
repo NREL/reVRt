@@ -4,15 +4,15 @@ use pyo3::exceptions::{PyException, PyIOError};
 use pyo3::prelude::*;
 
 use crate::error::{Error, Result};
-use crate::{Point, resolve};
+use crate::{ArrayIndex, resolve};
 
-pyo3::create_exception!(_rust, reVRtRustError, PyException);
+pyo3::create_exception!(_rust, revrtRustError, PyException);
 
 impl From<Error> for PyErr {
     fn from(err: Error) -> PyErr {
         match err {
             Error::IO(msg) => PyIOError::new_err(msg),
-            Error::Undefined(msg) => reVRtRustError::new_err(msg),
+            Error::Undefined(msg) => revrtRustError::new_err(msg),
         }
     }
 }
@@ -21,7 +21,7 @@ impl From<Error> for PyErr {
 #[pymodule]
 fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_paths, m)?)?;
-    m.add("reVRtRustError", py.get_type::<reVRtRustError>())?;
+    m.add("revrtRustError", py.get_type::<revrtRustError>())?;
     Ok(())
 }
 
@@ -72,6 +72,7 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     route cost.
 #[pyfunction]
 #[pyo3(signature = (zarr_fp, cost_layers, start, end, cache_size=250_000_000))]
+#[allow(clippy::type_complexity)]
 fn find_paths(
     zarr_fp: PathBuf,
     cost_layers: String,
@@ -79,8 +80,11 @@ fn find_paths(
     end: Vec<(u64, u64)>,
     cache_size: u64,
 ) -> Result<Vec<(Vec<(u64, u64)>, f32)>> {
-    let start: Vec<Point> = start.into_iter().map(Into::into).collect();
-    let end: Vec<Point> = end.into_iter().map(Into::into).collect();
+    let start: Vec<ArrayIndex> = start
+        .into_iter()
+        .map(|(i, j)| ArrayIndex { i, j })
+        .collect();
+    let end: Vec<ArrayIndex> = end.into_iter().map(|(i, j)| ArrayIndex { i, j }).collect();
     let paths = resolve(zarr_fp, &cost_layers, cache_size, &start, end)?;
     Ok(paths
         .into_iter()

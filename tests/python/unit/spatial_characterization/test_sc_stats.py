@@ -8,19 +8,19 @@ import xarray as xr
 from shapely.geometry import box
 from rasterio.transform import Affine
 
-from reVRt.spatial_characterization.stats import (
+from revrt.spatial_characterization.stats import (
     Stat,
     FractionalStat,
     ComputableStats,
     _PCT_PREFIX,
 )
-from reVRt.exceptions import reVRtNotImplementedError, reVRtValueError
+from revrt.exceptions import revrtNotImplementedError, revrtValueError
 
 
 def test_ni_error_message():
     """Test error message for not implemented stat"""
 
-    with pytest.raises(reVRtNotImplementedError) as exc_info:
+    with pytest.raises(revrtNotImplementedError) as exc_info:
         Stat.PIXEL_COUNT.compute(1, 2, 3, "a", kw="another")
 
     assert (
@@ -241,7 +241,7 @@ def test_computable_stats_from_other_iterable(in_iter):
 
 def test_computable_stats_unknown_stat():
     """Test that an unknown stat raises error"""
-    with pytest.raises(reVRtValueError) as exc_info:
+    with pytest.raises(revrtValueError) as exc_info:
         ComputableStats.from_iter("DNE")
 
     exc_info = str(exc_info.value)
@@ -252,7 +252,7 @@ def test_computable_stats_unknown_stat():
 
 def test_computable_stats_bad_percentile():
     """Test that a bad percentile raises error"""
-    with pytest.raises(reVRtValueError) as exc_info:
+    with pytest.raises(revrtValueError) as exc_info:
         ComputableStats.from_iter(f"{_PCT_PREFIX}100.5")
 
     assert (
@@ -260,7 +260,7 @@ def test_computable_stats_bad_percentile():
         == "Percentiles must be between 0 and 100 (inclusive). Got: 100.5"
     )
 
-    with pytest.raises(reVRtValueError) as exc_info:
+    with pytest.raises(revrtValueError) as exc_info:
         ComputableStats.from_iter(f"{_PCT_PREFIX}-10")
 
     assert (

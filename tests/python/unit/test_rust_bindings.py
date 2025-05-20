@@ -1,4 +1,4 @@
-"""reVRt rust binding tests"""
+"""revrt rust binding tests"""
 
 import json
 from pathlib import Path
@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 from skimage.graph import MCP
 
-from reVRt import find_paths
+from revrt import find_paths
 
 
 def test_basic_single_route(tmp_path):
