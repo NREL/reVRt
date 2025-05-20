@@ -92,7 +92,7 @@ reVRt = "reVRt._cli:main"
 
 
 [tool.maturin]
-manifest-path = "crates/lib/Cargo.toml"
+manifest-path = "crates/revrt/Cargo.toml"
 module-name = "reVRt._rust"
 features = ["pyo3/extension-module"]
 
