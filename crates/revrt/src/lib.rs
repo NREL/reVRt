@@ -58,7 +58,7 @@ impl Simulation {
         let neighbors = self.dataset.get_3x3(position);
         let neighbors = neighbors
             .into_iter()
-            .map(|(p, c)| (p, cost_as_u64(c)))
+            .map(|(p, c)| (p, cost_as_u64(c))) // ToDo: Maybe it's better to have get_3x3 return a u64 - then we can skip this map altogether
             .collect();
         trace!("Adjusting neighbors' types: {:?}", neighbors);
         neighbors
