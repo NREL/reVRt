@@ -6,7 +6,7 @@ use zarrs::storage::{
     ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
 };
 
-use crate::Point;
+use crate::ArrayIndex;
 use crate::cost::CostFunction;
 use crate::error::Result;
 
@@ -138,8 +138,8 @@ impl Dataset {
         cost.store_chunks_ndarray(chunk_subset, output).unwrap();
     }
 
-    pub(super) fn get_3x3(&self, x: u64, y: u64) -> Vec<(Point, f32)> {
-        trace!("Getting 3x3 neighborhood for ({}, {})", x, y);
+    pub(super) fn get_3x3(&self, i: u64, j: u64) -> Vec<(ArrayIndex, f32)> {
+        trace!("Getting 3x3 neighborhood for (i={}, j={})", i, j);
 
         trace!("Cost dataset contents: {:?}", self.cost.list().unwrap());
         // What is this size?
@@ -151,15 +151,15 @@ impl Dataset {
 
         // Cutting off the edges for now.
         let shape = cost.shape();
-        if x == 0 || x >= (shape[0] - 1) || y == 0 || y >= (shape[1] - 1) {
+        if i == 0 || i >= (shape[0] - 1) || j == 0 || j >= (shape[1] - 1) {
             warn!("I'm not ready to deal with the edges yet");
             return vec![];
         }
 
         // Capture the 3x3 neighborhood
         let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
-            (x - 1)..(x + 2),
-            (y - 1)..(y + 2),
+            (i - 1)..(i + 2),
+            (j - 1)..(j + 2),
         ]);
         trace!("Cost subset: {:?}", subset);
 
@@ -171,18 +171,18 @@ impl Dataset {
             chunks.num_elements_usize()
         );
 
-        for i in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[0]) {
-            for j in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
+        for ci in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[0]) {
+            for cj in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
                 trace!(
                     "Checking if cost for chunk ({}, {}) has been calculated",
-                    i, j
+                    ci, cj
                 );
-                if self.cost_chunk_idx.read().unwrap()[[i as usize, j as usize]] {
-                    trace!("Cost for chunk ({}, {}) already calculated", i, j);
+                if self.cost_chunk_idx.read().unwrap()[[ci as usize, cj as usize]] {
+                    trace!("Cost for chunk ({}, {}) already calculated", ci, cj);
                 } else {
-                    self.calculate_chunk_cost(i, j);
+                    self.calculate_chunk_cost(ci, cj);
                     let mut chunk_idx = self.cost_chunk_idx.write().unwrap();
-                    chunk_idx[[i as usize, j as usize]] = true;
+                    chunk_idx[[ci as usize, cj as usize]] = true;
                 }
             }
         }
@@ -199,14 +199,14 @@ impl Dataset {
         trace!("Read values {:?}", value);
 
         let neighbors = vec![
-            (Point(x - 1, y - 1), value[0]),
-            (Point(x, y - 1), value[1]),
-            (Point(x + 1, y - 1), value[2]),
-            (Point(x - 1, y), value[3]),
-            (Point(x + 1, y), value[5]),
-            (Point(x - 1, y + 1), value[6]),
-            (Point(x, y + 1), value[7]),
-            (Point(x + 1, y + 1), value[8]),
+            (ArrayIndex { i: i - 1, j: j - 1 }, value[0]),
+            (ArrayIndex { i: i, j: j - 1 }, value[1]),
+            (ArrayIndex { i: i + 1, j: j - 1 }, value[2]),
+            (ArrayIndex { i: i - 1, j: j }, value[3]),
+            (ArrayIndex { i: i + 1, j: j }, value[5]),
+            (ArrayIndex { i: i - 1, j: j + 1 }, value[6]),
+            (ArrayIndex { i: i, j: j + 1 }, value[7]),
+            (ArrayIndex { i: i + 1, j: j + 1 }, value[8]),
         ];
         trace!("Neighbors {:?}", neighbors);
 
