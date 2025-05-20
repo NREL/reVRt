@@ -138,7 +138,7 @@ impl Dataset {
     }
 
     pub(super) fn get_3x3(&self, index: &ArrayIndex) -> Vec<(ArrayIndex, f32)> {
-        let &ArrayIndex(i, j) = index;
+        let &ArrayIndex { i, j } = index;
 
         trace!("Getting 3x3 neighborhood for (i={}, j={})", i, j);
 
@@ -310,14 +310,14 @@ mod tests {
         let dataset =
             Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
 
-        let test_points = vec![Point(3, 1), Point(2, 2)];
+        let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
         let array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
         for point in test_points {
             let results = dataset.get_3x3(&point);
 
-            for (Point(x, y), val) in results {
+            for (ArrayIndex { i, j }, val) in results {
                 let subset =
-                    zarrs::array_subset::ArraySubset::new_with_ranges(&[x..(x + 1), y..(y + 1)]);
+                    zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
                 let subset_elements: Vec<f32> = array
                     .retrieve_array_subset_elements(&subset)
                     .expect("Error reading zarr data");
@@ -334,16 +334,16 @@ mod tests {
         let dataset =
             Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
 
-        let test_points = vec![Point(3, 1), Point(2, 2)];
+        let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
         let array_a = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
         let array_b = zarrs::array::Array::open(dataset.source.clone(), "/B").unwrap();
         let array_c = zarrs::array::Array::open(dataset.source.clone(), "/C").unwrap();
         for point in test_points {
             let results = dataset.get_3x3(&point);
 
-            for (Point(x, y), val) in results {
+            for (ArrayIndex { i, j }, val) in results {
                 let subset =
-                    zarrs::array_subset::ArraySubset::new_with_ranges(&[x..(x + 1), y..(y + 1)]);
+                    zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
                 let subset_elements_a: Vec<f32> = array_a
                     .retrieve_array_subset_elements(&subset)
                     .expect("Error reading zarr data");
