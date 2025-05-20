@@ -53,12 +53,12 @@ impl Simulation {
     /// - Add starting cell cost by adding a is_start parameter and
     ///   passing it down to the get_3x3 function so that it can add
     ///   the center pixel to all successor cost values
-    fn successors(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, usize)> {
+    fn successors(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, u64)> {
         trace!("Position {:?}", position);
         let neighbors = self.dataset.get_3x3(position);
         let neighbors = neighbors
             .into_iter()
-            .map(|(p, c)| (p, cost_as_usize(c)))
+            .map(|(p, c)| (p, cost_as_u64(c)))
             .collect();
         trace!("Adjusting neighbors' types: {:?}", neighbors);
         neighbors
@@ -73,21 +73,13 @@ impl Simulation {
     }
 }
 
-fn cost_as_usize(cost: f32) -> usize {
+fn cost_as_u64(cost: f32) -> u64 {
     let cost = cost * Simulation::PRECISION_SCALAR;
-    if cost.is_finite() && cost <= (usize::MAX as f32) {
-        cost as usize
-    } else {
-        usize::MAX
-    }
+    cost as u64
 }
 
-fn unscaled_cost(cost: usize) -> f32 {
-    if cost == usize::MAX {
-        cost as f32
-    } else {
-        (cost as f32) / Simulation::PRECISION_SCALAR
-    }
+fn unscaled_cost(cost: u64) -> f32 {
+    (cost as f32) / Simulation::PRECISION_SCALAR
 }
 
 pub fn resolve<P: AsRef<std::path::Path>>(
@@ -97,7 +89,6 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     start: &[ArrayIndex],
     end: Vec<ArrayIndex>,
 ) -> Result<Vec<(Vec<ArrayIndex>, f32)>> {
-    tracing::trace!("Cost function: {}", cost_function);
     let cost_function = CostFunction::from_json(cost_function)?;
     tracing::trace!("Cost function: {:?}", cost_function);
     let mut simulation: Simulation =
