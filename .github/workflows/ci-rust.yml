@@ -80,6 +80,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.87.0
+            override: true
+            profile: minimal
+
       - uses: prefix-dev/setup-pixi@v0.8.8
         with:
           pixi-version: v0.47.0
