@@ -200,12 +200,12 @@ impl Dataset {
 
         let neighbors = vec![
             (ArrayIndex { i: i - 1, j: j - 1 }, value[0]),
-            (ArrayIndex { i: i, j: j - 1 }, value[1]),
+            (ArrayIndex { i, j: j - 1 }, value[1]),
             (ArrayIndex { i: i + 1, j: j - 1 }, value[2]),
-            (ArrayIndex { i: i - 1, j: j }, value[3]),
-            (ArrayIndex { i: i + 1, j: j }, value[5]),
+            (ArrayIndex { i: i - 1, j }, value[3]),
+            (ArrayIndex { i: i + 1, j }, value[5]),
             (ArrayIndex { i: i - 1, j: j + 1 }, value[6]),
-            (ArrayIndex { i: i, j: j + 1 }, value[7]),
+            (ArrayIndex { i, j: j + 1 }, value[7]),
             (ArrayIndex { i: i + 1, j: j + 1 }, value[8]),
         ];
         trace!("Neighbors {:?}", neighbors);
