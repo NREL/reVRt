@@ -1,13 +1,13 @@
-"""Custom Exceptions and Errors for reVRt"""
+"""Custom Exceptions and Errors for revrt"""
 
 import logging
 
 
-logger = logging.getLogger("reVRt")
+logger = logging.getLogger("revrt")
 
 
-class reVRtError(Exception):  # noqa: N801
-    """Generic reVRt Error"""
+class revrtError(Exception):  # noqa: N801
+    """Generic revrt Error"""
 
     def __init__(self, *args, **kwargs):
         """Init exception and broadcast message to logger"""
@@ -16,21 +16,21 @@ class reVRtError(Exception):  # noqa: N801
             logger.error(str(args[0]), stacklevel=2)
 
 
-class reVRtKeyError(reVRtError, KeyError):  # noqa: N801
-    """reVRt KeyError"""
+class revrtKeyError(revrtError, KeyError):  # noqa: N801
+    """revrt KeyError"""
 
 
-class reVRtNotImplementedError(reVRtError, NotImplementedError):  # noqa: N801
-    """reVRt NotImplementedError"""
+class revrtNotImplementedError(revrtError, NotImplementedError):  # noqa: N801
+    """revrt NotImplementedError"""
 
 
-class reVRtRuntimeError(reVRtError, RuntimeError):  # noqa: N801
-    """reVRt RuntimeError"""
+class revrtRuntimeError(revrtError, RuntimeError):  # noqa: N801
+    """revrt RuntimeError"""
 
 
-class reVRtTypeError(reVRtError, TypeError):  # noqa: N801
-    """reVRt TypeError"""
+class revrtTypeError(revrtError, TypeError):  # noqa: N801
+    """revrt TypeError"""
 
 
-class reVRtValueError(reVRtError, ValueError):  # noqa: N801
-    """reVRt ValueError"""
+class revrtValueError(revrtError, ValueError):  # noqa: N801
+    """revrt ValueError"""

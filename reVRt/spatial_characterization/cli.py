@@ -1,4 +1,4 @@
-"""reVRt zonal stats command line interface (CLI)"""
+"""revrt zonal stats command line interface (CLI)"""
 
 import logging
 from pathlib import Path
@@ -10,7 +10,7 @@ from dask.distributed import Client
 from gaps.config import load_config
 from gaps.cli import CLICommandFromFunction
 
-from reVRt.spatial_characterization.zonal import ZonalStats
+from revrt.spatial_characterization.zonal import ZonalStats
 
 
 logger = logging.getLogger(__name__)
@@ -165,8 +165,8 @@ def _preprocess_stats_config(config, layers, row_widths):
               column (used to map to path ROW width).
             - stats: (OPTIONAL) Names of all statistics to compute.
               Statistics must be one of the members of
-              :class:`~reVRt.spatial_characterization.stats.Stat` or
-              :class:`~reVRt.spatial_characterization.stats.FractionalStat`,
+              :class:`~revrt.spatial_characterization.stats.Stat` or
+              :class:`~revrt.spatial_characterization.stats.FractionalStat`,
               or must start with the "percentile_" prefix and end with
               an int or float representing the percentile to compute
               (e.g. ``percentile_10.5``). If only one statistic is to be

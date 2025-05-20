@@ -3,7 +3,7 @@ requires = ["maturin>=1.8.6,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "reVRt"
+name = "NREL-reVRt"
 version = "0.1.0"
 description = "National Renewable Energy Laboratory's (NREL's) Transmission for reVX tool"
 readme = "README.rst"
@@ -88,12 +88,12 @@ build = [
 # repository = ""
 
 [project.scripts]
-reVRt = "reVRt._cli:main"
+reVRt = "revrt._cli:main"
 
 
 [tool.maturin]
 manifest-path = "crates/revrt/Cargo.toml"
-module-name = "reVRt._rust"
+module-name = "revrt._rust"
 features = ["pyo3/extension-module"]
 
 
@@ -210,14 +210,14 @@ build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 make-html = { cmd = "make html", cwd = "docs"}
-tests = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
-tests-u = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
-tests-i = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
+tests = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
+tests-u = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
+tests-i = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
 
 
 [tool.pixi.pypi-dependencies]
 NREL-gaps = ">=0.8.4,<0.9"
-reVRt = { path = ".", editable = true }
+NREL-reVRt = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
 # system

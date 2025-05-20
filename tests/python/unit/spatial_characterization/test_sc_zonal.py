@@ -9,9 +9,9 @@ import geopandas as gpd
 from shapely.geometry import box
 from rasterio.transform import Affine
 
-from reVRt.spatial_characterization.stats import _PCT_PREFIX
-from reVRt.spatial_characterization.zonal import ZonalStats
-from reVRt.exceptions import reVRtTypeError
+from revrt.spatial_characterization.stats import _PCT_PREFIX
+from revrt.spatial_characterization.zonal import ZonalStats
+from revrt.exceptions import revrtTypeError
 
 
 @pytest.fixture
@@ -250,7 +250,7 @@ def test_bad_callable(sample_raster, five_sample_zones):
     stats = zs.from_array(
         five_sample_zones, sample_raster, sample_raster.attrs["transform"]
     )
-    with pytest.raises(reVRtTypeError) as exc_info:
+    with pytest.raises(revrtTypeError) as exc_info:
         stats = list(stats)
 
     assert (

@@ -15,9 +15,9 @@ from rasterstats import zonal_stats as rzs
 from rasterstats.utils import VALID_STATS, DEFAULT_STATS
 from shapely.geometry import box, LineString
 
-from reVRt.spatial_characterization.stats import Stat
-from reVRt.spatial_characterization.zonal import ZonalStats
-from reVRt._cli import main
+from revrt.spatial_characterization.stats import Stat
+from revrt.spatial_characterization.zonal import ZonalStats
+from revrt._cli import main
 
 
 VALID_STATS.remove("nan")

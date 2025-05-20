@@ -6,13 +6,13 @@ use pyo3::prelude::*;
 use crate::error::{Error, Result};
 use crate::{ArrayIndex, resolve};
 
-pyo3::create_exception!(_rust, reVRtRustError, PyException);
+pyo3::create_exception!(_rust, revrtRustError, PyException);
 
 impl From<Error> for PyErr {
     fn from(err: Error) -> PyErr {
         match err {
             Error::IO(msg) => PyIOError::new_err(msg),
-            Error::Undefined(msg) => reVRtRustError::new_err(msg),
+            Error::Undefined(msg) => revrtRustError::new_err(msg),
         }
     }
 }
@@ -21,7 +21,7 @@ impl From<Error> for PyErr {
 #[pymodule]
 fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_paths, m)?)?;
-    m.add("reVRtRustError", py.get_type::<reVRtRustError>())?;
+    m.add("revrtRustError", py.get_type::<revrtRustError>())?;
     Ok(())
 }
 

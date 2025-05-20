@@ -15163,6 +15163,50 @@ packages:
   - pkginfo>=1.12.1.2,<2 ; extra == 'build'
   - twine>=6.1.0,<7 ; extra == 'build'
   requires_python: '>=3.9'
+- pypi: ./
+  name: nrel-revrt
+  version: 0.1.0
+  sha256: 461d745406bc8d136a018ea37bf233f4b7be14ed2b44f5a3596be104a3549d64
+  requires_dist:
+  - affine>=2.4.0,<3
+  - dask>=2025.4.1,<2026
+  - distributed>=2025.4.1,<2026
+  - geopandas>=1.0.1,<2
+  - numpy>=2.2.4,<3
+  - nrel-gaps>=0.8.4,<0.9
+  - rasterio>=1.4.3,<2
+  - rioxarray>=0.18.2,<0.19
+  - shapely>=2.0.7,<2.1.0
+  - zarr>=3.0.7,<4
+  - ipython>=9.1.0,<10 ; extra == 'dev'
+  - jupyter>=1.1.1,<2 ; extra == 'dev'
+  - maturin>=1.8.6,<2 ; extra == 'dev'
+  - pipreqs>=0.4.13,<0.5 ; extra == 'dev'
+  - ruff>=0.11.5,<0.12 ; extra == 'dev'
+  - ruff-lsp>=0.0.62,<0.0.63 ; extra == 'dev'
+  - pytest>=8.3.5,<9 ; extra == 'test'
+  - pytest-cases>=3.8.6,<4 ; extra == 'test'
+  - pytest-cov>=6.1.1,<7 ; extra == 'test'
+  - pytest-mock>=3.14.0,<4 ; extra == 'test'
+  - pytest-profiling>=1.8.1,<2 ; extra == 'test'
+  - pytest-xdist>=3.6.1,<4 ; extra == 'test'
+  - rasterstats>=0.20.0,<0.21 ; extra == 'test'
+  - snakeviz>=2.2.2,<3 ; extra == 'test'
+  - tox>=4.25.0,<5 ; extra == 'test'
+  - ghp-import>=2.1.0,<3 ; extra == 'doc'
+  - myst-parser>=4.0.1,<5 ; extra == 'doc'
+  - numpydoc>=1.8.0,<2 ; extra == 'doc'
+  - pydata-sphinx-theme>=0.16.1,<0.17 ; extra == 'doc'
+  - sphinx>=8.2.3,<9 ; extra == 'doc'
+  - sphinx-click>=6.0.0,<7 ; extra == 'doc'
+  - sphinx-copybutton>=0.5.2,<0.6 ; extra == 'doc'
+  - sphinx-tabs>=3.4.1,<4 ; extra == 'doc'
+  - sphinxcontrib-mermaid>=1.0.0,<2 ; extra == 'doc'
+  - build>=1.2.2,<2 ; extra == 'build'
+  - pkginfo>=1.12.1.2,<2 ; extra == 'build'
+  - twine>=6.1.0,<7 ; extra == 'build'
+  requires_python: '>=3.11'
+  editable: true
 - pypi: https://files.pythonhosted.org/packages/90/c8/5ecf76123516aef9a9abae03779357f0087ac94b269d08b2a745c199632b/nrel_rex-0.3.3-py3-none-any.whl
   name: nrel-rex
   version: 0.3.3
@@ -17798,50 +17842,6 @@ packages:
   requires_dist:
   - requests>=1.1
   requires_python: '>=3.9'
-- pypi: ./
-  name: revrt
-  version: 0.1.0
-  sha256: ff0e46d48b7bb13c9f1aa1193705f1058630e2cd0e2a4f7ca0346bbe7ac97f68
-  requires_dist:
-  - affine>=2.4.0,<3
-  - dask>=2025.4.1,<2026
-  - distributed>=2025.4.1,<2026
-  - geopandas>=1.0.1,<2
-  - numpy>=2.2.4,<3
-  - nrel-gaps>=0.8.4,<0.9
-  - rasterio>=1.4.3,<2
-  - rioxarray>=0.18.2,<0.19
-  - shapely>=2.0.7,<2.1.0
-  - zarr>=3.0.7,<4
-  - ipython>=9.1.0,<10 ; extra == 'dev'
-  - jupyter>=1.1.1,<2 ; extra == 'dev'
-  - maturin>=1.8.6,<2 ; extra == 'dev'
-  - pipreqs>=0.4.13,<0.5 ; extra == 'dev'
-  - ruff>=0.11.5,<0.12 ; extra == 'dev'
-  - ruff-lsp>=0.0.62,<0.0.63 ; extra == 'dev'
-  - pytest>=8.3.5,<9 ; extra == 'test'
-  - pytest-cases>=3.8.6,<4 ; extra == 'test'
-  - pytest-cov>=6.1.1,<7 ; extra == 'test'
-  - pytest-mock>=3.14.0,<4 ; extra == 'test'
-  - pytest-profiling>=1.8.1,<2 ; extra == 'test'
-  - pytest-xdist>=3.6.1,<4 ; extra == 'test'
-  - rasterstats>=0.20.0,<0.21 ; extra == 'test'
-  - snakeviz>=2.2.2,<3 ; extra == 'test'
-  - tox>=4.25.0,<5 ; extra == 'test'
-  - ghp-import>=2.1.0,<3 ; extra == 'doc'
-  - myst-parser>=4.0.1,<5 ; extra == 'doc'
-  - numpydoc>=1.8.0,<2 ; extra == 'doc'
-  - pydata-sphinx-theme>=0.16.1,<0.17 ; extra == 'doc'
-  - sphinx>=8.2.3,<9 ; extra == 'doc'
-  - sphinx-click>=6.0.0,<7 ; extra == 'doc'
-  - sphinx-copybutton>=0.5.2,<0.6 ; extra == 'doc'
-  - sphinx-tabs>=3.4.1,<4 ; extra == 'doc'
-  - sphinxcontrib-mermaid>=1.0.0,<2 ; extra == 'doc'
-  - build>=1.2.2,<2 ; extra == 'build'
-  - pkginfo>=1.12.1.2,<2 ; extra == 'build'
-  - twine>=6.1.0,<7 ; extra == 'build'
-  requires_python: '>=3.11'
-  editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/rfc3339-validator-0.1.4-pyhd8ed1ab_1.conda
   sha256: 2e4372f600490a6e0b3bac60717278448e323cab1c0fecd5f43f7c56535a99c5
   md5: 36de09a8d3e5d5e6f4ee63af49e59706
