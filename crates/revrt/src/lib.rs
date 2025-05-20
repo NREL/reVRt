@@ -111,6 +111,13 @@ mod tests {
     }
 
     #[test]
+    fn vec_contains_index() {
+        let vec_of_indices = vec![ArrayIndex { i: 2, j: 3 }, ArrayIndex { i: 5, j: 6 }];
+        assert!(vec_of_indices.contains(&ArrayIndex { i: 5, j: 6 }));
+        assert!(!vec_of_indices.contains(&ArrayIndex { i: 8, j: 9 }));
+    }
+
+    #[test]
     fn minimalist() {
         let store_path = dataset::samples::single_variable_zarr();
         let cost_function = cost::sample::cost_function();
