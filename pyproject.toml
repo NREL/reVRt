@@ -222,7 +222,7 @@ reVRt = { path = ".", editable = true }
 [tool.pixi.dependencies]
 # system
 python = ">=3.11"
-rust = ">=1.85.0,<1.86"
+rust = ">=1.87.0,<1.88"
 # package
 affine = ">=2.4.0,<3"
 dask = ">=2025.4.1,<2026"

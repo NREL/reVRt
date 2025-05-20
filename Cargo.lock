@@ -74,6 +74,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-generic"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ddf3728566eefa873833159754f5732fb0951d3649e6e5b891cc70d56dd41673"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "async-lock"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff6e472cdea888a4bd64f342f09b3f50e1886d32afe8df3d663c01140b811b18"
+dependencies = [
+ "event-listener",
+ "event-listener-strategy",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -240,6 +262,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 
 [[package]]
+name = "concurrent-queue"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crc32c"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -311,32 +342,11 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
-dependencies = [
- "derive_more-impl 1.0.0",
-]
-
-[[package]]
-name = "derive_more"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
 dependencies = [
- "derive_more-impl 2.0.1",
-]
-
-[[package]]
-name = "derive_more-impl"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
- "unicode-xid",
+ "derive_more-impl",
 ]
 
 [[package]]
@@ -371,6 +381,27 @@ checksum = "976dd42dc7e85965fe702eb8164f21f450704bdde31faefd6471dba214cb594e"
 dependencies = [
  "libc",
  "windows-sys",
+]
+
+[[package]]
+name = "event-listener"
+version = "5.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3492acde4c3fc54c845eaab3eed8bd00c7a7d881f78bfc801e43a93dec1331ae"
+dependencies = [
+ "concurrent-queue",
+ "parking",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "event-listener-strategy"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
+dependencies = [
+ "event-listener",
+ "pin-project-lite",
 ]
 
 [[package]]
@@ -673,9 +704,9 @@ dependencies = [
 
 [[package]]
 name = "lru"
-version = "0.12.5"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "234cf4f4a04dc1f57e24b96cc0cd600cf2af460d4161ac5ecdd0af8e1f3b2a38"
+checksum = "9f8cc7106155f10bdf99a6f379688f543ad6596a415375b36a59a054ceda1198"
 dependencies = [
  "hashbrown",
 ]
@@ -790,24 +821,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nrel-transmission"
-version = "0.0.4"
-dependencies = [
- "ndarray",
- "pathfinding",
- "pyo3",
- "pyo3-build-config",
- "rand 0.9.1",
- "rayon",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.12",
- "tracing",
- "zarrs",
-]
-
-[[package]]
 name = "nu-ansi-term"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -912,6 +925,12 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "parking"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f38d5652c16fde515bb1ecef450ab0f6a219d619a7274976324d5e377f7dceba"
 
 [[package]]
 name = "parking_lot"
@@ -1213,16 +1232,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "reVX-transmission-cli"
-version = "0.0.4"
-dependencies = [
- "clap",
- "nrel-transmission",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "redox_syscall"
 version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1274,6 +1283,32 @@ name = "regex-syntax"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
+
+[[package]]
+name = "revrt"
+version = "0.0.4"
+dependencies = [
+ "ndarray",
+ "pathfinding",
+ "rand",
+ "rayon",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.12",
+ "tracing",
+ "zarrs",
+]
+
+[[package]]
+name = "revrt-cli"
+version = "0.0.4"
+dependencies = [
+ "clap",
+ "revrt",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "rustc-hash"
@@ -1871,16 +1906,18 @@ dependencies = [
 
 [[package]]
 name = "zarrs"
-version = "0.19.2"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b93e0ba1b5bd7ffeb95bb9a050312319483de95febf5d0c558f373eb3435f5c5"
+checksum = "68797789128107ed02c246573d1218670fed84e2042f6728ea9ca756ecee2683"
 dependencies = [
+ "async-generic",
+ "async-lock",
  "async-trait",
  "blosc-src",
  "bytemuck",
  "bytes",
  "crc32c",
- "derive_more 1.0.0",
+ "derive_more",
  "flate2",
  "futures",
  "half",
@@ -1898,20 +1935,39 @@ dependencies = [
  "thiserror 2.0.12",
  "thread_local",
  "unsafe_cell_slice",
+ "zarrs_data_type",
  "zarrs_filesystem",
  "zarrs_metadata",
+ "zarrs_metadata_ext",
+ "zarrs_plugin",
+ "zarrs_registry",
  "zarrs_storage",
  "zstd",
 ]
 
 [[package]]
-name = "zarrs_filesystem"
-version = "0.2.2"
+name = "zarrs_data_type"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07f0b4166ebf148688d13b658b722bfb48ca772c9b6ad633c86624d038a75f7b"
+checksum = "a8951286d52528c94625bbca889a44f40690daa2ecea2c0108249357f7f9bf64"
+dependencies = [
+ "derive_more",
+ "half",
+ "inventory",
+ "num",
+ "thiserror 2.0.12",
+ "zarrs_metadata",
+ "zarrs_plugin",
+]
+
+[[package]]
+name = "zarrs_filesystem"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5cc06dd18a47729eedaa4dd2c1427458e97772186ef6155b474159ae9fe02c23"
 dependencies = [
  "bytes",
- "derive_more 2.0.1",
+ "derive_more",
  "itertools",
  "libc",
  "page_size",
@@ -1924,11 +1980,25 @@ dependencies = [
 
 [[package]]
 name = "zarrs_metadata"
-version = "0.3.7"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "335987ba54a4ff76a6afea84f3e251551b57860bf59a5bbae5e7385ee37b1ded"
+checksum = "5b5144f87eeac14201a7d20d2cd0787598b1ae6175f4b4a384444e71b6ede004"
 dependencies = [
- "derive_more 2.0.1",
+ "derive_more",
+ "half",
+ "monostate",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
+name = "zarrs_metadata_ext"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41c838df6b7d892d46f909c6f21fed783b7ea9afe49bde68a23191cbd06ea8d5"
+dependencies = [
+ "derive_more",
  "half",
  "monostate",
  "num",
@@ -1936,18 +2006,38 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "thiserror 2.0.12",
+ "zarrs_metadata",
+ "zarrs_registry",
+]
+
+[[package]]
+name = "zarrs_plugin"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bfe664c4f15bc85b60cbca70d1fc48906b9cd71a6870fb3ae753f5a3550c7db"
+dependencies = [
+ "thiserror 2.0.12",
+]
+
+[[package]]
+name = "zarrs_registry"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9c5ec5c9a5c79cad5081990fe8ed3c39086046a08e8afb7e97a104cbf316a7d"
+dependencies = [
+ "regex",
 ]
 
 [[package]]
 name = "zarrs_storage"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bdc8bb77d6efa09970244fa9f7a57e170eeee270572fe05fc3457ab40e26d3f"
+checksum = "0908f7fe5a8b2e181d25b3fe9a6f0aa314dcc9a2e3e65ed9cf8b7a0ae77486d7"
 dependencies = [
  "async-trait",
  "auto_impl",
  "bytes",
- "derive_more 2.0.1",
+ "derive_more",
  "futures",
  "itertools",
  "parking_lot",
