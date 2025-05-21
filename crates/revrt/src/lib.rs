@@ -16,8 +16,14 @@ use error::Result;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ArrayIndex {
-    pub i: u64,
-    pub j: u64,
+    i: u64,
+    j: u64,
+}
+
+impl ArrayIndex {
+    pub fn new(i: u64, j: u64) -> Self {
+        Self { i, j }
+    }
 }
 
 impl From<ArrayIndex> for (u64, u64) {
