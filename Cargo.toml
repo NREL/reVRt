@@ -17,6 +17,13 @@ revrt = { version = "0.0.4", path = "crates/revrt" }
 clap = { version = "4.5.37", features = ["derive", "cargo"] }
 ndarray = { version = "0.16.1", features = ["rayon"] }
 pathfinding = "4.14.0"
+pyo3 = { version = "0.25.0", features = [
+    "abi3-py311",
+    "extension-module",
+    "macros",
+    "chrono",
+    "chrono-tz",
+] }
 rand = "0.9.0"
 rayon = "1.10.0"
 serde = { version = "1.0.219", features = ["derive"] }

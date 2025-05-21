@@ -1,16 +1,16 @@
-"""reVRt exception tests"""
+"""revrt exception tests"""
 
 from pathlib import Path
 
 import pytest
 
-from reVRt.exceptions import (
-    reVRtError,
-    reVRtKeyError,
-    reVRtNotImplementedError,
-    reVRtRuntimeError,
-    reVRtTypeError,
-    reVRtValueError,
+from revrt.exceptions import (
+    revrtError,
+    revrtKeyError,
+    revrtNotImplementedError,
+    revrtRuntimeError,
+    revrtTypeError,
+    revrtValueError,
 )
 
 
@@ -21,15 +21,15 @@ def test_exceptions_log_error(caplog, assert_message_was_logged):
     """Test that a raised exception logs message, if any."""
 
     try:
-        raise reVRtError  # noqa: TRY301
-    except reVRtError:
+        raise revrtError  # noqa: TRY301
+    except revrtError:
         pass
 
     assert not caplog.records
 
     try:
-        raise reVRtError(BASIC_ERROR_MESSAGE)  # noqa: TRY301
-    except reVRtError:
+        raise revrtError(BASIC_ERROR_MESSAGE)  # noqa: TRY301
+    except revrtError:
         pass
 
     assert_message_was_logged(BASIC_ERROR_MESSAGE, "ERROR")
@@ -38,8 +38,8 @@ def test_exceptions_log_error(caplog, assert_message_was_logged):
 def test_exceptions_log_uncaught_error(assert_message_was_logged):
     """Test that a raised exception logs message if uncaught."""
 
-    with pytest.raises(reVRtError):
-        raise reVRtError(BASIC_ERROR_MESSAGE)
+    with pytest.raises(revrtError):
+        raise revrtError(BASIC_ERROR_MESSAGE)
 
     assert_message_was_logged(BASIC_ERROR_MESSAGE, "ERROR")
 
@@ -48,13 +48,13 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
     "raise_type, catch_types",
     [
         (
-            reVRtNotImplementedError,
-            [reVRtError, reVRtNotImplementedError, NotImplementedError],
+            revrtNotImplementedError,
+            [revrtError, revrtNotImplementedError, NotImplementedError],
         ),
-        (reVRtKeyError, [reVRtError, reVRtKeyError, KeyError]),
-        (reVRtRuntimeError, [reVRtError, reVRtRuntimeError, RuntimeError]),
-        (reVRtTypeError, [reVRtError, reVRtTypeError, TypeError]),
-        (reVRtValueError, [reVRtError, reVRtValueError, ValueError]),
+        (revrtKeyError, [revrtError, revrtKeyError, KeyError]),
+        (revrtRuntimeError, [revrtError, revrtRuntimeError, RuntimeError]),
+        (revrtTypeError, [revrtError, revrtTypeError, TypeError]),
+        (revrtValueError, [revrtError, revrtValueError, ValueError]),
     ],
 )
 def test_catching_error_by_type(

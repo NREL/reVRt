@@ -1,4 +1,4 @@
-"""reVRt zonal characterization module"""
+"""revrt zonal characterization module"""
 
 import logging
 import warnings
@@ -10,8 +10,8 @@ import rasterio.errors
 import rioxarray
 import geopandas as gpd
 
-from reVRt.spatial_characterization.stats import ComputableStats
-from reVRt.exceptions import reVRtTypeError
+from revrt.spatial_characterization.stats import ComputableStats
+from revrt.exceptions import revrtTypeError
 
 
 _GPKG_GEOM_COL = "geometry"
@@ -37,8 +37,8 @@ class ZonalStats:
         stats : str | iterable of str, optional
             Names of all statistics to compute. Statistics must be one
             of the members of
-            :class:`~reVRt.spatial_characterization.stats.Stat` or
-            :class:`~reVRt.spatial_characterization.stats.FractionalStat`,
+            :class:`~revrt.spatial_characterization.stats.Stat` or
+            :class:`~revrt.spatial_characterization.stats.FractionalStat`,
             or must start with the "percentile_" prefix and end with an
             int or float representing the percentile to compute (e.g.
             ``percentile_10.5``). If only one statistic is to be
@@ -102,7 +102,7 @@ class ZonalStats:
 
     @cached_property
     def computable_stats(self):
-        """:class:`~reVRt.spatial_characterization.stats.ComputableStats`"""
+        """:class:`~revrt.spatial_characterization.stats.ComputableStats`"""
         return ComputableStats.from_iter(self._stats_input)
 
     @cached_property
@@ -351,7 +351,7 @@ def _safe_apply_func(zone_func, processed_raster):
             "zone_func must be a callable function "
             "which accepts a single `raster` arg."
         )
-        raise reVRtTypeError(msg)
+        raise revrtTypeError(msg)
 
     return zone_func(processed_raster)
 

@@ -1,13 +1,10 @@
 [build-system]
-requires = [
-  "setuptools >= 78.1",
-  "setuptools_scm[toml] >= 8",
-]
-build-backend = 'setuptools.build_meta'
+requires = ["maturin>=1.8.6,<2.0"]
+build-backend = "maturin"
 
 [project]
-name="reVRt"
-dynamic = ["version"]
+name = "NREL-reVRt"
+version = "0.1.0"
 description = "National Renewable Energy Laboratory's (NREL's) Transmission for reVX tool"
 readme = "README.rst"
 authors = [
@@ -27,6 +24,7 @@ classifiers=[
 #   "License :: OSI Approved :: BSD License",
   "Natural Language :: English",
   "Operating System :: OS Independent",
+  "Programming Language :: Rust",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -43,12 +41,14 @@ dependencies = [
   "rasterio>=1.4.3,<2",
   "rioxarray>=0.18.2,<0.19",
   "shapely>=2.0.7,<2.1.0",  # bump back to >2.1.0 when This PR is merged and released: https://github.com/shapely/shapely/pull/2283
+  "zarr>=3.0.7,<4",
 ]
 
 [project.optional-dependencies]
 dev = [
   "ipython>=9.1.0,<10",
   "jupyter>=1.1.1,<2",
+  "maturin>=1.8.6,<2",
   "pipreqs>=0.4.13,<0.5",
   "ruff>=0.11.5,<0.12",
   "ruff-lsp>=0.0.62,<0.0.63",
@@ -88,7 +88,14 @@ build = [
 # repository = ""
 
 [project.scripts]
-reVRt = "reVRt._cli:main"
+reVRt = "revrt._cli:main"
+
+
+[tool.maturin]
+manifest-path = "crates/revrt/Cargo.toml"
+module-name = "revrt._rust"
+features = ["pyo3/extension-module"]
+
 
 [tool.ruff]
 line-length = 79
@@ -185,11 +192,6 @@ convention = "numpy"
 max-args = 10
 max-positional-args = 10
 
-[tool.setuptools]
-packages = ["reVRt"]
-
-[tool.setuptools_scm]
-version_file = "reVRt/_version.py"
 
 [tool.pixi.project]
 channels = ["conda-forge", "anaconda", "main"]
@@ -207,14 +209,14 @@ build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.feature.dev.tasks]
 make-html = { cmd = "make html", cwd = "docs"}
-tests = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
-tests-u = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
-tests-i = "pytest --durations=20 -rapP -vv --cov=reVRt --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
+tests = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
+tests-u = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
+tests-i = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
 
 
 [tool.pixi.pypi-dependencies]
 NREL-gaps = ">=0.8.4,<0.9"
-reVRt = { path = ".", editable = true }
+NREL-reVRt = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
 # system
@@ -229,6 +231,7 @@ numpy = ">=2.2.4,<3"
 rasterio = ">=1.4.3,<2"
 rioxarray = ">=0.18.2,<0.19"
 shapely = ">=2.0.7,<2.1.0"  # bump back to >2.1.0 when This PR is merged and released: https://github.com/shapely/shapely/pull/2283
+zarr = ">=3.0.7,<4"
 
 # for gaps
 packaging = ">=24.2,<25"
@@ -237,9 +240,14 @@ packaging = ">=24.2,<25"
 ipython = ">=9.1.0,<10"
 jupyter = ">=1.1.1,<2"
 matplotlib = ">=3.10.1,<4"
+maturin = ">=1.8.6,<2"
+pip = ">=25.1.1,<26"
 pipreqs = ">=0.4.13,<0.5"
 ruff = ">=0.11.5,<0.12"
 ruff-lsp = ">=0.0.62,<0.0.63"
+
+[tool.pixi.feature.dev.pypi-dependencies]
+patchelf = ">=0.17.2.2,<0.18"
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=8.3.5,<9"

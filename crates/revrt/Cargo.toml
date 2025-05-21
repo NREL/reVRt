@@ -5,9 +5,14 @@ authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[lib]
+path = "src/lib.rs"
+crate-type = ["lib", "cdylib"]
+
 [dependencies]
 ndarray = { workspace = true }
 pathfinding = { workspace = true }
+pyo3 = { workspace = true }
 rand = { workspace = true }
 rayon = { workspace = true }
 serde = { workspace = true }
@@ -16,3 +21,6 @@ tempfile = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 zarrs = { workspace = true }
+
+[build-dependencies]
+pyo3-build-config = "0.25.0"
