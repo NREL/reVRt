@@ -1,6 +1,7 @@
 //! Cost fuction
 
-use ndarray::{Axis, stack};
+use ndarray::{stack, Axis};
+use rayon::prelude::*;
 use tracing::{info, trace};
 
 use crate::error::Result;
@@ -75,7 +76,7 @@ impl CostFunction {
 
         let cost = self
             .cost_layers
-            .iter()
+            .par_iter()
             .map(|layer| {
                 let layer_name = &layer.layer_name;
                 trace!("Layer name: {}", layer_name);
@@ -87,20 +88,25 @@ impl CostFunction {
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
                         "Layer {} has multiplier scalar {}",
-                        layer_name, multiplier_scalar
+                        layer_name,
+                        multiplier_scalar
                     );
                     // Apply the multiplier scalar to the value
                     cost *= multiplier_scalar;
                     trace!(
                         "Cost for chunk ({}, {}) in layer {}: {}",
-                        ci, cj, layer_name, cost
+                        ci,
+                        cj,
+                        layer_name,
+                        cost
                     );
                 }
 
                 if let Some(multiplier_layer) = &layer.multiplier_layer {
                     trace!(
                         "Layer {} has multiplier layer {}",
-                        layer_name, multiplier_layer
+                        layer_name,
+                        multiplier_layer
                     );
                     let multiplier_array = zarrs::array::Array::open(
                         features.clone(),
@@ -115,7 +121,10 @@ impl CostFunction {
                     cost = cost * multiplier_value;
                     trace!(
                         "Cost for chunk ({}, {}) in layer {}: {}",
-                        ci, cj, layer_name, cost
+                        ci,
+                        cj,
+                        layer_name,
+                        cost
                     );
                 }
                 cost
