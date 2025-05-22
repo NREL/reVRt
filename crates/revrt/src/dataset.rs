@@ -98,7 +98,7 @@ impl Dataset {
         .into();
 
         if cache_size < 1_000_000 {
-            warn!("Cache size smalled than 1MB");
+            warn!("Cache size smaller than 1MB");
         }
         trace!("Creating cache with size {}MB", cache_size / 1_000_000);
         let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
@@ -116,7 +116,6 @@ impl Dataset {
 
     fn calculate_chunk_cost(&self, i: u64, j: u64) {
         let output = self.cost_function.calculate_chunk(&self.source, i, j);
-        let output = 1e2 * output;
         trace!("Cost function: {:?}", self.cost_function);
 
         /*
@@ -138,7 +137,9 @@ impl Dataset {
         cost.store_chunks_ndarray(chunk_subset, output).unwrap();
     }
 
-    pub(super) fn get_3x3(&self, i: u64, j: u64) -> Vec<(ArrayIndex, f32)> {
+    pub(super) fn get_3x3(&self, index: &ArrayIndex) -> Vec<(ArrayIndex, f32)> {
+        let &ArrayIndex { i, j } = index;
+
         trace!("Getting 3x3 neighborhood for (i={}, j={})", i, j);
 
         trace!("Cost dataset contents: {:?}", self.cost.list().unwrap());
@@ -200,12 +201,12 @@ impl Dataset {
 
         let neighbors = vec![
             (ArrayIndex { i: i - 1, j: j - 1 }, value[0]),
-            (ArrayIndex { i, j: j - 1 }, value[1]),
-            (ArrayIndex { i: i + 1, j: j - 1 }, value[2]),
-            (ArrayIndex { i: i - 1, j }, value[3]),
-            (ArrayIndex { i: i + 1, j }, value[5]),
-            (ArrayIndex { i: i - 1, j: j + 1 }, value[6]),
-            (ArrayIndex { i, j: j + 1 }, value[7]),
+            (ArrayIndex { i: i - 1, j }, value[1]),
+            (ArrayIndex { i: i - 1, j: j + 1 }, value[2]),
+            (ArrayIndex { i, j: j - 1 }, value[3]),
+            (ArrayIndex { i, j: j + 1 }, value[5]),
+            (ArrayIndex { i: i + 1, j: j - 1 }, value[6]),
+            (ArrayIndex { i: i + 1, j }, value[7]),
             (ArrayIndex { i: i + 1, j: j + 1 }, value[8]),
         ];
         trace!("Neighbors {:?}", neighbors);
@@ -302,14 +303,70 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_single_variable_zarr() {
+    fn test_simple_cost_function_get_3x3() {
+        let path = samples::single_variable_zarr();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
+        let array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
+        for point in test_points {
+            let results = dataset.get_3x3(&point);
+
+            for (ArrayIndex { i, j }, val) in results {
+                let subset =
+                    zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
+                let subset_elements: Vec<f32> = array
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements.len(), 1);
+                assert_eq!(subset_elements[0], val)
+            }
+        }
+    }
+
+    #[test]
+    fn test_sample_cost_function_get_3x3() {
         let path = samples::single_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
-        let dataset = Dataset::open(path, cost_function, 250_000_000).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
 
-        let results = dataset.get_3x3(3, 2);
-        dbg!(&results);
-        let results = dataset.get_3x3(2, 2);
-        dbg!(&results);
+        let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
+        let array_a = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
+        let array_b = zarrs::array::Array::open(dataset.source.clone(), "/B").unwrap();
+        let array_c = zarrs::array::Array::open(dataset.source.clone(), "/C").unwrap();
+        for point in test_points {
+            let results = dataset.get_3x3(&point);
+
+            for (ArrayIndex { i, j }, val) in results {
+                let subset =
+                    zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
+                let subset_elements_a: Vec<f32> = array_a
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements_a.len(), 1);
+
+                let subset_elements_b: Vec<f32> = array_b
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements_b.len(), 1);
+
+                let subset_elements_c: Vec<f32> = array_c
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements_c.len(), 1);
+
+                assert_eq!(
+                    subset_elements_a[0]
+                        + subset_elements_b[0] * 100.
+                        + subset_elements_a[0] * subset_elements_b[0]
+                        + subset_elements_c[0] * subset_elements_a[0] * 2.,
+                    val
+                )
+            }
+        }
     }
 }

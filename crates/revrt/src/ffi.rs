@@ -79,7 +79,7 @@ fn find_paths(
     start: Vec<(u64, u64)>,
     end: Vec<(u64, u64)>,
     cache_size: u64,
-) -> Result<Vec<(Vec<(u64, u64)>, usize)>> {
+) -> Result<Vec<(Vec<(u64, u64)>, f32)>> {
     let start: Vec<ArrayIndex> = start
         .into_iter()
         .map(|(i, j)| ArrayIndex { i, j })
