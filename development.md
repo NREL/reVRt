@@ -28,6 +28,17 @@ points should be organized and moved to the appropriate section.
   - Goal can be multiple targets. Return the best solution for each target
     and return the best of the best. Maybe return in order of best cost.
 
+## Contract of service:
+
+This project is commited to deliver:
+- Find the best path. Local or partial optimal is not enough.
+- Able to scan routes on national scale with resolution O[10m].
+- Be at least as fast as the former application.
+- While taking the best from HPC, be able to run in a regular laptop.
+- Able to scan multiple solutions concurrently.
+- Be able to use it as an analysis tool without requiring advanced knowledge on Python or Rust.
+- Provide a smooth transition such that users from former application should require at most 1hr to adapt to this new solution.
+
 ## Priorities:
 
 1. Correctness. Give a correct answer at any cost.
