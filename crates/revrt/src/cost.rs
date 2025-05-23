@@ -19,10 +19,11 @@ pub(crate) struct CostFunction {
 #[derive(Debug, serde::Deserialize)]
 /// A cost layer
 ///
-/// Each cost layer is composed by operating on input features.
-///
-/// The cost layers have equal weight in the total cost, i.e. all layers are
-/// summed together.
+/// Each cost layer is a raster dataset, i.e. a regular grid, composed by
+/// operating on input features. Following the original `revX` structure,
+/// the possible compositions are limited to compobinations of the relation
+/// `weight * layer_name * multiplier_layer`, where the `weight` and the
+/// `multiplier_layer` are optional.
 struct CostLayer {
     layer_name: String,
     multiplier_scalar: Option<f32>,
