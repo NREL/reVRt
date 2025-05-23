@@ -56,10 +56,10 @@ impl CostFunction {
     pub(crate) fn calculate_chunk(
         &self,
         features: &zarrs::storage::ReadableListableStorage,
-        i: u64,
-        j: u64,
+        ci: u64,
+        cj: u64,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        debug!("Calculating cost for chunk ({}, {})", i, j);
+        debug!("Calculating cost for chunk ({}, {})", ci, cj);
 
         let cost = self
             .cost_layers
@@ -70,7 +70,7 @@ impl CostFunction {
 
                 let array =
                     zarrs::array::Array::open(features.clone(), &format!("/{layer_name}")).unwrap();
-                let mut cost = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
+                let mut cost = array.retrieve_chunk_ndarray::<f32>(&[ci, cj]).unwrap();
 
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
@@ -81,7 +81,7 @@ impl CostFunction {
                     cost *= multiplier_scalar;
                     trace!(
                         "Cost for chunk ({}, {}) in layer {}: {}",
-                        i, j, layer_name, cost
+                        ci, cj, layer_name, cost
                     );
                 }
 
@@ -96,14 +96,14 @@ impl CostFunction {
                     )
                     .unwrap();
                     let multiplier_value = multiplier_array
-                        .retrieve_chunk_ndarray::<f32>(&[i, j])
+                        .retrieve_chunk_ndarray::<f32>(&[ci, cj])
                         .unwrap();
 
                     // Apply the multiplier layer to the value
                     cost = cost * multiplier_value;
                     trace!(
                         "Cost for chunk ({}, {}) in layer {}: {}",
-                        i, j, layer_name, cost
+                        ci, cj, layer_name, cost
                     );
                 }
                 cost
