@@ -30,12 +30,29 @@ struct CostLayer {
 }
 
 impl CostFunction {
+    /// Create a new cost function from a JSON string (RevX format)
+    ///
+    /// # Arguments
+    /// `json`: A JSON string representing the cost function with the format
+    ///         used by RevX.
     pub(super) fn from_json(json: &str) -> Result<Self> {
         trace!("Parsing cost definition from json: {}", json);
         let cost = serde_json::from_str(json).unwrap();
         Ok(cost)
     }
 
+    /// Calculate the cost for a full chunk
+    ///
+    /// From a given Zarr dataset containting the input features, calculate
+    /// the cost for a full chunk.
+    ///
+    /// # Arguments
+    /// `features`: A Zarr dataset containing the input features.
+    /// `i`: The chunk index in the first dimension.
+    /// `j`: The chunk index in the second dimension.
+    ///
+    /// # Returns
+    /// A 2D array containing the cost for the chunk.
     pub(crate) fn calculate_chunk(
         &self,
         features: &zarrs::storage::ReadableListableStorage,
