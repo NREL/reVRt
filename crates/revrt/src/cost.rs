@@ -6,11 +6,23 @@ use tracing::{debug, trace};
 use crate::error::Result;
 
 #[derive(Debug, serde::Deserialize)]
+/// A cost function definition
+///
+/// `cost_layers`: A collection of cost layers with equal weight.
+///
+/// This was based on the original transmission router and is composed of
+/// layers that are summed together (per gridpoint) to give the total cost.
 pub(crate) struct CostFunction {
     cost_layers: Vec<CostLayer>,
 }
 
 #[derive(Debug, serde::Deserialize)]
+/// A cost layer
+///
+/// Each cost layer is composed by operating on input features.
+///
+/// The cost layers have equal weight in the total cost, i.e. all layers are
+/// summed together.
 struct CostLayer {
     layer_name: String,
     multiplier_scalar: Option<f32>,
