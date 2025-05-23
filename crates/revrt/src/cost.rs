@@ -36,6 +36,17 @@ impl CostFunction {
     /// # Arguments
     /// `json`: A JSON string representing the cost function with the format
     ///         used by RevX.
+    ///
+    /// # Returns
+    /// A `CostFunction` object.
+    ///
+    /// The JSON pattern used by RevX was the following:
+    /// ```json
+    /// {"cost_layers": [
+    ///   {"layer_name": "A"},
+    ///   {"layer_name": "A", "multiplier_scalar": 2, "multiplier_layer": "B"}
+    ///   ]}
+    /// ```
     pub(super) fn from_json(json: &str) -> Result<Self> {
         trace!("Parsing cost definition from json: {}", json);
         let cost = serde_json::from_str(json).unwrap();
