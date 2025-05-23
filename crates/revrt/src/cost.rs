@@ -135,9 +135,8 @@ pub(crate) mod sample {
           {"layer_name": "B", "multiplier_scalar": 100},
           {"layer_name": "A",
             "multiplier_layer": "B"},
-          {"layer_name": "C",
-            "multiplier_layer": "A",
-            "multiplier_scalar": 2}
+          {"layer_name": "C", "multiplier_scalar": 2,
+            "multiplier_layer": "A"}
 ]
         }
         "#
