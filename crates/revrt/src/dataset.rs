@@ -6,9 +6,9 @@ use zarrs::storage::{
     ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
 };
 
-use crate::ArrayIndex;
 use crate::cost::CostFunction;
 use crate::error::Result;
+use crate::ArrayIndex;
 
 /// Manages the features datasets and calculated total cost
 pub(super) struct Dataset {
@@ -176,7 +176,8 @@ impl Dataset {
             for cj in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
                 trace!(
                     "Checking if cost for chunk ({}, {}) has been calculated",
-                    ci, cj
+                    ci,
+                    cj
                 );
                 if self.cost_chunk_idx.read().unwrap()[[ci as usize, cj as usize]] {
                     trace!("Cost for chunk ({}, {}) already calculated", ci, cj);
