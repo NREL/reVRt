@@ -6,11 +6,24 @@ use tracing::{debug, trace};
 use crate::error::Result;
 
 #[derive(Debug, serde::Deserialize)]
+/// A cost function definition
+///
+/// `cost_layers`: A collection of cost layers with equal weight.
+///
+/// This was based on the original transmission router and is composed of
+/// layers that are summed together (per grid point) to give the total cost.
 pub(crate) struct CostFunction {
     cost_layers: Vec<CostLayer>,
 }
 
 #[derive(Debug, serde::Deserialize)]
+/// A cost layer
+///
+/// Each cost layer is a raster dataset, i.e. a regular grid, composed by
+/// operating on input features. Following the original `revX` structure,
+/// the possible compositions are limited to combinations of the relation
+/// `weight * layer_name * multiplier_layer`, where the `weight` and the
+/// `multiplier_layer` are optional.
 struct CostLayer {
     layer_name: String,
     multiplier_scalar: Option<f32>,
@@ -18,19 +31,47 @@ struct CostLayer {
 }
 
 impl CostFunction {
+    /// Create a new cost function from a JSON string (reVX format)
+    ///
+    /// # Arguments
+    /// `json`: A JSON string representing the cost function with the format
+    ///         used by reVX.
+    ///
+    /// # Returns
+    /// A `CostFunction` object.
+    ///
+    /// The JSON pattern used by reVX was the following:
+    /// ```json
+    /// {"cost_layers": [
+    ///   {"layer_name": "A"},
+    ///   {"layer_name": "A", "multiplier_scalar": 2, "multiplier_layer": "B"}
+    ///   ]}
+    /// ```
     pub(super) fn from_json(json: &str) -> Result<Self> {
         trace!("Parsing cost definition from json: {}", json);
         let cost = serde_json::from_str(json).unwrap();
         Ok(cost)
     }
 
+    /// Calculate the cost for a full chunk
+    ///
+    /// From a given Zarr dataset containing the input features, calculate
+    /// the cost for a full chunk.
+    ///
+    /// # Arguments
+    /// `features`: A Zarr dataset containing the input features.
+    /// `ci`: The chunk index in the first dimension.
+    /// `cj`: The chunk index in the second dimension.
+    ///
+    /// # Returns
+    /// A 2D array containing the cost for the chunk.
     pub(crate) fn calculate_chunk(
         &self,
         features: &zarrs::storage::ReadableListableStorage,
-        i: u64,
-        j: u64,
+        ci: u64,
+        cj: u64,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        debug!("Calculating cost for chunk ({}, {})", i, j);
+        debug!("Calculating cost for chunk ({}, {})", ci, cj);
 
         let cost = self
             .cost_layers
@@ -41,7 +82,7 @@ impl CostFunction {
 
                 let array =
                     zarrs::array::Array::open(features.clone(), &format!("/{layer_name}")).unwrap();
-                let mut cost = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
+                let mut cost = array.retrieve_chunk_ndarray::<f32>(&[ci, cj]).unwrap();
 
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
@@ -52,7 +93,7 @@ impl CostFunction {
                     cost *= multiplier_scalar;
                     trace!(
                         "Cost for chunk ({}, {}) in layer {}: {}",
-                        i, j, layer_name, cost
+                        ci, cj, layer_name, cost
                     );
                 }
 
@@ -67,14 +108,14 @@ impl CostFunction {
                     )
                     .unwrap();
                     let multiplier_value = multiplier_array
-                        .retrieve_chunk_ndarray::<f32>(&[i, j])
+                        .retrieve_chunk_ndarray::<f32>(&[ci, cj])
                         .unwrap();
 
                     // Apply the multiplier layer to the value
                     cost = cost * multiplier_value;
                     trace!(
                         "Cost for chunk ({}, {}) in layer {}: {}",
-                        i, j, layer_name, cost
+                        ci, cj, layer_name, cost
                     );
                 }
                 cost
@@ -105,9 +146,8 @@ pub(crate) mod sample {
           {"layer_name": "B", "multiplier_scalar": 100},
           {"layer_name": "A",
             "multiplier_layer": "B"},
-          {"layer_name": "C",
-            "multiplier_layer": "A",
-            "multiplier_scalar": 2}
+          {"layer_name": "C", "multiplier_scalar": 2,
+            "multiplier_layer": "A"}
 ]
         }
         "#
