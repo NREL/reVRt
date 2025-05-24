@@ -181,9 +181,20 @@ impl Dataset {
                 if self.cost_chunk_idx.read().unwrap()[[ci as usize, cj as usize]] {
                     trace!("Cost for chunk ({}, {}) already calculated", ci, cj);
                 } else {
-                    self.calculate_chunk_cost(ci, cj);
+                    trace!("Requesting write lock for cost_chunk_idx ({}, {})", ci, cj);
                     let mut chunk_idx = self.cost_chunk_idx.write().unwrap();
-                    chunk_idx[[ci as usize, cj as usize]] = true;
+                    trace!("Acquired write lock for cost_chunk_idx ({}, {})", ci, cj);
+                    if chunk_idx[[ci as usize, cj as usize]] {
+                        trace!(
+                            "Cost for chunk ({}, {}) already calculated while waiting for the lock",
+                            ci,
+                            cj
+                        );
+                    } else {
+                        self.calculate_chunk_cost(ci, cj);
+                        trace!("Recording chunk ({}, {}) as calculated", ci, cj);
+                        chunk_idx[[ci as usize, cj as usize]] = true;
+                    }
                 }
             }
         }
