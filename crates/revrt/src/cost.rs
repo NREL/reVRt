@@ -11,7 +11,7 @@ use crate::error::Result;
 /// `cost_layers`: A collection of cost layers with equal weight.
 ///
 /// This was based on the original transmission router and is composed of
-/// layers that are summed together (per gridpoint) to give the total cost.
+/// layers that are summed together (per grid point) to give the total cost.
 pub(crate) struct CostFunction {
     cost_layers: Vec<CostLayer>,
 }
@@ -21,7 +21,7 @@ pub(crate) struct CostFunction {
 ///
 /// Each cost layer is a raster dataset, i.e. a regular grid, composed by
 /// operating on input features. Following the original `revX` structure,
-/// the possible compositions are limited to compobinations of the relation
+/// the possible compositions are limited to combinations of the relation
 /// `weight * layer_name * multiplier_layer`, where the `weight` and the
 /// `multiplier_layer` are optional.
 struct CostLayer {
@@ -31,16 +31,16 @@ struct CostLayer {
 }
 
 impl CostFunction {
-    /// Create a new cost function from a JSON string (RevX format)
+    /// Create a new cost function from a JSON string (reVX format)
     ///
     /// # Arguments
     /// `json`: A JSON string representing the cost function with the format
-    ///         used by RevX.
+    ///         used by reVX.
     ///
     /// # Returns
     /// A `CostFunction` object.
     ///
-    /// The JSON pattern used by RevX was the following:
+    /// The JSON pattern used by reVX was the following:
     /// ```json
     /// {"cost_layers": [
     ///   {"layer_name": "A"},
@@ -55,13 +55,13 @@ impl CostFunction {
 
     /// Calculate the cost for a full chunk
     ///
-    /// From a given Zarr dataset containting the input features, calculate
+    /// From a given Zarr dataset containing the input features, calculate
     /// the cost for a full chunk.
     ///
     /// # Arguments
     /// `features`: A Zarr dataset containing the input features.
-    /// `i`: The chunk index in the first dimension.
-    /// `j`: The chunk index in the second dimension.
+    /// `ci`: The chunk index in the first dimension.
+    /// `cj`: The chunk index in the second dimension.
     ///
     /// # Returns
     /// A 2D array containing the cost for the chunk.
