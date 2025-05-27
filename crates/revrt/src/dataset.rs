@@ -182,7 +182,10 @@ impl Dataset {
                     trace!("Cost for chunk ({}, {}) already calculated", ci, cj);
                 } else {
                     trace!("Requesting write lock for cost_chunk_idx ({}, {})", ci, cj);
-                    let mut chunk_idx = self.cost_chunk_idx.write().unwrap();
+                    let mut chunk_idx = self
+                        .cost_chunk_idx
+                        .write()
+                        .expect("Failed to acquire write lock");
                     trace!("Acquired write lock for cost_chunk_idx ({}, {})", ci, cj);
                     if chunk_idx[[ci as usize, cj as usize]] {
                         trace!(
