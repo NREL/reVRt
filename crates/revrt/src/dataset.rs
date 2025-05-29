@@ -233,11 +233,11 @@ pub(crate) mod samples {
     use ndarray::Array2;
     use rand::Rng;
 
-    /// Create a single variable (/A) zarr store
+    /// Create a zarr store with a few sample layers
     ///
     /// Just a proof of concept with lots of hardcoded values
     /// that must be improved.
-    pub(crate) fn single_variable_zarr() -> std::path::PathBuf {
+    pub(crate) fn multi_variable_zarr() -> std::path::PathBuf {
         let ni = 8;
         let nj = 8;
         let ci = 4;
@@ -258,7 +258,7 @@ pub(crate) mod samples {
 
         // Create an array
         // Remember to remove /cost
-        for array_path in ["/A", "/B", "/C", "/cost"].iter() {
+        for array_path in ["/A", "/B", "/C", "/cost"] {
             let array = zarrs::array::ArrayBuilder::new(
                 vec![ni, nj], // array shape
                 zarrs::array::DataType::Float32,
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_simple_cost_function_get_3x3() {
-        let path = samples::single_variable_zarr();
+        let path = samples::multi_variable_zarr();
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
         let dataset =
@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn test_sample_cost_function_get_3x3() {
-        let path = samples::single_variable_zarr();
+        let path = samples::multi_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
         let dataset =
             Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");

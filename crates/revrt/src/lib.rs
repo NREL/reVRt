@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn minimalist() {
-        let store_path = dataset::samples::single_variable_zarr();
+        let store_path = dataset::samples::multi_variable_zarr();
         let cost_function = cost::sample::cost_function();
         //let cost_function = CostFunction::from_json(&cost::sample::as_text_v1()).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
