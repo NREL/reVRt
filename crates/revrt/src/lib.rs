@@ -169,7 +169,7 @@ mod tests {
         assert_eq!(cost, &expected_cost);
     }
 
-    #[test_case((1, 1), vec![(1, 4), (3, 1)], (3, 1), 3, 2.; "different cost endpoints")]
+    #[test_case((1, 1), vec![(1, 4), (3, 1), (4, 4)], (3, 1), 3, 2.; "different cost endpoints")]
     fn basic_routing_one_point_to_many(
         (si, sj): (u64, u64),
         endpoints: Vec<(u64, u64)>,
