@@ -168,4 +168,34 @@ mod tests {
         assert_eq!(track.len(), expected_num_steps);
         assert_eq!(cost, &expected_cost);
     }
+
+    #[test_case((1, 1), vec![(1, 4), (3, 1)], (3, 1), 3, 2.; "different cost endpoints")]
+    fn basic_routing_one_point_to_many(
+        (si, sj): (u64, u64),
+        endpoints: Vec<(u64, u64)>,
+        expected_endpoint: (u64, u64),
+        expected_num_steps: usize,
+        expected_cost: f32,
+    ) {
+        let store_path = dataset::samples::all_ones_cost_zarr();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![ArrayIndex { i: si, j: sj }];
+        let end = endpoints
+            .clone()
+            .into_iter()
+            .map(|(i, j)| ArrayIndex { i, j })
+            .collect();
+        let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 1);
+        let (track, cost) = &solutions[0];
+        assert_eq!(track.len(), expected_num_steps);
+        assert_eq!(cost, &expected_cost);
+        assert_eq!(track[0], ArrayIndex { i: 1, j: 1 });
+
+        let &ArrayIndex { i: ei, j: ej } = track.last().unwrap();
+        assert_eq!((ei, ej), expected_endpoint);
+    }
 }
