@@ -199,16 +199,16 @@ mod tests {
         assert_eq!((ei, ej), expected_endpoint);
     }
 
-    #[test_case((1, 1), vec![(1, 3), (3, 1)], 3, 2.; "horizontal and vertical")]
-    #[test_case((3, 3), vec![(3, 5), (1, 1), (3, 1)], 3, 2.; "horizontal")]
-    #[test_case((3, 3), vec![(5, 3), (5, 5), (1, 3)], 3, 2.; "vertical")]
+    #[test_case((1, 1), vec![(1, 3), (3, 1)], 1.; "horizontal and vertical")]
+    #[test_case((3, 3), vec![(3, 5), (1, 1), (3, 1)], 1.; "horizontal")]
+    #[test_case((3, 3), vec![(5, 3), (5, 5), (1, 3)], 1.; "vertical")]
+    #[test_case((3, 3), vec![(3, 1), (3, 4)], 0.; "zero costs")]
     fn routing_one_point_to_many_same_cost_and_length(
         (si, sj): (u64, u64),
         endpoints: Vec<(u64, u64)>,
-        expected_num_steps: usize,
-        expected_cost: f32,
+        cost_array_fill: f32,
     ) {
-        let store_path = dataset::samples::constant_value_cost_zarr(1.0);
+        let store_path = dataset::samples::constant_value_cost_zarr(cost_array_fill);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
@@ -223,8 +223,8 @@ mod tests {
         assert_eq!(solutions.len(), 1);
 
         let (track, cost) = solutions.swap_remove(0);
-        assert_eq!(track.len(), expected_num_steps);
-        assert_eq!(cost, expected_cost);
+        assert_eq!(track.len(), 3);
+        assert_eq!(cost, 2. * cost_array_fill);
         assert_eq!(track[0], start[0]);
 
         let &ArrayIndex { i: ei, j: ej } = track.last().unwrap();
