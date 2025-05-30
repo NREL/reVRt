@@ -1,4 +1,3 @@
-use std::cmp;
 use std::iter;
 use std::sync::RwLock;
 
