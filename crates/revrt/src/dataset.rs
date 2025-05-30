@@ -154,8 +154,12 @@ impl Dataset {
 
         // Cutting off the edges for now.
         let shape = cost.shape();
-        if i == 0 || i >= (shape[0] - 1) || j == 0 || j >= (shape[1] - 1) {
-            warn!("I'm not ready to deal with the edges yet");
+        if shape.contains(&0) {
+            warn!(
+                "Cannot compute 3x3 neighborhood for array with one or more
+                zero-length dimensions (Input shape: {:?})",
+                shape
+            );
             return vec![];
         }
 
