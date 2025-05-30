@@ -298,7 +298,7 @@ pub(crate) mod samples {
     }
 
     /// Create a zarr store with a cost layer comprised of all ones
-    pub(crate) fn all_ones_cost_zarr() -> std::path::PathBuf {
+    pub(crate) fn constant_value_cost_zarr(cost_value: f32) -> std::path::PathBuf {
         let (ni, nj) = (8, 8);
         let (ci, cj) = (4, 4);
 
@@ -330,7 +330,7 @@ pub(crate) mod samples {
 
         let (uni, unj): (usize, usize) = (ni.try_into().unwrap(), nj.try_into().unwrap());
         let data: Array2<f32> =
-            ndarray::Array::from_shape_vec((uni, unj), vec![1.0; uni * unj]).unwrap();
+            ndarray::Array::from_shape_vec((uni, unj), vec![cost_value; uni * unj]).unwrap();
 
         array
             .store_chunks_ndarray(

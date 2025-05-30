@@ -155,7 +155,7 @@ mod tests {
         expected_num_steps: usize,
         expected_cost: f32,
     ) {
-        let store_path = dataset::samples::all_ones_cost_zarr();
+        let store_path = dataset::samples::constant_value_cost_zarr(1.0);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
@@ -177,7 +177,7 @@ mod tests {
         expected_num_steps: usize,
         expected_cost: f32,
     ) {
-        let store_path = dataset::samples::all_ones_cost_zarr();
+        let store_path = dataset::samples::constant_value_cost_zarr(1.0);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
@@ -208,7 +208,7 @@ mod tests {
         expected_num_steps: usize,
         expected_cost: f32,
     ) {
-        let store_path = dataset::samples::all_ones_cost_zarr();
+        let store_path = dataset::samples::constant_value_cost_zarr(1.0);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
