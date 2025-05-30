@@ -1,3 +1,4 @@
+use std::iter;
 use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
@@ -152,16 +153,27 @@ impl Dataset {
 
         // Cutting off the edges for now.
         let shape = cost.shape();
-        if i == 0 || i >= (shape[0] - 1) || j == 0 || j >= (shape[1] - 1) {
-            warn!("I'm not ready to deal with the edges yet");
-            return vec![];
-        }
+        debug_assert!(!shape.contains(&0));
+
+        let max_i = shape[0] - 1;
+        let max_j = shape[1] - 1;
+
+        let i_range = match i {
+            0 if max_i == 0 => 0..1,
+            0 => 0..2,
+            _ if i == max_i => i - 1..i + 1,
+            _ => i - 1..i + 2,
+        };
+        let j_range = match j {
+            0 if max_j == 0 => 0..1,
+            0 => 0..2,
+            _ if j == max_j => j - 1..j + 1,
+            _ => j - 1..j + 2,
+        };
 
         // Capture the 3x3 neighborhood
-        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
-            (i - 1)..(i + 2),
-            (j - 1)..(j + 2),
-        ]);
+        let subset =
+            zarrs::array_subset::ArraySubset::new_with_ranges(&[i_range.clone(), j_range.clone()]);
         trace!("Cost subset: {:?}", subset);
 
         // Find the chunks that intersect the subset
@@ -212,16 +224,13 @@ impl Dataset {
 
         trace!("Read values {:?}", value);
 
-        let neighbors = vec![
-            (ArrayIndex { i: i - 1, j: j - 1 }, value[0]),
-            (ArrayIndex { i: i - 1, j }, value[1]),
-            (ArrayIndex { i: i - 1, j: j + 1 }, value[2]),
-            (ArrayIndex { i, j: j - 1 }, value[3]),
-            (ArrayIndex { i, j: j + 1 }, value[5]),
-            (ArrayIndex { i: i + 1, j: j - 1 }, value[6]),
-            (ArrayIndex { i: i + 1, j }, value[7]),
-            (ArrayIndex { i: i + 1, j: j + 1 }, value[8]),
-        ];
+        let neighbors = i_range
+            .flat_map(|e| iter::repeat(e).zip(j_range.clone()))
+            .zip(value)
+            .filter(|((ir, jr), _)| !(*ir == i && *jr == j)) // no center point
+            .map(|((ir, jr), v)| (ArrayIndex { i: ir, j: jr }, v))
+            .collect();
+
         trace!("Neighbors {:?}", neighbors);
 
         neighbors
@@ -310,7 +319,7 @@ pub(crate) mod samples {
         tmp_path.keep()
     }
 
-    /// Create a zarr store with a cost layer comprised of all ones
+    /// Create a zarr store with a cost layer comprised of a single value
     pub(crate) fn constant_value_cost_zarr(cost_value: f32) -> std::path::PathBuf {
         let (ni, nj) = (8, 8);
         let (ci, cj) = (4, 4);
@@ -354,11 +363,58 @@ pub(crate) mod samples {
 
         tmp_path.keep()
     }
+
+    /// Create a zarr store with a cost layer comprised of cell indices
+    pub(crate) fn cost_as_index_zarr(
+        (ni, nj): (u64, u64),
+        (ci, cj): (u64, u64),
+    ) -> std::path::PathBuf {
+        let tmp_path = tempfile::TempDir::new().unwrap();
+
+        let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
+            zarrs::filesystem::FilesystemStore::new(tmp_path.path())
+                .expect("could not open filesystem store"),
+        );
+
+        zarrs::group::GroupBuilder::new()
+            .build(store.clone(), "/")
+            .unwrap()
+            .store_metadata()
+            .unwrap();
+
+        let array = zarrs::array::ArrayBuilder::new(
+            vec![ni, nj], // array shape
+            zarrs::array::DataType::Float32,
+            vec![ci, cj].try_into().unwrap(), // regular chunk shape
+            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
+        )
+        .dimension_names(["y", "x"].into())
+        .build(store.clone(), "/cost")
+        .unwrap();
+
+        // Write array metadata to store
+        array.store_metadata().unwrap();
+
+        let a: Vec<f32> = (0..ni * nj).map(|x| x as f32).collect();
+        let data: Array2<f32> =
+            ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+                .unwrap();
+
+        array
+            .store_chunks_ndarray(
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+                data,
+            )
+            .unwrap();
+
+        tmp_path.keep()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     #[test]
     fn test_simple_cost_function_get_3x3() {
@@ -426,5 +482,103 @@ mod tests {
                 )
             }
         }
+    }
+
+    #[test]
+    fn test_get_3x3_single_item_array() {
+        let path = samples::cost_as_index_zarr((1, 1), (1, 1));
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
+
+        assert_eq!(results, vec![]);
+    }
+
+    #[test_case((0, 0), vec![(0, 1, 1.), (1, 0, 2.), (1, 1, 3.)] ; "top left corner")]
+    #[test_case((0, 1), vec![(0, 0, 0.), (1, 0, 2.), (1, 1, 3.)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 0, 0.), (0, 1, 1.), (1, 1, 3.)] ; "bottom left corner")]
+    #[test_case((1, 1), vec![(0, 0, 0.), (0, 1, 1.), (1, 0, 2.)] ; "bottom right corner")]
+    fn test_get_3x3_two_by_two_array((si, sj): (u64, u64), expected_output: Vec<(u64, u64, f32)>) {
+        let path = samples::cost_as_index_zarr((2, 2), (2, 2));
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
+
+        assert_eq!(
+            results,
+            expected_output
+                .into_iter()
+                .map(|(i, j, v)| (ArrayIndex { i, j }, v))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test_case((0, 0), vec![(0, 1, 1.), (1, 0, 3.), (1, 1, 4.)] ; "top left corner")]
+    #[test_case((0, 1), vec![(0, 0, 0.), (0, 2, 2.), (1, 0, 3.), (1, 1, 4.), (1, 2, 5.)] ; "top middle")]
+    #[test_case((0, 2), vec![(0, 1, 1.), (1, 1, 4.), (1, 2, 5.)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 0, 0.), (0, 1, 1.), (1, 1, 4.), (2, 0, 6.), (2, 1, 7.)] ; "middle left")]
+    #[test_case((1, 1), vec![(0, 0, 0.), (0, 1, 1.), (0, 2, 2.), (1, 0, 3.), (1, 2, 5.), (2, 0, 6.), (2, 1, 7.), (2, 2, 8.)] ; "middle middle")]
+    #[test_case((1, 2), vec![(0, 1, 1.), (0, 2, 2.), (1, 1, 4.), (2, 1, 7.), (2, 2, 8.)] ; "middle right")]
+    #[test_case((2, 0), vec![(1, 0, 3.), (1, 1, 4.), (2, 1, 7.)] ; "bottom left corner")]
+    #[test_case((2, 1), vec![(1, 0, 3.), (1, 1, 4.), (1, 2, 5.), (2, 0, 6.), (2, 2, 8.)] ; "bottom middle")]
+    #[test_case((2, 2), vec![(1, 1, 4.), (1, 2, 5.), (2, 1, 7.)] ; "bottom right corner")]
+    fn test_get_3x3_three_by_three_array(
+        (si, sj): (u64, u64),
+        expected_output: Vec<(u64, u64, f32)>,
+    ) {
+        let path = samples::cost_as_index_zarr((3, 3), (3, 3));
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
+
+        assert_eq!(
+            results,
+            expected_output
+                .into_iter()
+                .map(|(i, j, v)| (ArrayIndex { i, j }, v))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test_case((0, 0), vec![(0, 1, 1.), (1, 0, 4.), (1, 1, 5.)] ; "top left corner")]
+    #[test_case((0, 1), vec![(0, 0, 0.), (0, 2, 2.), (1, 0, 4.), (1, 1, 5.), (1, 2, 6.)] ; "top left edge")]
+    #[test_case((0, 2), vec![(0, 1, 1.), (0, 3, 3.), (1, 1, 5.), (1, 2, 6.), (1, 3, 7.)] ; "top right edge")]
+    #[test_case((0, 3), vec![(0, 2, 2.), (1, 2, 6.), (1, 3, 7.)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 0, 0.), (0, 1, 1.), (1, 1, 5.), (2, 0, 8.), (2, 1, 9.)] ; "left top edge")]
+    #[test_case((1, 3), vec![(0, 2, 2.), (0, 3, 3.), (1, 2, 6.), (2, 2, 10.), (2, 3, 11.)] ; "right top edge")]
+    #[test_case((2, 0), vec![(1, 0, 4.), (1, 1, 5.), (2, 1, 9.), (3, 0, 12.), (3, 1, 13.)] ; "left bottom edge")]
+    #[test_case((2, 3), vec![(1, 2, 6.), (1, 3, 7.), (2, 2, 10.), (3, 2, 14.), (3, 3, 15.)] ; "right bottom edge")]
+    #[test_case((3, 0), vec![(2, 0, 8.), (2, 1, 9.), (3, 1, 13.)] ; "bottom left corner")]
+    #[test_case((3, 1), vec![(2, 0, 8.), (2, 1, 9.), (2, 2, 10.), (3, 0, 12.), (3, 2, 14.)] ; "bottom left edge")]
+    #[test_case((3, 2), vec![(2, 1, 9.), (2, 2, 10.), (2, 3, 11.), (3, 1, 13.), (3, 3, 15.)] ; "bottom right edge")]
+    #[test_case((3, 3), vec![(2, 2, 10.), (2, 3, 11.), (3, 2, 14.)] ; "bottom right corner")]
+    fn test_get_3x3_four_by_four_array(
+        (si, sj): (u64, u64),
+        expected_output: Vec<(u64, u64, f32)>,
+    ) {
+        let path = samples::cost_as_index_zarr((4, 4), (2, 2));
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
+
+        assert_eq!(
+            results,
+            expected_output
+                .into_iter()
+                .map(|(i, j, v)| (ArrayIndex { i, j }, v))
+                .collect::<Vec<_>>()
+        );
     }
 }
