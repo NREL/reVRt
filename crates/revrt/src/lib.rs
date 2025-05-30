@@ -193,7 +193,7 @@ mod tests {
         let (track, cost) = &solutions[0];
         assert_eq!(track.len(), expected_num_steps);
         assert_eq!(cost, &expected_cost);
-        assert_eq!(track[0], ArrayIndex { i: 1, j: 1 });
+        assert_eq!(track[0], start[0]);
 
         let &ArrayIndex { i: ei, j: ej } = track.last().unwrap();
         assert_eq!((ei, ej), expected_endpoint);
