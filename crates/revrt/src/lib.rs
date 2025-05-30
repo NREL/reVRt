@@ -106,6 +106,7 @@ pub fn resolve<P: AsRef<std::path::Path>>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     #[test]
     fn tuple_from_index() {
@@ -141,5 +142,30 @@ mod tests {
         let (track, cost) = &solutions[0];
         assert!(track.len() > 1);
         assert!(cost > &0.);
+    }
+
+    #[test_case((1, 1), (1, 1), 1, 0.; "no movement")]
+    #[test_case((1, 1), (1, 2), 2, 1.; "step one cell to the side")]
+    #[test_case((1, 1), (2, 1), 2, 1.; "step one cell down")]
+    #[test_case((1, 1), (2, 2), 2, 1.; "step one cell diagonally")]
+    #[test_case((1, 1), (2, 3), 3, 2.; "step diagonally and across")]
+    fn basic_routing_point_to_point(
+        (si, sj): (u64, u64),
+        (ei, ej): (u64, u64),
+        expected_num_steps: usize,
+        expected_cost: f32,
+    ) {
+        let store_path = dataset::samples::all_ones_cost_zarr();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![ArrayIndex { i: si, j: sj }];
+        let end = vec![ArrayIndex { i: ei, j: ej }];
+        let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 1);
+        let (track, cost) = &solutions[0];
+        assert_eq!(track.len(), expected_num_steps);
+        assert_eq!(cost, &expected_cost);
     }
 }
