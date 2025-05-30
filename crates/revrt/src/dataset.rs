@@ -234,7 +234,7 @@ impl Dataset {
         let neighbors = i_range
             .flat_map(|e| iter::repeat(e).zip(j_range.clone()))
             .zip(value)
-            .filter(|((ir, jr), _)| !(*ir == 1 && *jr == j)) // no center point
+            .filter(|((ir, jr), _)| !(*ir == i && *jr == j)) // no center point
             .map(|((ir, jr), v)| (ArrayIndex { i: ir, j: jr }, v))
             .collect();
 
