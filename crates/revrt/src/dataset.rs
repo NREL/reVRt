@@ -168,14 +168,13 @@ impl Dataset {
         let i_range = match i {
             0 if max_i == 0 => 0..1,
             0 => 0..2,
-            _ if i == max_i => i - 1..max_i + 1,
+            _ if i == max_i => i - 1..i + 1,
             _ => i - 1..i + 2,
         };
-
         let j_range = match j {
             0 if max_j == 0 => 0..1,
             0 => 0..2,
-            _ if j == max_j => j - 1..max_j + 1,
+            _ if j == max_j => j - 1..j + 1,
             _ => j - 1..j + 2,
         };
 
