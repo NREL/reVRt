@@ -1,3 +1,4 @@
+use std::cmp;
 use std::iter;
 use std::sync::RwLock;
 
@@ -161,8 +162,21 @@ impl Dataset {
             );
             return vec![];
         }
+        let max_i = shape[0] - 1;
+        let max_j = shape[1] - 1;
 
-        let i_range = cmp::max(0, i - 1)..cmp::min(shape[0], i + 2);
+        let i_range = match i {
+            0 => 0..2,
+            _ if i == max_i => i - 1..max_i + 1,
+            _ => i - 1..i + 2,
+        };
+
+        let j_range = match j {
+            0 => 0..2,
+            _ if j == max_j => j - 1..max_j + 1,
+            _ => j - 1..j + 2,
+        };
+
         let j_range = cmp::max(0, j - 1)..cmp::min(shape[1], j + 2);
         // Capture the 3x3 neighborhood
         let subset =
