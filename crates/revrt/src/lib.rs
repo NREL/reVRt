@@ -230,4 +230,36 @@ mod tests {
         let &ArrayIndex { i: ei, j: ej } = track.last().unwrap();
         assert!(endpoints.contains(&(ei, ej)));
     }
+
+    #[test]
+    fn routing_many_to_many() {
+        let store_path = dataset::samples::constant_value_cost_zarr(1.);
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![
+            ArrayIndex { i: 1, j: 1 },
+            ArrayIndex { i: 3, j: 3 },
+            ArrayIndex { i: 5, j: 5 },
+        ];
+        let end = vec![
+            ArrayIndex { i: 1, j: 2 },
+            ArrayIndex { i: 4, j: 4 },
+            ArrayIndex { i: 7, j: 7 },
+        ];
+        let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 3);
+
+        let expected_end_points = vec![
+            ArrayIndex { i: 1, j: 2 },
+            ArrayIndex { i: 4, j: 4 },
+            ArrayIndex { i: 4, j: 4 },
+        ];
+        for ((track, cost), eep) in solutions.into_iter().zip(expected_end_points) {
+            assert_eq!(track.len(), 2);
+            assert_eq!(cost, 1.);
+            assert_eq!(*track.last().unwrap(), eep);
+        }
+    }
 }
