@@ -215,9 +215,9 @@ impl Dataset {
         trace!("Read values {:?}", value);
 
         let neighbors = i_range
-            .flat_map(|e| std::iter::repeat(e).zip(j_range.clone()))
+            .flat_map(|e| iter::repeat(e).zip(j_range.clone()))
             .zip(value)
-            .filter(|((ir, jr), _)| !(i == *ir && j == *jr))
+            .filter(|((ir, jr), _)| !(i == *ir && j == *jr)) // no center point
             .map(|((ir, jr), v)| (ArrayIndex { i: ir, j: jr }, v))
             .collect();
 
