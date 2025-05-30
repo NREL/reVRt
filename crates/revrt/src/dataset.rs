@@ -327,6 +327,51 @@ pub(crate) mod samples {
 
         tmp_path.keep()
     }
+
+    pub(crate) fn cost_as_index_zarr(
+        (ni, nj): (u64, u64),
+        (ci, cj): (u64, u64),
+    ) -> std::path::PathBuf {
+        let tmp_path = tempfile::TempDir::new().unwrap();
+
+        let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
+            zarrs::filesystem::FilesystemStore::new(tmp_path.path())
+                .expect("could not open filesystem store"),
+        );
+
+        zarrs::group::GroupBuilder::new()
+            .build(store.clone(), "/")
+            .unwrap()
+            .store_metadata()
+            .unwrap();
+
+        let array = zarrs::array::ArrayBuilder::new(
+            vec![ni, nj], // array shape
+            zarrs::array::DataType::Float32,
+            vec![ci, cj].try_into().unwrap(), // regular chunk shape
+            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
+        )
+        .dimension_names(["y", "x"].into())
+        .build(store.clone(), "/cost")
+        .unwrap();
+
+        // Write array metadata to store
+        array.store_metadata().unwrap();
+
+        let a: Vec<f32> = (0..ni * nj).map(|x| x as f32).collect();
+        let data: Array2<f32> =
+            ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+                .unwrap();
+
+        array
+            .store_chunks_ndarray(
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+                data,
+            )
+            .unwrap();
+
+        tmp_path.keep()
+    }
 }
 
 #[cfg(test)]
