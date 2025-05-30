@@ -162,6 +162,7 @@ impl Dataset {
             );
             return vec![];
         }
+
         let max_i = shape[0] - 1;
         let max_j = shape[1] - 1;
 
@@ -177,7 +178,6 @@ impl Dataset {
             _ => j - 1..j + 2,
         };
 
-        let j_range = cmp::max(0, j - 1)..cmp::min(shape[1], j + 2);
         // Capture the 3x3 neighborhood
         let subset =
             zarrs::array_subset::ArraySubset::new_with_ranges(&[i_range.clone(), j_range.clone()]);
