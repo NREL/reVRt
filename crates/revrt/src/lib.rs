@@ -106,6 +106,7 @@ pub fn resolve<P: AsRef<std::path::Path>>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     #[test]
     fn tuple_from_index() {
@@ -130,17 +131,154 @@ mod tests {
 
     #[test]
     fn minimalist() {
-        let store_path = dataset::samples::single_variable_zarr();
+        let store_path = dataset::samples::multi_variable_zarr();
         let cost_function = cost::sample::cost_function();
-        //let cost_function = CostFunction::from_json(&cost::sample::as_text_v1()).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: 2, j: 3 }];
         let end = vec![ArrayIndex { i: 6, j: 6 }];
         let solutions = simulation.scout(&start, end);
         dbg!(&solutions);
-        assert!(solutions.len() == 1);
+        assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
         assert!(track.len() > 1);
         assert!(cost > &0.);
+    }
+
+    #[test_case((1, 1), (1, 1), 1, 0.; "no movement")]
+    #[test_case((1, 1), (1, 2), 2, 1.; "step one cell to the side")]
+    #[test_case((1, 1), (2, 1), 2, 1.; "step one cell down")]
+    #[test_case((1, 1), (2, 2), 2, 1.; "step one cell diagonally")]
+    #[test_case((1, 1), (2, 3), 3, 2.; "step diagonally and across")]
+    fn basic_routing_point_to_point(
+        (si, sj): (u64, u64),
+        (ei, ej): (u64, u64),
+        expected_num_steps: usize,
+        expected_cost: f32,
+    ) {
+        let store_path = dataset::samples::constant_value_cost_zarr(1.0);
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![ArrayIndex { i: si, j: sj }];
+        let end = vec![ArrayIndex { i: ei, j: ej }];
+        let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 1);
+        let (track, cost) = &solutions[0];
+        assert_eq!(track.len(), expected_num_steps);
+        assert_eq!(cost, &expected_cost);
+    }
+
+    #[test_case((1, 1), vec![(1, 4), (3, 1), (4, 4)], (3, 1), 3, 2.; "different cost endpoints")]
+    fn basic_routing_one_point_to_many(
+        (si, sj): (u64, u64),
+        endpoints: Vec<(u64, u64)>,
+        expected_endpoint: (u64, u64),
+        expected_num_steps: usize,
+        expected_cost: f32,
+    ) {
+        let store_path = dataset::samples::constant_value_cost_zarr(1.0);
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![ArrayIndex { i: si, j: sj }];
+        let end = endpoints
+            .clone()
+            .into_iter()
+            .map(|(i, j)| ArrayIndex { i, j })
+            .collect();
+        let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 1);
+        let (track, cost) = &solutions[0];
+        assert_eq!(track.len(), expected_num_steps);
+        assert_eq!(cost, &expected_cost);
+        assert_eq!(track[0], start[0]);
+
+        let &ArrayIndex { i: ei, j: ej } = track.last().unwrap();
+        assert_eq!((ei, ej), expected_endpoint);
+    }
+
+    #[test_case((1, 1), vec![(1, 3), (3, 1)], 1.; "horizontal and vertical")]
+    #[test_case((3, 3), vec![(3, 5), (1, 1), (3, 1)], 1.; "horizontal")]
+    #[test_case((3, 3), vec![(5, 3), (5, 5), (1, 3)], 1.; "vertical")]
+    #[test_case((3, 3), vec![(3, 1), (3, 4)], 0.; "zero costs")]
+    fn routing_one_point_to_many_same_cost_and_length(
+        (si, sj): (u64, u64),
+        endpoints: Vec<(u64, u64)>,
+        cost_array_fill: f32,
+    ) {
+        let store_path = dataset::samples::constant_value_cost_zarr(cost_array_fill);
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![ArrayIndex { i: si, j: sj }];
+        let end = endpoints
+            .clone()
+            .into_iter()
+            .map(|(i, j)| ArrayIndex { i, j })
+            .collect();
+        let mut solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 1);
+
+        let (track, cost) = solutions.swap_remove(0);
+        assert_eq!(track.len(), 3);
+        assert_eq!(cost, 2. * cost_array_fill);
+        assert_eq!(track[0], start[0]);
+
+        let &ArrayIndex { i: ei, j: ej } = track.last().unwrap();
+        assert!(endpoints.contains(&(ei, ej)));
+    }
+
+    #[test]
+    fn routing_many_to_many() {
+        let store_path = dataset::samples::constant_value_cost_zarr(1.);
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![
+            ArrayIndex { i: 1, j: 1 },
+            ArrayIndex { i: 3, j: 3 },
+            ArrayIndex { i: 5, j: 5 },
+        ];
+        let end = vec![
+            ArrayIndex { i: 1, j: 2 },
+            ArrayIndex { i: 4, j: 4 },
+            ArrayIndex { i: 7, j: 7 },
+        ];
+        let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 3);
+
+        let expected_end_points = vec![
+            ArrayIndex { i: 1, j: 2 },
+            ArrayIndex { i: 4, j: 4 },
+            ArrayIndex { i: 4, j: 4 },
+        ];
+        for ((track, cost), eep) in solutions.into_iter().zip(expected_end_points) {
+            assert_eq!(track.len(), 2);
+            assert_eq!(cost, 1.);
+            assert_eq!(*track.last().unwrap(), eep);
+        }
+    }
+
+    #[test]
+    fn routing_many_to_one() {
+        let store_path = dataset::samples::constant_value_cost_zarr(1.);
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![ArrayIndex { i: 1, j: 1 }, ArrayIndex { i: 5, j: 5 }];
+        let end = vec![ArrayIndex { i: 3, j: 3 }];
+        let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 2);
+
+        for (track, cost) in solutions {
+            assert_eq!(track.len(), 3);
+            assert_eq!(cost, 2.);
+            assert_eq!(*track.last().unwrap(), ArrayIndex { i: 3, j: 3 });
+        }
     }
 }

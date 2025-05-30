@@ -246,11 +246,11 @@ pub(crate) mod samples {
     use ndarray::Array2;
     use rand::Rng;
 
-    /// Create a single variable (/A) zarr store
+    /// Create a zarr store with a few sample layers
     ///
     /// Just a proof of concept with lots of hardcoded values
     /// that must be improved.
-    pub(crate) fn single_variable_zarr() -> std::path::PathBuf {
+    pub(crate) fn multi_variable_zarr() -> std::path::PathBuf {
         let ni = 8;
         let nj = 8;
         let ci = 4;
@@ -271,7 +271,7 @@ pub(crate) mod samples {
 
         // Create an array
         // Remember to remove /cost
-        for array_path in ["/A", "/B", "/C", "/cost"].iter() {
+        for array_path in ["/A", "/B", "/C", "/cost"] {
             let array = zarrs::array::ArrayBuilder::new(
                 vec![ni, nj], // array shape
                 zarrs::array::DataType::Float32,
@@ -309,6 +309,51 @@ pub(crate) mod samples {
 
         tmp_path.keep()
     }
+
+    /// Create a zarr store with a cost layer comprised of all ones
+    pub(crate) fn constant_value_cost_zarr(cost_value: f32) -> std::path::PathBuf {
+        let (ni, nj) = (8, 8);
+        let (ci, cj) = (4, 4);
+
+        let tmp_path = tempfile::TempDir::new().unwrap();
+
+        let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
+            zarrs::filesystem::FilesystemStore::new(tmp_path.path())
+                .expect("could not open filesystem store"),
+        );
+
+        zarrs::group::GroupBuilder::new()
+            .build(store.clone(), "/")
+            .unwrap()
+            .store_metadata()
+            .unwrap();
+
+        let array = zarrs::array::ArrayBuilder::new(
+            vec![ni, nj], // array shape
+            zarrs::array::DataType::Float32,
+            vec![ci, cj].try_into().unwrap(), // regular chunk shape
+            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
+        )
+        .dimension_names(["y", "x"].into())
+        .build(store.clone(), "/cost")
+        .unwrap();
+
+        // Write array metadata to store
+        array.store_metadata().unwrap();
+
+        let (uni, unj): (usize, usize) = (ni.try_into().unwrap(), nj.try_into().unwrap());
+        let data: Array2<f32> =
+            ndarray::Array::from_shape_vec((uni, unj), vec![cost_value; uni * unj]).unwrap();
+
+        array
+            .store_chunks_ndarray(
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+                data,
+            )
+            .unwrap();
+
+        tmp_path.keep()
+    }
 }
 
 #[cfg(test)]
@@ -317,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_simple_cost_function_get_3x3() {
-        let path = samples::single_variable_zarr();
+        let path = samples::multi_variable_zarr();
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
         let dataset =
@@ -342,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_sample_cost_function_get_3x3() {
-        let path = samples::single_variable_zarr();
+        let path = samples::multi_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
         let dataset =
             Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
