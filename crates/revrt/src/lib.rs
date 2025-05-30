@@ -132,13 +132,12 @@ mod tests {
     fn minimalist() {
         let store_path = dataset::samples::multi_variable_zarr();
         let cost_function = cost::sample::cost_function();
-        //let cost_function = CostFunction::from_json(&cost::sample::as_text_v1()).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: 2, j: 3 }];
         let end = vec![ArrayIndex { i: 6, j: 6 }];
         let solutions = simulation.scout(&start, end);
         dbg!(&solutions);
-        assert!(solutions.len() == 1);
+        assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
         assert!(track.len() > 1);
         assert!(cost > &0.);
