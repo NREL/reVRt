@@ -140,15 +140,15 @@ pub(crate) mod sample {
     /// Sample cost definition
     pub(crate) fn as_text_v1() -> String {
         r#"
-      {
-        "cost_layers": [
-          {"layer_name": "A"},
-          {"layer_name": "B", "multiplier_scalar": 100},
-          {"layer_name": "A",
-            "multiplier_layer": "B"},
-          {"layer_name": "C", "multiplier_scalar": 2,
-            "multiplier_layer": "A"}
-]
+        {
+            "cost_layers": [
+                {"layer_name": "A"},
+                {"layer_name": "B", "multiplier_scalar": 100},
+                {"layer_name": "A",
+                    "multiplier_layer": "B"},
+                {"layer_name": "C", "multiplier_scalar": 2,
+                    "multiplier_layer": "A"}
+            ]
         }
         "#
         .to_string()
