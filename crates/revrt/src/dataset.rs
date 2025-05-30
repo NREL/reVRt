@@ -1,4 +1,3 @@
-use std::cmp;
 use std::iter;
 use std::sync::RwLock;
 
@@ -444,5 +443,54 @@ mod tests {
                 )
             }
         }
+    }
+
+    #[test]
+    fn test_get_3x3_single_item_array() {
+        let path = samples::cost_as_index_zarr((1, 1), (1, 1));
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
+
+        assert_eq!(results, vec![]);
+    }
+
+    #[test]
+    fn test_get_3x3_two_item_array() {
+        let path = samples::cost_as_index_zarr((2, 2), (2, 2));
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
+
+        assert_eq!(results, vec![]);
+    }
+
+    #[test]
+    fn test_edges_get_3x3() {
+        let path = samples::cost_as_index_zarr((4, 4), (2, 2));
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        // let array = zarrs::array::Array::open(dataset.source.clone(), "/cost").unwrap();
+
+        // let test_points = [ArrayIndex { i: 0, j: 0 }, ArrayIndex { i: 2, j: 2 }];
+        let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
+
+        assert_eq!(
+            results,
+            vec![
+                (ArrayIndex { i: 0, j: 1 }, 1.),
+                (ArrayIndex { i: 1, j: 0 }, 4.),
+                (ArrayIndex { i: 1, j: 1 }, 5.)
+            ]
+        );
     }
 }
