@@ -153,14 +153,7 @@ impl Dataset {
 
         // Cutting off the edges for now.
         let shape = cost.shape();
-        if shape.contains(&0) {
-            warn!(
-                "Cannot compute 3x3 neighborhood for array with one or more
-                zero-length dimensions (Input shape: {:?})",
-                shape
-            );
-            return vec![];
-        }
+        debug_assert!(!shape.contains(&0));
 
         let max_i = shape[0] - 1;
         let max_j = shape[1] - 1;
