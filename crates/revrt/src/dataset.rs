@@ -159,8 +159,8 @@ impl Dataset {
             return vec![];
         }
 
-        let i_range = (i - 1)..(i + 2);
-        let j_range = (j - 1)..(j + 2);
+        let i_range = cmp::max(0, i - 1)..cmp::min(shape[0], i + 2);
+        let j_range = cmp::max(0, j - 1)..cmp::min(shape[1], j + 2);
         // Capture the 3x3 neighborhood
         let subset =
             zarrs::array_subset::ArraySubset::new_with_ranges(&[i_range.clone(), j_range.clone()]);
