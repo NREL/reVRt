@@ -281,4 +281,79 @@ mod tests {
             assert_eq!(*track.last().unwrap(), ArrayIndex { i: 3, j: 3 });
         }
     }
+
+    #[test]
+    fn test_routing_along_boundary() {
+        use ndarray::Array2;
+
+        let (ni, nj) = (4, 4);
+        let (ci, cj) = (2, 2);
+
+        let store_path = tempfile::TempDir::new().unwrap();
+
+        let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
+            zarrs::filesystem::FilesystemStore::new(store_path.path())
+                .expect("could not open filesystem store"),
+        );
+
+        zarrs::group::GroupBuilder::new()
+            .build(store.clone(), "/")
+            .unwrap()
+            .store_metadata()
+            .unwrap();
+
+        let array = zarrs::array::ArrayBuilder::new(
+            vec![ni, nj], // array shape
+            zarrs::array::DataType::Float32,
+            vec![ci, cj].try_into().unwrap(), // regular chunk shape
+            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
+        )
+        .dimension_names(["y", "x"].into())
+        .build(store.clone(), "/cost")
+        .unwrap();
+
+        // Write array metadata to store
+        array.store_metadata().unwrap();
+
+        #[rustfmt::skip]
+        let a = vec![1., 50.,  1., 1.,
+                     1., 50., 50., 1.,
+                     1., 50., 50., 1.,
+                     1.,  1.,  1., 1.];
+
+        let data: Array2<f32> =
+            ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+                .unwrap();
+
+        array
+            .store_chunks_ndarray(
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+                data,
+            )
+            .unwrap();
+
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![ArrayIndex { i: 0, j: 0 }];
+        let end = vec![ArrayIndex { i: 0, j: 2 }];
+        let mut solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 1);
+
+        let (track, cost) = solutions.swap_remove(0);
+        assert_eq!(cost, 7.);
+
+        let expected_track = vec![
+            ArrayIndex { i: 0, j: 0 },
+            ArrayIndex { i: 1, j: 0 },
+            ArrayIndex { i: 2, j: 0 },
+            ArrayIndex { i: 3, j: 1 },
+            ArrayIndex { i: 3, j: 2 },
+            ArrayIndex { i: 2, j: 3 },
+            ArrayIndex { i: 1, j: 3 },
+            ArrayIndex { i: 0, j: 2 },
+        ];
+        assert_eq!(track, expected_track);
+    }
 }
