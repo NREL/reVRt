@@ -262,4 +262,23 @@ mod tests {
             assert_eq!(*track.last().unwrap(), eep);
         }
     }
+
+    #[test]
+    fn routing_many_to_one() {
+        let store_path = dataset::samples::constant_value_cost_zarr(1.);
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
+        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let start = vec![ArrayIndex { i: 1, j: 1 }, ArrayIndex { i: 5, j: 5 }];
+        let end = vec![ArrayIndex { i: 3, j: 3 }];
+        let solutions = simulation.scout(&start, end);
+        dbg!(&solutions);
+        assert_eq!(solutions.len(), 2);
+
+        for (track, cost) in solutions {
+            assert_eq!(track.len(), 3);
+            assert_eq!(cost, 2.);
+            assert_eq!(*track.last().unwrap(), ArrayIndex { i: 3, j: 3 });
+        }
+    }
 }
