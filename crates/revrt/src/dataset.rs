@@ -157,11 +157,11 @@ impl Dataset {
             return vec![];
         }
 
+        let i_range = (i - 1)..(i + 2);
+        let j_range = (j - 1)..(j + 2);
         // Capture the 3x3 neighborhood
-        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
-            (i - 1)..(i + 2),
-            (j - 1)..(j + 2),
-        ]);
+        let subset =
+            zarrs::array_subset::ArraySubset::new_with_ranges(&[i_range.clone(), j_range.clone()]);
         trace!("Cost subset: {:?}", subset);
 
         // Find the chunks that intersect the subset
@@ -212,16 +212,13 @@ impl Dataset {
 
         trace!("Read values {:?}", value);
 
-        let neighbors = vec![
-            (ArrayIndex { i: i - 1, j: j - 1 }, value[0]),
-            (ArrayIndex { i: i - 1, j }, value[1]),
-            (ArrayIndex { i: i - 1, j: j + 1 }, value[2]),
-            (ArrayIndex { i, j: j - 1 }, value[3]),
-            (ArrayIndex { i, j: j + 1 }, value[5]),
-            (ArrayIndex { i: i + 1, j: j - 1 }, value[6]),
-            (ArrayIndex { i: i + 1, j }, value[7]),
-            (ArrayIndex { i: i + 1, j: j + 1 }, value[8]),
-        ];
+        let neighbors = i_range
+            .flat_map(|e| std::iter::repeat(e).zip(j_range.clone()))
+            .zip(value)
+            .filter(|((ir, jr), _)| !(i == *ir && j == *jr))
+            .map(|((ir, jr), v)| (ArrayIndex { i: ir, j: jr }, v))
+            .collect();
+
         trace!("Neighbors {:?}", neighbors);
 
         neighbors
