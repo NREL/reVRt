@@ -63,7 +63,7 @@ test = [
   "rasterstats>=0.20.0,<0.21",
   "scikit-image>=0.25.2,<0.26",
   "snakeviz>=2.2.2,<3",
-  "tox>=4.25.0,<5",
+  "tox>=4.26.0,<5",
 ]
 doc = [
   "ghp-import>=2.1.0,<3",
@@ -260,7 +260,7 @@ pytest-xdist = ">=3.6.1,<4"
 rasterstats = ">=0.20.0,<0.21"
 scikit-image = ">=0.25.2,<0.26"
 snakeviz = ">=2.2.2,<3"
-tox = ">=4.25.0,<5"
+tox = ">=4.26.0,<5"
 
 [tool.pixi.feature.doc.dependencies]
 ghp-import = ">=2.1.0,<3"
