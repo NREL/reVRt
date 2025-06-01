@@ -20,6 +20,7 @@ def buffered_lcp_characterizations(
     geotiff_fp,
     lcp_fp,
     row_widths,
+    multiplier_scalar=1.0,
     prefix=None,
     copy_properties=None,
     parallel=False,
@@ -45,6 +46,10 @@ def buffered_lcp_characterizations(
         a value used to match each LCP with a particular ROW width (this
         is typically a voltage). The value should be found under the
         ``row_width_key`` entry of the ``lcp_fp``.
+    multiplier_scalar : float, optional
+        Optional multiplier value to apply to layer before computing
+        statistics. This is useful if you want to scale the values in
+        the raster before computing statistics. By default, ``1.0``.
     prefix : str, optional
         A string representing a prefix to add to each stat name. If you
         wish to have the prefix separated by a delimiter, you must
@@ -69,7 +74,9 @@ def buffered_lcp_characterizations(
     pd.DataFrame
         Pandas DataFrame containing computed characteristics/stats.
     """
-    rds = rioxarray.open_rasterio(geotiff_fp, chunks=chunks)
+    rds = (
+        rioxarray.open_rasterio(geotiff_fp, chunks=chunks) * multiplier_scalar
+    )
     logger.debug("Tiff properties:\n%r", rds)
     # cspell:disable-next-line
     logger.debug("Tiff chunksizes:\n%r", rds.chunksizes)
@@ -199,6 +206,10 @@ def _preprocess_stats_config(config, layers, row_widths):
               to new names. If given, this mapping will be applied to
               the pixel count dictionary, so you can use it to map
               raster values to human-readable category names.
+            - multiplier_scalar: (OPTIONAL) Optional multiplier value to
+              apply to layer before computing statistics. This is useful
+              if you want to scale the values in the raster before
+              computing statistics. By default, ``1.0``.
             - prefix: (OPTIONAL) A string representing a prefix to add
               to each stat name. If you wish to have the prefix
               separated by a delimiter, you must include it in this
