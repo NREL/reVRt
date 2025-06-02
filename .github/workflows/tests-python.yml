@@ -27,7 +27,7 @@ jobs:
         locked: true
         cache: true
 
-    - run: pixi run -e test tests-u
+    - run: pixi run tests-u
 
   integration-tests:
     runs-on: ${{ matrix.os }}
@@ -49,4 +49,4 @@ jobs:
         locked: true
         cache: true
 
-    - run: pixi run -e test tests-i
+    - run: pixi run tests-i
