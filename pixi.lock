@@ -2616,7 +2616,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/0c/93/f70a4c35b103fcfe1443059a2bb7f66e5c35f2aea7804105ff214f566009/multidict-6.4.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a0/fb/0ec9f0ecbf36f36fbb6851d9d350794294293a7bc759288b9fffa52afc32/nrel_gaps-0.8.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/90/c8/5ecf76123516aef9a9abae03779357f0087ac94b269d08b2a745c199632b/nrel_rex-0.3.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/f2/f9/e070956e350ccdfdf059251836f757ad91ac0c01b0ba3e033ea7188d8d42/patchelf-0.17.2.2-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.musllinux_1_1_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/45/5f/3faee66fc930dfb5da509e34c6ac7128870631c0e3582987fad161fcb4b1/propcache-0.3.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/d4/ca/f5b147b8a186e37a9339290dd9c8271aae94eab0307169124ec83c74aa99/pyjson5-1.6.8-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/61/ad/689f02752eeec26aed679477e80e632ef1b682313be70793d798c1d5fc8f/PyJWT-2.10.1-py3-none-any.whl
@@ -3045,7 +3044,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/45/05/9b51fdf7aef2563340a93be0a663acba2c428c4daeaf3960d92d53a4a930/multidict-6.4.3-cp313-cp313-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a0/fb/0ec9f0ecbf36f36fbb6851d9d350794294293a7bc759288b9fffa52afc32/nrel_gaps-0.8.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/90/c8/5ecf76123516aef9a9abae03779357f0087ac94b269d08b2a745c199632b/nrel_rex-0.3.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/a0/80/1bf161e57b8310943220d41d8018ca54bc73a61591114475a9402a72be45/patchelf-0.17.2.2-py3-none-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/6f/d4/c1adbf3901537582e65cf90fd9c26fde1298fde5a2c593f987112c0d0798/propcache-0.3.1-cp313-cp313-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/42/43/3b2a26ca84573209616675d63ffe559a6e8b73488d6c11e4a45f0204fc3e/pyjson5-1.6.8-cp313-cp313-macosx_10_13_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/61/ad/689f02752eeec26aed679477e80e632ef1b682313be70793d798c1d5fc8f/PyJWT-2.10.1-py3-none-any.whl
@@ -3474,7 +3472,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/0b/43/53fc25394386c911822419b522181227ca450cf57fea76e6188772a1bd91/multidict-6.4.3-cp313-cp313-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/a0/fb/0ec9f0ecbf36f36fbb6851d9d350794294293a7bc759288b9fffa52afc32/nrel_gaps-0.8.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/90/c8/5ecf76123516aef9a9abae03779357f0087ac94b269d08b2a745c199632b/nrel_rex-0.3.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/a0/80/1bf161e57b8310943220d41d8018ca54bc73a61591114475a9402a72be45/patchelf-0.17.2.2-py3-none-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/d1/b5/fe752b2e63f49f727c6c1c224175d21b7d1727ce1d4873ef1c24c9216830/propcache-0.3.1-cp313-cp313-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/9d/cd/ad93170f8b7934b13e5a340daed934e7a8591e5d08abf3f50ab144a2663d/pyjson5-1.6.8-cp313-cp313-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/61/ad/689f02752eeec26aed679477e80e632ef1b682313be70793d798c1d5fc8f/PyJWT-2.10.1-py3-none-any.whl
@@ -3911,7 +3908,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/23/57/2c0167a1bffa30d9a1383c3dab99d8caae985defc8636934b5668830d2ef/multidict-6.4.3-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/a0/fb/0ec9f0ecbf36f36fbb6851d9d350794294293a7bc759288b9fffa52afc32/nrel_gaps-0.8.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/90/c8/5ecf76123516aef9a9abae03779357f0087ac94b269d08b2a745c199632b/nrel_rex-0.3.3-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/0d/41/dc3ee5838db2d90be935adb53ae7745135d9c719d070b1989b246f983c7f/patchelf-0.17.2.2.tar.gz
       - pypi: https://files.pythonhosted.org/packages/a6/2c/a54614d61895ba6dd7ac8f107e2b2a0347259ab29cbf2ecc7b94fa38c4dc/propcache-0.3.1-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/67/d9/9bd17bc0c99d2d917900114d548414f609ea81947e58f6525068d673fc77/pyjson5-1.6.8-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/61/ad/689f02752eeec26aed679477e80e632ef1b682313be70793d798c1d5fc8f/PyJWT-2.10.1-py3-none-any.whl
@@ -16083,7 +16079,7 @@ packages:
 - pypi: ./
   name: nrel-revrt
   version: 0.1.0
-  sha256: 6903c8292b8de4cf7655bfed7c080b9675f40ea3521c5ea8b70f4da28304d46d
+  sha256: b8e0b014bb10c9df4152b49c706b1f0275d5083bcffdd63f1421ebcbde9210ff
   requires_dist:
   - affine>=2.4.0,<3
   - dask>=2025.4.1,<2026
@@ -16811,30 +16807,6 @@ packages:
   - pkg:pypi/partd?source=hash-mapping
   size: 20884
   timestamp: 1715026639309
-- pypi: https://files.pythonhosted.org/packages/0d/41/dc3ee5838db2d90be935adb53ae7745135d9c719d070b1989b246f983c7f/patchelf-0.17.2.2.tar.gz
-  name: patchelf
-  version: 0.17.2.2
-  sha256: 080b2ac3074fd4ab257700088e82470425e56609aa0dd07abe548f04b7b3b007
-  requires_dist:
-  - importlib-metadata>=2.0 ; extra == 'test'
-  - pytest>=6.0 ; extra == 'test'
-  requires_python: '>=3.7'
-- pypi: https://files.pythonhosted.org/packages/a0/80/1bf161e57b8310943220d41d8018ca54bc73a61591114475a9402a72be45/patchelf-0.17.2.2-py3-none-macosx_10_9_universal2.whl
-  name: patchelf
-  version: 0.17.2.2
-  sha256: 47b558db8f7dccc6262e930631991ecdd053724c1d8daf3df5ce03813438da10
-  requires_dist:
-  - importlib-metadata>=2.0 ; extra == 'test'
-  - pytest>=6.0 ; extra == 'test'
-  requires_python: '>=3.7'
-- pypi: https://files.pythonhosted.org/packages/f2/f9/e070956e350ccdfdf059251836f757ad91ac0c01b0ba3e033ea7188d8d42/patchelf-0.17.2.2-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.musllinux_1_1_x86_64.whl
-  name: patchelf
-  version: 0.17.2.2
-  sha256: e334ebb1c5aa9fc740fd95ebe449271899fe1e45a3eb0941300b304f7e3d1299
-  requires_dist:
-  - importlib-metadata>=2.0 ; extra == 'test'
-  - pytest>=6.0 ; extra == 'test'
-  requires_python: '>=3.7'
 - conda: https://conda.anaconda.org/conda-forge/linux-64/pcre2-10.44-hc749103_2.conda
   sha256: 09717569649d89caafbf32f6cda1e65aef86e5a86c053d30e4ce77fca8d27b68
   md5: 31614c73d7b103ef76faa4d83d261d34
