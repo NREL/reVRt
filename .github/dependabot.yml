@@ -1,5 +1,12 @@
 version: 2
 updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: weekly
+  allow:
+    - dependency-type: "direct"
+  open-pull-requests-limit: 0
 - package-ecosystem: cargo
   directory: "/"
   schedule:
