@@ -247,9 +247,6 @@ pipreqs = ">=0.4.13,<0.5"
 ruff = ">=0.11.5,<0.12"
 ruff-lsp = ">=0.0.62,<0.0.63"
 
-[tool.pixi.feature.dev.pypi-dependencies]
-patchelf = ">=0.17.2.2,<0.18"
-
 [tool.pixi.feature.test.dependencies]
 pytest = ">=8.3.5,<9"
 pytest-cases = ">=3.8.6,<4"
