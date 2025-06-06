@@ -27,3 +27,4 @@ pyo3-build-config = "0.25.0"
 
 [dev-dependencies]
 test-case = "3.3.1"
+criterion = { workspace = true }
