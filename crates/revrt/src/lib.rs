@@ -9,7 +9,7 @@ mod ffi;
 
 use pathfinding::prelude::dijkstra;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::trace;
+use tracing::{debug, trace};
 
 use cost::CostFunction;
 use error::Result;
@@ -71,6 +71,8 @@ impl Simulation {
     }
 
     fn scout(&mut self, start: &[ArrayIndex], end: Vec<ArrayIndex>) -> Vec<(Vec<ArrayIndex>, f32)> {
+        debug!("Starting scout with {} start points", start.len());
+
         start
             .into_par_iter()
             .filter_map(|s| dijkstra(s, |p| self.successors(p), |p| end.contains(p)))
