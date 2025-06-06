@@ -144,7 +144,6 @@ impl Dataset {
         trace!("Getting 3x3 neighborhood for (i={}, j={})", i, j);
 
         trace!("Cost dataset contents: {:?}", self.cost.list().unwrap());
-        // What is this size?
         trace!("Cost dataset size: {:?}", self.cost.size().unwrap());
 
         trace!("Opening cost dataset");
