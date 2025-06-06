@@ -1,6 +1,6 @@
 //! Cost fuction
 
-use ndarray::{stack, Axis};
+use ndarray::{Axis, stack};
 use tracing::{info, trace};
 
 use crate::error::Result;
