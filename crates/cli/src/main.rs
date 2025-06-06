@@ -40,6 +40,7 @@ fn main() {
     };
     tracing_subscriber::fmt()
         .with_max_level(tracing_level)
+        .with_thread_ids(true)
         .init();
     debug!("Verbose level: {}", cli.verbose);
 
