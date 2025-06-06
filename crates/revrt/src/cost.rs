@@ -1,7 +1,7 @@
 //! Cost fuction
 
-use ndarray::{Axis, stack};
-use tracing::{debug, trace};
+use ndarray::{stack, Axis};
+use tracing::{info, trace};
 
 use crate::error::Result;
 
@@ -71,7 +71,7 @@ impl CostFunction {
         ci: u64,
         cj: u64,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        debug!("Calculating cost for chunk ({}, {})", ci, cj);
+        info!("Calculating cost for chunk ({}, {})", ci, cj);
 
         let cost = self
             .cost_layers
