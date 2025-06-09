@@ -26,8 +26,11 @@ jobs:
           output-file-path: output.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
-          # Show alert with commit comment on detecting possible performance regression
-          alert-threshold: '10%'
+          # Show alert with commit comment on detecting possible performance
+          # regression
+          # Benchmarking with GA is noisy, so only alert significant
+          # regressions.
+          alert-threshold: '50%'
           comment-on-alert: true
           fail-on-alert: true
           alert-comment-cc-users: '@castelao @ppinchuk'
