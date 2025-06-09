@@ -13,7 +13,7 @@
 //! - Single chunk with reasonable size: How well we parallelize
 //!   calculating the cost.
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
 use revrt::bench_minimalist;
