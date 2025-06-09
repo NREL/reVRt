@@ -134,6 +134,7 @@ pub fn bench_minimalist(features_path: std::path::PathBuf) {
     let start: Vec<ArrayIndex> = vec![ArrayIndex { i: 20, j: 50 }];
     let end: Vec<ArrayIndex> = vec![ArrayIndex { i: 5, j: 50 }];
     let solutions: Vec<(Vec<ArrayIndex>, f32)> = simulation.scout(&start, end);
+    assert!(!solutions.is_empty(), "No solutions found");
 }
 
 #[cfg(test)]
