@@ -111,7 +111,7 @@ pub fn resolve<P: AsRef<std::path::Path>>(
 /// This function is intended for use during development only. It will
 /// eventually be replaced by a builder, thus more flexible and usable
 /// for other purposes.
-pub fn bench_minimalist(features_path: std::path::PathBuf) -> () {
+pub fn bench_minimalist(features_path: std::path::PathBuf) {
     // temporary solution for a cost function until we have a builder
     let cost_json = r#"
       {
