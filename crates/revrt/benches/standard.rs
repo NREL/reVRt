@@ -26,12 +26,7 @@ enum FeaturesType {
     Random,
 }
 
-fn features_random(ftype: FeaturesType) -> std::path::PathBuf {
-    let ni = 100;
-    let nj = 100;
-    let ci = 4;
-    let cj = 4;
-
+fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::path::PathBuf {
     let tmp_path = tempfile::TempDir::new().unwrap();
 
     let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
@@ -89,3 +84,30 @@ fn features_random(ftype: FeaturesType) -> std::path::PathBuf {
 
     tmp_path.keep()
 }
+
+fn standard_ones(c: &mut Criterion) {
+    let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
+
+    c.bench_function("bench_minimalist", |b| {
+        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+    });
+}
+
+fn standard_random(c: &mut Criterion) {
+    let features_path = features(100, 100, 4, 4, FeaturesType::Random);
+
+    c.bench_function("bench_minimalist", |b| {
+        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+    });
+}
+
+fn single_chunk(c: &mut Criterion) {
+    let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
+
+    c.bench_function("bench_minimalist", |b| {
+        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+    });
+}
+
+criterion_group!(benches, standard_ones, standard_random, single_chunk);
+criterion_main!(benches);
