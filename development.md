@@ -6,6 +6,7 @@
 Ideally this section should be empty, so whenever there is a chance, this
 points should be organized and moved to the appropriate section.
 
+- Instructions to run benchmark locally: `cargo bench --bench standard`
 - Use a cache for the chunks.
 - Does it make sense a cache on the final weight calculated? Maybe
   a HashMap with (x, y), and rolling the oldest out to minimize
