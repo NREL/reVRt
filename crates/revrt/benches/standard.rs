@@ -13,10 +13,11 @@
 //! - Single chunk with reasonable size: How well we parallelize
 //!   calculating the cost.
 
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 use std::hint::black_box;
 
 use revrt::bench_minimalist;
+use revrt::ArrayIndex;
 
 use ndarray::Array2;
 use rand::Rng;
@@ -89,7 +90,13 @@ fn standard_ones(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
 
     c.bench_function("bench_minimalist", |b| {
-        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                vec![ArrayIndex::new(20, 50)],
+                vec![ArrayIndex::new(5, 50)],
+            )
+        })
     });
 }
 
@@ -97,7 +104,13 @@ fn standard_random(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::Random);
 
     c.bench_function("bench_minimalist", |b| {
-        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                vec![ArrayIndex::new(20, 50)],
+                vec![ArrayIndex::new(5, 50)],
+            )
+        })
     });
 }
 
@@ -105,7 +118,13 @@ fn single_chunk(c: &mut Criterion) {
     let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
 
     c.bench_function("bench_minimalist", |b| {
-        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                vec![ArrayIndex::new(20, 50)],
+                vec![ArrayIndex::new(5, 50)],
+            )
+        })
     });
 }
 
