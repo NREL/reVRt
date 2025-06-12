@@ -111,7 +111,11 @@ pub fn resolve<P: AsRef<std::path::Path>>(
 /// This function is intended for use during development only. It will
 /// eventually be replaced by a builder, thus more flexible and usable
 /// for other purposes.
-pub fn bench_minimalist(features_path: std::path::PathBuf) {
+pub fn bench_minimalist(
+    features_path: std::path::PathBuf,
+    start: Vec<ArrayIndex>,
+    end: Vec<ArrayIndex>,
+) {
     // temporary solution for a cost function until we have a builder
     let cost_json = r#"
       {
@@ -131,8 +135,6 @@ pub fn bench_minimalist(features_path: std::path::PathBuf) {
 
     let mut simulation: Simulation =
         Simulation::new(&features_path, cost_function, 250_000_000).unwrap();
-    let start: Vec<ArrayIndex> = vec![ArrayIndex { i: 20, j: 50 }];
-    let end: Vec<ArrayIndex> = vec![ArrayIndex { i: 5, j: 50 }];
     let solutions: Vec<(Vec<ArrayIndex>, f32)> = simulation.scout(&start, end);
     assert!(!solutions.is_empty(), "No solutions found");
 }

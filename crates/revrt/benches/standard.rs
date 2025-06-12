@@ -13,9 +13,10 @@
 //! - Single chunk with reasonable size: How well we parallelize
 //!   calculating the cost.
 
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
+use revrt::ArrayIndex;
 use revrt::bench_minimalist;
 
 use ndarray::Array2;
@@ -89,7 +90,13 @@ fn standard_ones(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
 
     c.bench_function("bench_minimalist", |b| {
-        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                black_box(vec![ArrayIndex::new(20, 50)]),
+                black_box(vec![ArrayIndex::new(5, 50)]),
+            )
+        })
     });
 }
 
@@ -97,7 +104,13 @@ fn standard_random(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::Random);
 
     c.bench_function("bench_minimalist", |b| {
-        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                black_box(vec![ArrayIndex::new(20, 50)]),
+                black_box(vec![ArrayIndex::new(5, 50)]),
+            )
+        })
     });
 }
 
@@ -105,9 +118,46 @@ fn single_chunk(c: &mut Criterion) {
     let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
 
     c.bench_function("bench_minimalist", |b| {
-        b.iter(|| bench_minimalist(black_box(features_path.clone())))
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                black_box(vec![ArrayIndex::new(20, 50)]),
+                black_box(vec![ArrayIndex::new(5, 50)]),
+            )
+        })
     });
 }
 
-criterion_group!(benches, standard_ones, standard_random, single_chunk);
+fn range_distance(c: &mut Criterion) {
+    // Away from the border to progressively increas the search radius.
+    static X0: u64 = 30;
+    let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
+
+    let mut group = c.benchmark_group("distance");
+    // Create an alternative benchmark definition to run locally only
+    for distance in [0, 1, 2, 5, 10, 15].iter() {
+        group.bench_with_input(
+            BenchmarkId::from_parameter(distance),
+            distance,
+            |b, &distance| {
+                b.iter(|| {
+                    bench_minimalist(
+                        black_box(features_path.clone()),
+                        black_box(vec![ArrayIndex::new(X0 + distance, 50)]),
+                        black_box(vec![ArrayIndex::new(X0, 50)]),
+                    )
+                })
+            },
+        );
+    }
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    standard_ones,
+    standard_random,
+    single_chunk,
+    range_distance
+);
 criterion_main!(benches);
