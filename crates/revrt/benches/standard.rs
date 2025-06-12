@@ -13,11 +13,11 @@
 //! - Single chunk with reasonable size: How well we parallelize
 //!   calculating the cost.
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
-use revrt::bench_minimalist;
 use revrt::ArrayIndex;
+use revrt::bench_minimalist;
 
 use ndarray::Array2;
 use rand::Rng;
