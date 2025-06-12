@@ -1,5 +1,6 @@
 //! Cost fuction
 
+use derive_builder::Builder;
 use ndarray::{Axis, stack};
 use tracing::{info, trace};
 
