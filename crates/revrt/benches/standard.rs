@@ -134,7 +134,8 @@ fn range_distance(c: &mut Criterion) {
     let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
 
     let mut group = c.benchmark_group("distance");
-    for distance in [0, 1, 2, 5, 10, 15, 20].iter() {
+    // Create an alternative benchmark definition to run locally only
+    for distance in [0, 1, 2, 5, 10, 15].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(distance),
             distance,
