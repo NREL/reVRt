@@ -13,7 +13,7 @@
 //! - Single chunk with reasonable size: How well we parallelize
 //!   calculating the cost.
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::hint::black_box;
 
 use revrt::bench_minimalist;
@@ -128,5 +128,35 @@ fn single_chunk(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, standard_ones, standard_random, single_chunk);
+fn range_distance(c: &mut Criterion) {
+    // Away from the border to progressively increas the search radius.
+    static X0: u64 = 30;
+    let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
+
+    let mut group = c.benchmark_group("distance");
+    for distance in [0, 1, 2, 5, 10, 15, 20].iter() {
+        group.bench_with_input(
+            BenchmarkId::from_parameter(distance),
+            distance,
+            |b, &distance| {
+                b.iter(|| {
+                    bench_minimalist(
+                        black_box(features_path.clone()),
+                        black_box(vec![ArrayIndex::new(X0 + distance, 50)]),
+                        black_box(vec![ArrayIndex::new(X0, 50)]),
+                    )
+                })
+            },
+        );
+    }
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    standard_ones,
+    standard_random,
+    single_chunk,
+    range_distance
+);
 criterion_main!(benches);
