@@ -93,8 +93,8 @@ fn standard_ones(c: &mut Criterion) {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
-                vec![ArrayIndex::new(20, 50)],
-                vec![ArrayIndex::new(5, 50)],
+                black_box(vec![ArrayIndex::new(20, 50)]),
+                black_box(vec![ArrayIndex::new(5, 50)]),
             )
         })
     });
@@ -107,8 +107,8 @@ fn standard_random(c: &mut Criterion) {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
-                vec![ArrayIndex::new(20, 50)],
-                vec![ArrayIndex::new(5, 50)],
+                black_box(vec![ArrayIndex::new(20, 50)]),
+                black_box(vec![ArrayIndex::new(5, 50)]),
             )
         })
     });
@@ -121,8 +121,8 @@ fn single_chunk(c: &mut Criterion) {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
-                vec![ArrayIndex::new(20, 50)],
-                vec![ArrayIndex::new(5, 50)],
+                black_box(vec![ArrayIndex::new(20, 50)]),
+                black_box(vec![ArrayIndex::new(5, 50)]),
             )
         })
     });
