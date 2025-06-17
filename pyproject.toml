@@ -216,7 +216,6 @@ tests-i = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-b
 
 
 [tool.pixi.pypi-dependencies]
-NREL-gaps = ">=0.8.7,<0.9"
 NREL-reVRt = { path = ".", editable = true }
 
 [tool.pixi.dependencies]

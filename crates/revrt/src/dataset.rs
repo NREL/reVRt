@@ -144,7 +144,6 @@ impl Dataset {
         trace!("Getting 3x3 neighborhood for (i={}, j={})", i, j);
 
         trace!("Cost dataset contents: {:?}", self.cost.list().unwrap());
-        // What is this size?
         trace!("Cost dataset size: {:?}", self.cost.size().unwrap());
 
         trace!("Opening cost dataset");
@@ -193,12 +192,12 @@ impl Dataset {
                 if self.cost_chunk_idx.read().unwrap()[[ci as usize, cj as usize]] {
                     trace!("Cost for chunk ({}, {}) already calculated", ci, cj);
                 } else {
-                    trace!("Requesting write lock for cost_chunk_idx ({}, {})", ci, cj);
+                    debug!("Requesting write lock for cost_chunk_idx ({}, {})", ci, cj);
                     let mut chunk_idx = self
                         .cost_chunk_idx
                         .write()
                         .expect("Failed to acquire write lock");
-                    trace!("Acquired write lock for cost_chunk_idx ({}, {})", ci, cj);
+                    debug!("Acquired write lock for cost_chunk_idx ({}, {})", ci, cj);
                     if chunk_idx[[ci as usize, cj as usize]] {
                         trace!(
                             "Cost for chunk ({}, {}) already calculated while waiting for the lock",
@@ -206,9 +205,10 @@ impl Dataset {
                         );
                     } else {
                         self.calculate_chunk_cost(ci, cj);
-                        trace!("Recording chunk ({}, {}) as calculated", ci, cj);
+                        debug!("Recording chunk ({}, {}) as calculated", ci, cj);
                         chunk_idx[[ci as usize, cj as usize]] = true;
                     }
+                    debug!("Released write lock for cost_chunk_idx ({}, {})", ci, cj);
                 }
             }
         }

@@ -9,7 +9,7 @@ mod ffi;
 
 use pathfinding::prelude::dijkstra;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::trace;
+use tracing::{debug, trace};
 
 use cost::CostFunction;
 use error::Result;
@@ -71,6 +71,8 @@ impl Simulation {
     }
 
     fn scout(&mut self, start: &[ArrayIndex], end: Vec<ArrayIndex>) -> Vec<(Vec<ArrayIndex>, f32)> {
+        debug!("Starting scout with {} start points", start.len());
+
         start
             .into_par_iter()
             .filter_map(|s| dijkstra(s, |p| self.successors(p), |p| end.contains(p)))
@@ -101,6 +103,40 @@ pub fn resolve<P: AsRef<std::path::Path>>(
         Simulation::new(store_path, cost_function, cache_size).unwrap();
     let result = simulation.scout(start, end);
     Ok(result)
+}
+
+#[inline]
+/// A public interface to run benchmarks
+///
+/// This function is intended for use during development only. It will
+/// eventually be replaced by a builder, thus more flexible and usable
+/// for other purposes.
+pub fn bench_minimalist(
+    features_path: std::path::PathBuf,
+    start: Vec<ArrayIndex>,
+    end: Vec<ArrayIndex>,
+) {
+    // temporary solution for a cost function until we have a builder
+    let cost_json = r#"
+      {
+        "cost_layers": [
+          {"layer_name": "A"},
+          {"layer_name": "B", "multiplier_scalar": 100},
+          {"layer_name": "A",
+            "multiplier_layer": "B"},
+          {"layer_name": "C",
+            "multiplier_layer": "A",
+            "multiplier_scalar": 2}
+]
+        }
+        "#
+    .to_string();
+    let cost_function = CostFunction::from_json(&cost_json).unwrap();
+
+    let mut simulation: Simulation =
+        Simulation::new(&features_path, cost_function, 250_000_000).unwrap();
+    let solutions: Vec<(Vec<ArrayIndex>, f32)> = simulation.scout(&start, end);
+    assert!(!solutions.is_empty(), "No solutions found");
 }
 
 #[cfg(test)]
