@@ -1,5 +1,6 @@
 //! Cost fuction
 
+use derive_builder::Builder;
 use ndarray::{Axis, stack};
 use tracing::{info, trace};
 
@@ -16,7 +17,7 @@ pub(crate) struct CostFunction {
     cost_layers: Vec<CostLayer>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Builder, Clone, Debug, serde::Deserialize)]
 /// A cost layer
 ///
 /// Each cost layer is a raster dataset, i.e. a regular grid, composed by
@@ -26,7 +27,9 @@ pub(crate) struct CostFunction {
 /// `multiplier_layer` are optional.
 struct CostLayer {
     layer_name: String,
+    #[builder(setter(strip_option), default)]
     multiplier_scalar: Option<f32>,
+    #[builder(setter(strip_option, into), default)]
     multiplier_layer: Option<String>,
 }
 
@@ -157,6 +160,37 @@ pub(crate) mod sample {
     pub(crate) fn cost_function() -> CostFunction {
         let json = as_text_v1();
         CostFunction::from_json(&json).unwrap()
+    }
+}
+
+#[cfg(test)]
+mod test_builder {
+    use super::*;
+
+    #[test]
+    fn costlayer() {
+        let layer = CostLayerBuilder::default()
+            .layer_name("A".to_string())
+            .multiplier_scalar(2.0)
+            .multiplier_layer("B")
+            .build()
+            .unwrap();
+
+        assert_eq!(layer.layer_name, "A");
+        assert_eq!(layer.multiplier_scalar, Some(2.0));
+        assert_eq!(layer.multiplier_layer, Some("B".to_string()));
+    }
+
+    #[test]
+    fn defaults() {
+        let layer = CostLayerBuilder::default()
+            .layer_name("A".to_string())
+            .build()
+            .unwrap();
+
+        assert_eq!(layer.layer_name, "A");
+        assert_eq!(layer.multiplier_scalar, None);
+        assert_eq!(layer.multiplier_layer, None);
     }
 }
 
