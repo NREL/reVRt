@@ -1,6 +1,8 @@
 """Test revrt spatial characterization CLI"""
 
+import os
 import json
+import platform
 from pathlib import Path
 
 import pytest
@@ -279,6 +281,11 @@ def test_buffered_lcp_characterizations_percentile(tmp_path, sample_raster):
     )
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli_command_minimal(tmp_cwd, sample_raster, cli_runner):
     """Test running from config with minimal user inputs"""
     raster_fp = tmp_cwd / "test_raster.tif"
@@ -335,6 +342,11 @@ def test_cli_command_minimal(tmp_cwd, sample_raster, cli_runner):
     assert out_stats["A"].to_list() == ["a", "b"]
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli_command_multiple_rasters(tmp_cwd, sample_raster, cli_runner):
     """Test running from config with multiple raster inputs"""
     raster_fp = tmp_cwd / "raster.tif"

@@ -1,0 +1,125 @@
+name: Python checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint Python Code Base with Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+        with:
+          version: "latest"
+          args: "check"
+          src: "./revrt"
+      - uses: astral-sh/ruff-action@v3
+        with:
+          version: "latest"
+          args: "format --check"
+          src: "./revrt"
+
+  unit-tests:
+    needs: lint
+    name: Python Unit Tests (Pixi)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: prefix-dev/setup-pixi@v0.8.10
+      with:
+        pixi-version: v0.48.2
+        locked: true
+        cache: true
+        cache-write: ${{ github.ref == 'refs/heads/main' }}
+        environments: dev
+
+    - run: pixi run --frozen tests-u
+
+  integration-tests:
+    needs: lint
+    name: Python Integration Tests (Pixi)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: prefix-dev/setup-pixi@v0.8.10
+      with:
+        pixi-version: v0.48.2
+        locked: true
+        cache: true
+        cache-write: ${{ github.ref == 'refs/heads/main' }}
+        environments: dev
+
+    - run: pixi run --frozen tests-i
+
+  tox-tests:
+    needs: lint
+    name: Python tests (Tox)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.13', '3.12', '3.11']
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install tox tox-gh-actions>=2.0
+
+    - name: Load tox cache
+      uses: actions/cache/restore@v4
+      with:
+        path: .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-tox-v1-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.python-version }}-tox-v1-
+
+    - name: Test with tox
+      run: tox -e ${{ matrix.python-version == '3.11' && 'msv' || 'latest' }}
+      env:
+        PYTHONDEVMODE: 1
+
+    - name: Save tox cache only on main
+      if: github.ref == 'refs/heads/main'
+      uses: actions/cache/save@v4
+      with:
+        path: .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-tox-v1-${{ hashFiles('**/pyproject.toml') }}
