@@ -71,7 +71,7 @@ impl CostFunction {
     /// A 2D array containing the cost for the chunk.
     pub(crate) fn calculate_chunk(
         &self,
-        mut neofeatures: LazyChunk,
+        mut features: LazyChunk,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
         // info!("Calculating cost for chunk ({}, {})", ci, cj);
 
@@ -82,7 +82,7 @@ impl CostFunction {
                 let layer_name = &layer.layer_name;
                 trace!("Layer name: {}", layer_name);
 
-                let mut cost = neofeatures
+                let mut cost = features
                     .get(layer_name)
                     .expect("Layer not found in features");
 
@@ -103,7 +103,7 @@ impl CostFunction {
                         layer_name,
                         multiplier_layer
                     );
-                    let multiplier_value = neofeatures
+                    let multiplier_value = features
                         .get(multiplier_layer)
                         .expect("Multiplier layer not found in features");
 
