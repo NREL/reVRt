@@ -667,6 +667,6 @@ mod chunk_tests {
         assert_eq!(chunk.ci, 0);
         assert_eq!(chunk.cj, 0);
 
-        let tmp = chunk.get("A").unwrap();
+        let _tmp = chunk.get("A").unwrap();
     }
 }
