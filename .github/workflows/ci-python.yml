@@ -49,7 +49,9 @@ jobs:
         cache-write: ${{ github.ref == 'refs/heads/main' }}
         environments: dev
 
-    - run: pixi run --frozen tests-u
+    - run:
+        pixi reinstall -e dev NREL-reVRt
+        pixi run -e dev --frozen tests-u
 
   integration-tests:
     needs: lint
@@ -75,7 +77,9 @@ jobs:
         cache-write: ${{ github.ref == 'refs/heads/main' }}
         environments: dev
 
-    - run: pixi run --frozen tests-i
+    - run: |
+        pixi reinstall -e dev NREL-reVRt
+        pixi run -e dev --frozen tests-i
 
   tox-tests:
     needs: lint
