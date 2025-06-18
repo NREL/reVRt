@@ -21,6 +21,8 @@ jobs:
           pixi-version: v0.48.2
           cache: true
           frozen: true
+          cache-write: ${{ github.ref == 'refs/heads/main' }}
+          environments: dev
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -28,7 +30,7 @@ jobs:
 
       - name: Run cargo check
         run: |
-          pixi run --frozen cargo check --workspace
+          pixi run -e dev --frozen cargo check --workspace
 
   lints:
     # Only run tests if code looks OK
@@ -44,6 +46,8 @@ jobs:
           pixi-version: v0.48.2
           cache: true
           frozen: true
+          cache-write: ${{ github.ref == 'refs/heads/main' }}
+          environments: dev
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -51,11 +55,11 @@ jobs:
 
       - name: Run cargo fmt
         run: |
-          pixi run --frozen cargo fmt --all --check
+          pixi run -e dev --frozen cargo fmt --all --check
 
       - name: Run cargo clippy
         run: |
-          pixi run --frozen cargo clippy --all-features --tests -- -D warnings
+          pixi run -e dev --frozen cargo clippy --locked --all-features --tests -- -D warnings
 
   test:
     # Only run tests if code looks OK
@@ -92,9 +96,11 @@ jobs:
           pixi-version: v0.48.2
           cache: true
           frozen: true
+          cache-write: ${{ github.ref == 'refs/heads/main' }}
+          environments: dev
 
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - run: pixi run --frozen cargo test --workspace --no-fail-fast
+      - run: pixi run -e dev --frozen tests-r

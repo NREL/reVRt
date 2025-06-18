@@ -46,6 +46,8 @@ jobs:
         pixi-version: v0.48.2
         locked: true
         cache: true
+        cache-write: ${{ github.ref == 'refs/heads/main' }}
+        environments: dev
 
     - run: pixi run tests-u
 
@@ -70,6 +72,8 @@ jobs:
         pixi-version: v0.48.2
         locked: true
         cache: true
+        cache-write: ${{ github.ref == 'refs/heads/main' }}
+        environments: dev
 
     - run: pixi run tests-i
 
