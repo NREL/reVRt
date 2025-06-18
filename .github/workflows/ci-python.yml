@@ -100,8 +100,8 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install tox tox-gh-actions>=2.0
 
-    - name: tox cache
-      uses: actions/cache@v4
+    - name: Load tox cache
+      uses: actions/cache/restore@v4
       with:
         path: .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-tox-v1-${{ hashFiles('**/pyproject.toml') }}
@@ -112,3 +112,10 @@ jobs:
       run: tox -e ${{ matrix.python-version == '3.11' && 'msv' || 'latest' }}
       env:
         PYTHONDEVMODE: 1
+
+    - name: Save tox cache only on main
+      if: github.ref == 'refs/heads/main'
+      uses: actions/cache/save@v4
+      with:
+        path: .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-tox-v1-${{ hashFiles('**/pyproject.toml') }}
