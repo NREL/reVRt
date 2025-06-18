@@ -1,6 +1,8 @@
 """Zonal stats integration tests"""
 
+import os
 import json
+import platform
 from pathlib import Path
 
 import pytest
@@ -389,6 +391,11 @@ def test_parallel_zonal_stats_with_client(sc_dir, zonal_polygon_fp):
     assert test_stats == truth_stats
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli_command_parallel(tmp_cwd, cli_runner):
     """Test running from config with multiple workers"""
     sample_raster = xr.DataArray(
@@ -493,6 +500,11 @@ def test_cli_command_parallel(tmp_cwd, cli_runner):
     )
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli_command_parallel_with_multiplier(tmp_cwd, cli_runner):
     """Test running from config with multiple workers"""
     sample_raster = xr.DataArray(
