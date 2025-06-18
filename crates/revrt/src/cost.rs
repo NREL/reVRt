@@ -70,11 +70,9 @@ impl CostFunction {
     /// A 2D array containing the cost for the chunk.
     pub(crate) fn calculate_chunk(
         &self,
-        features: &zarrs::storage::ReadableListableStorage,
-        ci: u64,
-        cj: u64,
+        mut neofeatures: LazyChunk,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        info!("Calculating cost for chunk ({}, {})", ci, cj);
+        // info!("Calculating cost for chunk ({}, {})", ci, cj);
 
         let cost = self
             .cost_layers
@@ -83,43 +81,34 @@ impl CostFunction {
                 let layer_name = &layer.layer_name;
                 trace!("Layer name: {}", layer_name);
 
-                let array =
-                    zarrs::array::Array::open(features.clone(), &format!("/{layer_name}")).unwrap();
-                let mut cost = array.retrieve_chunk_ndarray::<f32>(&[ci, cj]).unwrap();
+                let mut cost = neofeatures
+                    .get(layer_name)
+                    .expect("Layer not found in features");
 
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
                         "Layer {} has multiplier scalar {}",
-                        layer_name, multiplier_scalar
+                        layer_name,
+                        multiplier_scalar
                     );
                     // Apply the multiplier scalar to the value
                     cost *= multiplier_scalar;
-                    trace!(
-                        "Cost for chunk ({}, {}) in layer {}: {}",
-                        ci, cj, layer_name, cost
-                    );
+                    // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
                 }
 
                 if let Some(multiplier_layer) = &layer.multiplier_layer {
                     trace!(
                         "Layer {} has multiplier layer {}",
-                        layer_name, multiplier_layer
+                        layer_name,
+                        multiplier_layer
                     );
-                    let multiplier_array = zarrs::array::Array::open(
-                        features.clone(),
-                        &format!("/{multiplier_layer}"),
-                    )
-                    .unwrap();
-                    let multiplier_value = multiplier_array
-                        .retrieve_chunk_ndarray::<f32>(&[ci, cj])
-                        .unwrap();
+                    let multiplier_value = neofeatures
+                        .get(multiplier_layer)
+                        .expect("Multiplier layer not found in features");
 
                     // Apply the multiplier layer to the value
                     cost = cost * multiplier_value;
-                    trace!(
-                        "Cost for chunk ({}, {}) in layer {}: {}",
-                        ci, cj, layer_name, cost
-                    );
+                    // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
                 }
                 cost
             })

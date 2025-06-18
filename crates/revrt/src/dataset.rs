@@ -116,7 +116,13 @@ impl Dataset {
     }
 
     fn calculate_chunk_cost(&self, i: u64, j: u64) {
-        let output = self.cost_function.calculate_chunk(&self.source, i, j);
+        let chunk = LazyChunk {
+            source: self.source.clone(),
+            ci: i as u32,
+            cj: j as u32,
+            data: std::collections::HashMap::new(),
+        };
+        let output = self.cost_function.calculate_chunk(chunk);
         trace!("Cost function: {:?}", self.cost_function);
 
         /*
@@ -584,7 +590,7 @@ mod tests {
 }
 
 /// Lazy chunk of a Zarr dataset
-struct Chunk {
+pub(crate) struct LazyChunk {
     /// Source Zarr storage
     source: ReadableListableStorage,
     /// Chunk index 1st dimension
@@ -599,9 +605,9 @@ struct Chunk {
     >,
 }
 
-impl Chunk {
+impl LazyChunk {
     //fn get(&self, variable: &str) -> Result<&ndarray::Array2<f32>> {
-    fn get(
+    pub(crate) fn get(
         &mut self,
         variable: &str,
     ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>> {
@@ -640,7 +646,7 @@ mod chunk_tests {
         let store: zarrs::storage::ReadableListableStorage =
             std::sync::Arc::new(zarrs::filesystem::FilesystemStore::new(&path).unwrap());
 
-        let mut chunk = Chunk {
+        let mut chunk = LazyChunk {
             source: store,
             ci: 0,
             cj: 0,
