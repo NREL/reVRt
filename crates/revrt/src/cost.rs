@@ -4,6 +4,7 @@ use derive_builder::Builder;
 use ndarray::{Axis, stack};
 use tracing::{info, trace};
 
+use crate::dataset::LazyChunk;
 use crate::error::Result;
 
 #[derive(Debug, serde::Deserialize)]
@@ -88,8 +89,7 @@ impl CostFunction {
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
                         "Layer {} has multiplier scalar {}",
-                        layer_name,
-                        multiplier_scalar
+                        layer_name, multiplier_scalar
                     );
                     // Apply the multiplier scalar to the value
                     cost *= multiplier_scalar;
@@ -99,8 +99,7 @@ impl CostFunction {
                 if let Some(multiplier_layer) = &layer.multiplier_layer {
                     trace!(
                         "Layer {} has multiplier layer {}",
-                        layer_name,
-                        multiplier_layer
+                        layer_name, multiplier_layer
                     );
                     let multiplier_value = neofeatures
                         .get(multiplier_layer)
