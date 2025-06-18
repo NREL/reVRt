@@ -116,7 +116,7 @@ impl Dataset {
     }
 
     fn calculate_chunk_cost(&self, ci: u64, cj: u64) {
-        trace!("Creating a LazyChunk for ({}, {})", i, j);
+        trace!("Creating a LazyChunk for ({}, {})", ci, cj);
         let chunk = LazyChunk {
             source: self.source.clone(),
             ci,
