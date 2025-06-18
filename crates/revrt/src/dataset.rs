@@ -632,7 +632,7 @@ impl LazyChunk {
                 trace!("Loading chunk data for variable: {}", variable);
                 let array = zarrs::array::Array::open(self.source.clone(), &format!("/{variable}"))
                     .unwrap();
-                let chunk_indices = &[self.ci as u64, self.cj as u64];
+                let chunk_indices = &[self.ci, self.cj];
                 let chunk_subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
                     chunk_indices[0]..(chunk_indices[0] + 1),
                     chunk_indices[1]..(chunk_indices[1] + 1),
