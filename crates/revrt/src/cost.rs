@@ -74,7 +74,11 @@ impl CostFunction {
         &self,
         mut features: LazyChunk,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        // info!("Calculating cost for chunk ({}, {})", ci, cj);
+        info!(
+            "Calculating cost for chunk ({}, {})",
+            features.ci(),
+            features.cj()
+        );
 
         let cost = self
             .cost_layers

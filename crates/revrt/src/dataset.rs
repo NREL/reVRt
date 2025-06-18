@@ -607,6 +607,14 @@ pub(crate) struct LazyChunk {
 }
 
 impl LazyChunk {
+    pub(super) fn ci(&self) -> u64 {
+        self.ci
+    }
+
+    pub(super) fn cj(&self) -> u64 {
+        self.cj
+    }
+
     //fn get(&self, variable: &str) -> Result<&ndarray::Array2<f32>> {
     pub(crate) fn get(
         &mut self,
