@@ -115,11 +115,12 @@ impl Dataset {
         })
     }
 
-    fn calculate_chunk_cost(&self, i: u64, j: u64) {
+    fn calculate_chunk_cost(&self, ci: u64, cj: u64) {
+        trace!("Creating a LazyChunk for ({}, {})", i, j);
         let chunk = LazyChunk {
             source: self.source.clone(),
-            ci: i as u32,
-            cj: j as u32,
+            ci,
+            cj,
             data: std::collections::HashMap::new(),
         };
         let output = self.cost_function.calculate_chunk(chunk);
@@ -594,9 +595,9 @@ pub(crate) struct LazyChunk {
     /// Source Zarr storage
     source: ReadableListableStorage,
     /// Chunk index 1st dimension
-    ci: u32,
+    ci: u64,
     /// Chunk index 2nd dimension
-    cj: u32,
+    cj: u64,
     /// Data
     // data: std::collections::HashMap<String, ndarray::Array2<f32>>,
     data: std::collections::HashMap<
