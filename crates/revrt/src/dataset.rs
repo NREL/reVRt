@@ -123,7 +123,7 @@ impl Dataset {
             cj,
             data: std::collections::HashMap::new(),
         };
-        let output = self.cost_function.calculate_chunk(chunk);
+        let output = self.cost_function.calculate(chunk);
         trace!("Cost function: {:?}", self.cost_function);
 
         /*

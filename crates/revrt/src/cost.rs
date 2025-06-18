@@ -59,16 +59,18 @@ impl CostFunction {
 
     /// Calculate the cost from a given collection of input features
     ///
-    /// From the cost function definition, calculates the cost for a given
-    /// collection of input features. This collection is typically a subset,
-    /// such as a chunk from a Zarr dataset.
+    /// Applies the cost function to a collection of input features, which
+    /// is typically a subset of a larger dataset, such as a chunk from a
+    /// Zarr dataset. The cost function is defined by a series of layers,
+    /// each of which may have a multiplier scalar or a multiplier layer.
     ///
     /// # Arguments
     /// `features`: A lazy collection of input features.
     ///
     /// # Returns
-    /// A 2D array containing the cost for the chunk.
-    pub(crate) fn calculate_chunk(
+    /// A 2D array containing the cost for the subset covered by the input
+    /// features.
+    pub(crate) fn calculate(
         &self,
         mut features: LazyChunk,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
