@@ -137,10 +137,10 @@ impl Dataset {
 
         let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
-        let chunk_indices: Vec<u64> = vec![i, j];
+        let chunk_indices: Vec<u64> = vec![ci, cj];
         trace!("Storing chunk at {:?}", chunk_indices);
         let chunk_subset =
-            &zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
+            &zarrs::array_subset::ArraySubset::new_with_ranges(&[ci..(ci + 1), cj..(cj + 1)]);
         trace!("Target chunk subset: {:?}", chunk_subset);
         cost.store_chunks_ndarray(chunk_subset, output).unwrap();
     }
