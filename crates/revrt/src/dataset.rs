@@ -599,6 +599,7 @@ pub(crate) struct LazyChunk {
     /// Chunk index 2nd dimension
     cj: u64,
     /// Data
+    // We know it is a 2D array of f32. We might want to simplify and strict this definition.
     // data: std::collections::HashMap<String, ndarray::Array2<f32>>,
     data: std::collections::HashMap<
         String,
@@ -638,6 +639,7 @@ impl LazyChunk {
                 ]);
                 trace!("Storing chunk data for variable: {}", variable);
                 let values = array.retrieve_chunks_ndarray::<f32>(&chunk_subset).unwrap();
+                // array.retrieve_chunk_ndarray::<f32>(&[ci, cj]).unwrap();
                 self.data.insert(variable.to_string(), values.clone());
                 values
             }
