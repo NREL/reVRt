@@ -103,4 +103,4 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - run: pixi run -e dev --frozen tests-r
+      - run: pixi run --frozen tests-r
