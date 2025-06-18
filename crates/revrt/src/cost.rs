@@ -57,15 +57,14 @@ impl CostFunction {
         Ok(cost)
     }
 
-    /// Calculate the cost for a full chunk
+    /// Calculate the cost from a given collection of input features
     ///
-    /// From a given Zarr dataset containing the input features, calculate
-    /// the cost for a full chunk.
+    /// From the cost function definition, calculates the cost for a given
+    /// collection of input features. This collection is typically a subset,
+    /// such as a chunk from a Zarr dataset.
     ///
     /// # Arguments
-    /// `features`: A Zarr dataset containing the input features.
-    /// `ci`: The chunk index in the first dimension.
-    /// `cj`: The chunk index in the second dimension.
+    /// `features`: A lazy collection of input features.
     ///
     /// # Returns
     /// A 2D array containing the cost for the chunk.
