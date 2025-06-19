@@ -4,6 +4,7 @@ use derive_builder::Builder;
 use ndarray::{Axis, stack};
 use tracing::{info, trace};
 
+use crate::dataset::LazyChunk;
 use crate::error::Result;
 
 #[derive(Debug, serde::Deserialize)]
@@ -56,25 +57,28 @@ impl CostFunction {
         Ok(cost)
     }
 
-    /// Calculate the cost for a full chunk
+    /// Calculate the cost from a given collection of input features
     ///
-    /// From a given Zarr dataset containing the input features, calculate
-    /// the cost for a full chunk.
+    /// Applies the cost function to a collection of input features, which
+    /// is typically a subset of a larger dataset, such as a chunk from a
+    /// Zarr dataset. The cost function is defined by a series of layers,
+    /// each of which may have a multiplier scalar or a multiplier layer.
     ///
     /// # Arguments
-    /// `features`: A Zarr dataset containing the input features.
-    /// `ci`: The chunk index in the first dimension.
-    /// `cj`: The chunk index in the second dimension.
+    /// `features`: A lazy collection of input features.
     ///
     /// # Returns
-    /// A 2D array containing the cost for the chunk.
-    pub(crate) fn calculate_chunk(
+    /// A 2D array containing the cost for the subset covered by the input
+    /// features.
+    pub(crate) fn calculate(
         &self,
-        features: &zarrs::storage::ReadableListableStorage,
-        ci: u64,
-        cj: u64,
+        mut features: LazyChunk,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        info!("Calculating cost for chunk ({}, {})", ci, cj);
+        info!(
+            "Calculating cost for chunk ({}, {})",
+            features.ci(),
+            features.cj()
+        );
 
         let cost = self
             .cost_layers
@@ -83,9 +87,9 @@ impl CostFunction {
                 let layer_name = &layer.layer_name;
                 trace!("Layer name: {}", layer_name);
 
-                let array =
-                    zarrs::array::Array::open(features.clone(), &format!("/{layer_name}")).unwrap();
-                let mut cost = array.retrieve_chunk_ndarray::<f32>(&[ci, cj]).unwrap();
+                let mut cost = features
+                    .get(layer_name)
+                    .expect("Layer not found in features");
 
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
@@ -94,10 +98,7 @@ impl CostFunction {
                     );
                     // Apply the multiplier scalar to the value
                     cost *= multiplier_scalar;
-                    trace!(
-                        "Cost for chunk ({}, {}) in layer {}: {}",
-                        ci, cj, layer_name, cost
-                    );
+                    // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
                 }
 
                 if let Some(multiplier_layer) = &layer.multiplier_layer {
@@ -105,21 +106,13 @@ impl CostFunction {
                         "Layer {} has multiplier layer {}",
                         layer_name, multiplier_layer
                     );
-                    let multiplier_array = zarrs::array::Array::open(
-                        features.clone(),
-                        &format!("/{multiplier_layer}"),
-                    )
-                    .unwrap();
-                    let multiplier_value = multiplier_array
-                        .retrieve_chunk_ndarray::<f32>(&[ci, cj])
-                        .unwrap();
+                    let multiplier_value = features
+                        .get(multiplier_layer)
+                        .expect("Multiplier layer not found in features");
 
                     // Apply the multiplier layer to the value
                     cost = cost * multiplier_value;
-                    trace!(
-                        "Cost for chunk ({}, {}) in layer {}: {}",
-                        ci, cj, layer_name, cost
-                    );
+                    // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
                 }
                 cost
             })
