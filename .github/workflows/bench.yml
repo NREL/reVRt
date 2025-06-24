@@ -14,10 +14,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.10
+        with:
+          pixi-version: v0.48.2
+          cache: true
+          frozen: true
+          cache-write: ${{ github.ref == 'refs/heads/main' }}
+          environments: dev
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "gha"
+          save-if: false
+
       - name: Run benchmark
         run: |
-          cargo install cargo-criterion
-          cargo criterion --output-format bencher --benches 2>&1 | tee output.txt
+          pixi r -e dev cargo --locked install cargo-criterion
+          pixi r -e dev cargo --locked criterion --output-format bencher --benches 2>&1 | tee output.txt
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
