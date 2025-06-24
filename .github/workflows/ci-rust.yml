@@ -26,7 +26,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: "gha"
+          # Don't cache for cargo check
+          save-if: false
 
       - name: Run cargo check
         run: |
@@ -51,7 +53,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: "gha"
+          # Don't cache for cargo fmt/clippy
+          save-if: false
 
       - name: Run cargo fmt
         run: |
@@ -101,6 +105,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
+          shared-key: "gha"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - run: pixi run --frozen tests-r
