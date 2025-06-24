@@ -32,7 +32,7 @@ jobs:
 
       - name: Run cargo check
         run: |
-          pixi run -e dev --frozen cargo check --workspace
+          pixi run -e dev --frozen cargo check --workspace --locked
 
   lints:
     # Only run tests if code looks OK
