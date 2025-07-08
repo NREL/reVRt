@@ -1,15 +1,18 @@
 /// Support cost for a node in a network graph.
 use std::cmp::Ordering;
 
+use crate::ArrayIndex;
+
+#[derive(Debug)]
 /// Cost for a node of a network graph
 ///
 /// Provides support to compare nodes based on their cost and estimated cost.
 pub(super) struct NodeCost<T> {
     /// Estimated cost to reach the goal from this node.
     // This is not used now, but preparing for A* algorithm.
-    index: usize,
-    cost: T,
-    estimated_cost: T,
+    pub(super) index: ArrayIndex,
+    pub(super) cost: T,
+    pub(super) estimated_cost: T,
 }
 
 impl<T: PartialEq> PartialEq for NodeCost<T> {
@@ -42,12 +45,12 @@ mod test {
     #[test]
     fn equal_integers() {
         let a = NodeCost {
-            index: 0,
+            index: ArrayIndex::new(0, 0),
             cost: 5,
             estimated_cost: 10,
         };
         let b = NodeCost {
-            index: 1,
+            index: ArrayIndex::new(1, 1),
             cost: 5,
             estimated_cost: 10,
         };
@@ -58,12 +61,12 @@ mod test {
     fn integer() {
         use super::*;
         let a = NodeCost {
-            index: 0,
+            index: ArrayIndex::new(0, 0),
             cost: 5,
             estimated_cost: 10,
         };
         let b = NodeCost {
-            index: 1,
+            index: ArrayIndex::new(1, 1),
             cost: 3,
             estimated_cost: 10,
         };
@@ -73,12 +76,12 @@ mod test {
     #[test]
     fn equal_floats() {
         let a = NodeCost {
-            index: 0,
+            index: ArrayIndex::new(0, 0),
             cost: 5.0,
             estimated_cost: 10.0,
         };
         let b = NodeCost {
-            index: 1,
+            index: ArrayIndex::new(1, 1),
             cost: 5.0,
             estimated_cost: 10.0,
         };
@@ -105,16 +108,16 @@ mod test {
     fn binary_heap() {
         let mut heap = std::collections::BinaryHeap::new();
         heap.push(NodeCost {
-            index: 0,
+            index: ArrayIndex::new(0, 0),
             cost: 5,
             estimated_cost: 5,
         });
         heap.push(NodeCost {
-            index: 1,
+            index: ArrayIndex::new(1, 1),
             cost: 3,
             estimated_cost: 3,
         });
-        assert_eq!(heap.pop().unwrap().index, 1);
-        assert_eq!(heap.pop().unwrap().index, 0);
+        assert_eq!(heap.pop().unwrap().index, ArrayIndex::new(1, 1));
+        assert_eq!(heap.pop().unwrap().index, ArrayIndex::new(0, 0));
     }
 }
