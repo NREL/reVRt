@@ -1,4 +1,5 @@
-# Welcome to reV Routing (reVRt)!
+Welcome to reV Routing (reVRt)!
+===============================
 
 
 The reV Routing tool is a computational framework for modeling and optimizing
