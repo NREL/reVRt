@@ -16,6 +16,10 @@ class revrtError(Exception):  # noqa: N801
             logger.error(str(args[0]), stacklevel=2)
 
 
+class revrtFileNotFoundError(revrtError, FileNotFoundError):  # noqa: N801
+    """revrt FileNotFoundError"""
+
+
 class revrtKeyError(revrtError, KeyError):  # noqa: N801
     """revrt KeyError"""
 
