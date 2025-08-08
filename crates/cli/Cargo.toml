@@ -11,3 +11,7 @@ clap = { workspace = true }
 revrt = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+dhat = { workspace = true }
+
+[features]
+dhat-heap = []
