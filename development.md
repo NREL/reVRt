@@ -6,7 +6,21 @@
 Ideally this section should be empty, so whenever there is a chance, this
 points should be organized and moved to the appropriate section.
 
-- Instructions to run benchmark locally: `cargo bench --bench standard`
+- Profiling memory usage:
+  - Using dhat:
+    - cargo run --release -p revrt-cli --features dhat-heap -- -vv -d ../transmission_costs.zarr --cost-function='{"cost_layers": [{"layer_name": "fmv_dollar_per_acre"}, {"layer_name": "swca_natural_resources_risk_2"}]}' --start 20012,40000 --end 20012,40100 --cache-size=250000
+      Which gives this:
+      ```
+      dhat: Total:     730,183,928 bytes in 5,192,541 blocks
+      dhat: At t-gmax: 80,245,023 bytes in 428 blocks
+      dhat: At t-end:  158,992 bytes in 268 blocks
+      dhat: The data has been saved to dhat-heap.json, and is viewable with dhat/dh_view.html
+      ```
+- Benchmarking with smaply
+  - cargo install --locked samply
+- Benchmarking with criterion:
+  - Instructions to run benchmark locally: `cargo bench --bench standard`
+  - Visualize output at `target/criterion/`
 - Use a cache for the chunks.
 - Does it make sense a cache on the final weight calculated? Maybe
   a HashMap with (x, y), and rolling the oldest out to minimize
