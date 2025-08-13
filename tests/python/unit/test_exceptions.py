@@ -9,6 +9,7 @@ from revrt.exceptions import (
     revrtFileNotFoundError,
     revrtKeyError,
     revrtNotImplementedError,
+    revrtProfileCheckError,
     revrtRuntimeError,
     revrtTypeError,
     revrtValueError,
@@ -55,6 +56,10 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
         (
             revrtNotImplementedError,
             [revrtError, revrtNotImplementedError, NotImplementedError],
+        ),
+        (
+            revrtProfileCheckError,
+            [revrtError, revrtProfileCheckError, ValueError],
         ),
         (revrtKeyError, [revrtError, revrtKeyError, KeyError]),
         (revrtRuntimeError, [revrtError, revrtRuntimeError, RuntimeError]),
