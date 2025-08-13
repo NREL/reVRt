@@ -2,44 +2,43 @@
 
 use std::cmp::Ordering;
 
-use crate::ArrayIndex;
-
 #[derive(Debug)]
 /// Cost for a node in a network graph
 ///
 /// Provides support to compare nodes based on their cost and estimated cost.
-pub(super) struct NodeCost<T> {
+// Consider renaming to NodePriority
+pub(super) struct NodeCost<I, T> {
     /// Estimated cost to reach the goal from this node.
     // This is not used now, but preparing for A* algorithm.
-    pub(super) index: ArrayIndex,
+    pub(super) index: I,
     /// Cost (cheapest) to reach this node from the start node.
     pub(super) cost: T,
     /// Estimated cost to reach the goal from this node.
     pub(super) estimated_cost: T,
 }
 
-impl<T: PartialEq> PartialEq for NodeCost<T> {
+impl<I, T: PartialEq> PartialEq for NodeCost<I, T> {
     fn eq(&self, other: &Self) -> bool {
         self.estimated_cost.eq(&other.estimated_cost) && self.cost.eq(&other.cost)
     }
 }
 
-impl<T: PartialEq> Eq for NodeCost<T> {}
+impl<I, T: PartialEq> Eq for NodeCost<I, T> {}
 
-impl PartialOrd for NodeCost<i32> {
+impl<I> PartialOrd for NodeCost<I, i32> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialOrd for NodeCost<f32> {
+impl<I> PartialOrd for NodeCost<I, f32> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 /*
-impl<T: Ord> PartialOrd for NodeCost<T> {
+impl<T: Ord> PartialOrd for NodeCost<I,T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -49,7 +48,7 @@ impl<T: Ord> PartialOrd for NodeCost<T> {
 /// Priority order for the node cost.
 ///
 /// Note that the order is reversed compared to the default ordering.
-impl Ord for NodeCost<i32> {
+impl<I> Ord for NodeCost<I, i32> {
     fn cmp(&self, other: &Self) -> Ordering {
         match other.estimated_cost.cmp(&self.estimated_cost) {
             Ordering::Equal => other.cost.cmp(&self.cost),
@@ -57,7 +56,7 @@ impl Ord for NodeCost<i32> {
         }
     }
 }
-impl Ord for NodeCost<f32> {
+impl<I> Ord for NodeCost<I, f32> {
     fn cmp(&self, other: &Self) -> Ordering {
         match other.estimated_cost.total_cmp(&self.estimated_cost) {
             Ordering::Equal => other.cost.total_cmp(&self.cost),
@@ -66,7 +65,7 @@ impl Ord for NodeCost<f32> {
     }
 }
 /*
-impl<T: Ord> Ord for NodeCost<T> {
+impl<T: Ord> Ord for NodeCost<I,T> {
     fn cmp(&self, other: &Self) -> Ordering {
         match other.estimated_cost.cmp(&self.estimated_cost) {
             Ordering::Equal => self.cost.partial_cmp(&other.cost).unwrap(),
@@ -79,6 +78,7 @@ impl<T: Ord> Ord for NodeCost<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::ArrayIndex;
 
     #[test]
     fn equal_integers() {
