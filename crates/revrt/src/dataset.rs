@@ -53,10 +53,7 @@ impl Dataset {
 
         // ==== Create the swap dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
-        debug!(
-            "Initializing a temporary swap dataset at {:?}",
-            tmp_path.path()
-        );
+        debug!("Initializing a swap dataset at {:?}", tmp_path.path());
         let swap: ReadableWritableListableStorage = std::sync::Arc::new(
             zarrs::filesystem::FilesystemStore::new(tmp_path.path())
                 .expect("could not open filesystem store"),
