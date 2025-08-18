@@ -22,6 +22,7 @@ pub(crate) use lazy_subset::LazySubset;
 pub(super) struct Dataset {
     /// A Zarr storages with the features
     source: ReadableListableStorage,
+    dims: Vec<u64>,
     // Silly way to keep the tmp path alive
     #[allow(dead_code)]
     cost_path: tempfile::TempDir,
@@ -61,6 +62,14 @@ impl Dataset {
         let filesystem =
             zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
         let source = std::sync::Arc::new(filesystem);
+
+        // ==== Temporary solution to specify dimensions ====
+        // Assume all variables have the same shape and chunk shape.
+        // Find the name of the first variable and use it.
+        let varname = source.list().unwrap()[0].to_string();
+        let varname = varname.split("/").collect::<Vec<_>>()[0];
+        let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
+        let dims = tmp.shape().to_vec();
 
         // ==== Create the swap dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
@@ -144,6 +153,7 @@ impl Dataset {
         trace!("Dataset opened successfully");
         Ok(Self {
             source,
+            dims,
             cost_path: tmp_path,
             swap,
             cost_chunk_idx,
