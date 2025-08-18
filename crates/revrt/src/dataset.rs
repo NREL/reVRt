@@ -8,6 +8,7 @@ use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
 use zarrs::array::ArrayChunkCacheExt;
+use zarrs::array_subset::ArraySubset;
 use zarrs::storage::{
     ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
 };
@@ -188,8 +189,7 @@ impl Dataset {
         cost.store_metadata().unwrap();
         let chunk_indices: Vec<u64> = vec![ci, cj];
         trace!("Storing chunk at {:?}", chunk_indices);
-        let chunk_subset =
-            &zarrs::array_subset::ArraySubset::new_with_ranges(&[ci..(ci + 1), cj..(cj + 1)]);
+        let chunk_subset = &ArraySubset::new_with_ranges(&[ci..(ci + 1), cj..(cj + 1)]);
         trace!("Target chunk subset: {:?}", chunk_subset);
         cost.store_chunks_ndarray(chunk_subset, output).unwrap();
     }
@@ -361,8 +361,7 @@ mod tests {
             let results = dataset.get_3x3(&point);
 
             for (ArrayIndex { i, j }, val) in results {
-                let subset =
-                    zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
+                let subset = ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
                 let subset_elements: Vec<f32> = array
                     .retrieve_array_subset_elements(&subset)
                     .expect("Error reading zarr data");
@@ -387,8 +386,7 @@ mod tests {
             let results = dataset.get_3x3(&point);
 
             for (ArrayIndex { i, j }, val) in results {
-                let subset =
-                    zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
+                let subset = ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
                 let subset_elements_a: Vec<f32> = array_a
                     .retrieve_array_subset_elements(&subset)
                     .expect("Error reading zarr data");
