@@ -19,6 +19,8 @@ use crate::error::Result;
 pub(crate) use lazy_chunk::LazyChunk;
 pub(crate) use lazy_subset::LazySubset;
 
+const CHUNK_SHAPE: [u64; 2] = [1_000, 1_000];
+
 /// Manages the features datasets and calculated total cost
 pub(super) struct Dataset {
     /// A Zarr storages with the features
