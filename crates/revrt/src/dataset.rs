@@ -125,9 +125,9 @@ impl Dataset {
         // Get the subset according to cost's chunk
         let subset = variable.chunk_subset(&[ci, cj]).unwrap();
         let data = LazySubset::<f32>::new(self.source.clone(), subset);
-        let output = self.cost_function.compute(data);
 
         trace!("Cost function: {:?}", self.cost_function);
+        let output = self.cost_function.compute(data);
 
         /*
         trace!("Getting '/A' variable");
