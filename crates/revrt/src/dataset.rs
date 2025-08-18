@@ -88,7 +88,7 @@ impl Dataset {
         // ----
 
         trace!("Creating an empty cost array");
-        let array = zarrs::array::ArrayBuilder::new(
+        let cost = zarrs::array::ArrayBuilder::new(
             cost_shape.into(),
             zarrs::array::DataType::Float32,
             chunk_shape,
@@ -96,16 +96,23 @@ impl Dataset {
         )
         .build(swap.clone(), "/cost")
         .unwrap();
-        trace!("Cost shape: {:?}", array.shape().to_vec());
-        trace!("Cost chunk shape: {:?}", array.chunk_grid());
-        array.store_metadata().unwrap();
+        trace!("Cost shape: {:?}", cost.shape().to_vec());
+        trace!("Cost chunk shape: {:?}", cost.chunk_grid());
+        cost.store_metadata().unwrap();
+
+        debug!(
+            "Cost variable created: {:?}, shape: {:?} [{:?}]",
+            cost.path(),
+            cost.shape(),
+            cost.chunk_grid()
+        );
 
         trace!("Cost dataset contents: {:?}", swap.list().unwrap());
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
-                array.chunk_grid_shape().unwrap()[0] as usize,
-                array.chunk_grid_shape().unwrap()[1] as usize,
+                cost.chunk_grid_shape().unwrap()[0] as usize,
+                cost.chunk_grid_shape().unwrap()[1] as usize,
             ),
             false,
         )
