@@ -95,7 +95,7 @@ impl Dataset {
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         .build(swap.clone(), "/cost")
-        .unwrap();
+        .expect("Failed to create cost array");
         trace!("Cost shape: {:?}", cost.shape().to_vec());
         trace!("Cost chunk shape: {:?}", cost.chunk_grid());
         cost.store_metadata().unwrap();
