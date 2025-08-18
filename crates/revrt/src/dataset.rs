@@ -107,6 +107,23 @@ impl Dataset {
             cost.chunk_grid()
         );
 
+        // ==== Create the delta cost array ====
+        trace!("Creating an empty delta cost array");
+
+        let delta = zarrs::array::ArrayBuilder::new(
+            [cost_shape, &[8]].concat(),
+            zarrs::array::DataType::Float32,
+            vec![CHUNK_SHAPE[0], CHUNK_SHAPE[1], 8].try_into().unwrap(),
+            // CHUNK_SHAPE .iter() .chain(&[8]) .cloned() .collect::<Vec<_>>() .try_into() .unwrap(),
+            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
+        )
+        .build(swap.clone(), "/delta")
+        .expect("Failed to create delta array");
+        trace!("Delta shape: {:?}", delta.shape().to_vec());
+        trace!("Delta chunk shape: {:?}", delta.chunk_grid());
+        delta.store_metadata().unwrap();
+
+        // ====
         trace!("Cost dataset contents: {:?}", swap.list().unwrap());
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
