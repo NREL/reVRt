@@ -70,6 +70,7 @@ impl Dataset {
         let varname = varname.split("/").collect::<Vec<_>>()[0];
         let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
         let dims = tmp.shape().to_vec();
+        debug_assert!(!dims.contains(&0));
 
         // ==== Create the swap dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
