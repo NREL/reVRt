@@ -46,6 +46,15 @@ impl Dataset {
         cost_function: CostFunction,
         cache_size: u64,
     ) -> Result<Self> {
+        tracing::warn!("Deprecated: use `Dataset::new` instead");
+        Self::new(path, cost_function, cache_size)
+    }
+
+    pub(super) fn new<P: AsRef<std::path::Path>>(
+        path: P,
+        cost_function: CostFunction,
+        cache_size: u64,
+    ) -> Result<Self> {
         debug!("Opening dataset: {:?}", path.as_ref());
         let filesystem =
             zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
@@ -307,7 +316,7 @@ mod tests {
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
         let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+            Dataset::new(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
         let array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
@@ -331,7 +340,7 @@ mod tests {
         let path = samples::multi_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
         let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+            Dataset::new(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
         let array_a = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
@@ -375,7 +384,7 @@ mod tests {
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+            Dataset::new(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
 
@@ -391,7 +400,7 @@ mod tests {
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+            Dataset::new(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
 
@@ -421,7 +430,7 @@ mod tests {
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+            Dataset::new(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
 
@@ -454,7 +463,7 @@ mod tests {
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+            Dataset::new(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
 
