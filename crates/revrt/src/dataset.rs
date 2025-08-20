@@ -180,16 +180,6 @@ impl Dataset {
         trace!("Cost function: {:?}", self.cost_function);
         let output = self.cost_function.compute(data);
 
-        /*
-        trace!("Getting '/A' variable");
-        let array = zarrs::array::Array::open(self.source.clone(), "/A").unwrap();
-        let value = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
-        trace!("Value: {:?}", value);
-        trace!("Calculating cost for chunk ({}, {})", i, j);
-        let output = value * 10.0;
-        */
-
-        let cost = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
         let chunk_indices: Vec<u64> = vec![ci, cj];
         trace!("Storing chunk at {:?}", chunk_indices);
