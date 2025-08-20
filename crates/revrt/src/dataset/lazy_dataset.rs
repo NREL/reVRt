@@ -13,6 +13,7 @@
 //! is defined with a Subset instead, giving us more flexibility.
 
 use std::collections::HashMap;
+use std::fmt;
 
 use tracing::trace;
 use zarrs::array::{Array, ElementOwned};
@@ -33,6 +34,12 @@ struct LazyDataset<T> {
     >,
 }
 
+impl<T> fmt::Display for LazyDataset<T> {
+    // Add information on the source and the data HashMap.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "LazyDataset {{ subset: {:?}, ... }}", self.subset,)
+    }
+}
 impl<T: ElementOwned> LazyDataset<T> {
     /// Create a new LazyDataset with the given source and subset.
     fn new(source: ReadableListableStorage, subset: ArraySubset) -> Self {
