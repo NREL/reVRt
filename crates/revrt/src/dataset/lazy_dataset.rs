@@ -99,12 +99,13 @@ mod tests {
     use zarrs::storage::ReadableListableStorage;
 
     #[test]
-    fn sampe() {
+    fn sample() {
         let path = samples::multi_variable_zarr();
         let store: ReadableListableStorage =
             Arc::new(zarrs::filesystem::FilesystemStore::new(&path).unwrap());
 
-        let mut dataset = LazyDataset::<f32>::new(store, ArraySubset::default());
+        let subset = ArraySubset::new_with_start_shape(vec![0, 0], vec![2, 2]).unwrap();
+        let mut dataset = LazyDataset::<f32>::new(store, subset);
         let _tmp = dataset.get("A").unwrap();
     }
 
