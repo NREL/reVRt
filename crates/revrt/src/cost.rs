@@ -120,7 +120,6 @@ impl CostFunction {
         let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
         let stack = stack(Axis(0), &views).unwrap();
         //let cost = stack![Axis(3), &cost];
-        trace!("Stack shape: {:?}", stack.shape());
         let cost = stack.sum_axis(Axis(0));
         trace!("Stack shape: {:?}", stack.shape());
 
