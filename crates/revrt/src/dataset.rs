@@ -1,3 +1,4 @@
+mod lazy_array;
 pub(crate) mod lazy_chunk;
 mod lazy_subset;
 #[cfg(test)]
