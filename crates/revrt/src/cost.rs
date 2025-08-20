@@ -1,7 +1,7 @@
 //! Cost fuction
 
 use derive_builder::Builder;
-use ndarray::{Axis, stack};
+use ndarray::{stack, Axis};
 use tracing::{debug, trace};
 
 use crate::dataset::LazySubset;
@@ -72,6 +72,7 @@ impl CostFunction {
     /// features.
     pub(crate) fn compute(
         &self,
+        // For now let's restrict to f32, but we are ready to move to generic types.
         mut features: LazySubset<f32>,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
         debug!("Calculating cost for ({})", features.subset());
@@ -90,7 +91,8 @@ impl CostFunction {
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
                         "Layer {} has multiplier scalar {}",
-                        layer_name, multiplier_scalar
+                        layer_name,
+                        multiplier_scalar
                     );
                     // Apply the multiplier scalar to the value
                     cost *= multiplier_scalar;
@@ -100,7 +102,8 @@ impl CostFunction {
                 if let Some(multiplier_layer) = &layer.multiplier_layer {
                     trace!(
                         "Layer {} has multiplier layer {}",
-                        layer_name, multiplier_layer
+                        layer_name,
+                        multiplier_layer
                     );
                     let multiplier_value = features
                         .get(multiplier_layer)

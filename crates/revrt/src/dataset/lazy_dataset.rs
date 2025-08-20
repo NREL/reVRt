@@ -22,7 +22,7 @@ use zarrs::storage::ReadableListableStorage;
 
 use crate::error::Result;
 
-struct LazyDataset<T> {
+pub(crate) struct LazyDataset<T> {
     /// Source Zarr storage
     source: ReadableListableStorage,
     /// Subset of the source to be lazily loaded
@@ -42,7 +42,9 @@ impl<T> fmt::Display for LazyDataset<T> {
 }
 impl<T: ElementOwned> LazyDataset<T> {
     /// Create a new LazyDataset with the given source and subset.
-    fn new(source: ReadableListableStorage, subset: ArraySubset) -> Self {
+    pub(super) fn new(source: ReadableListableStorage, subset: ArraySubset) -> Self {
+        trace!("Creating LazyDataset for subset: {:?}", subset);
+
         LazyDataset {
             source,
             subset,
@@ -51,7 +53,7 @@ impl<T: ElementOwned> LazyDataset<T> {
     }
 
     /// Get a data subset for the given variable name.
-    fn get(
+    pub(crate) fn get(
         &mut self,
         varname: &str,
     ) -> Option<ndarray::ArrayBase<ndarray::OwnedRepr<T>, ndarray::Dim<ndarray::IxDynImpl>>> {
