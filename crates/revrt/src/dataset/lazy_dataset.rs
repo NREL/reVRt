@@ -69,7 +69,11 @@ impl<T: ElementOwned> LazyDataset<T> {
                 v.clone()
             }
             None => {
-                trace!("Loading data subset for variable: {}", varname);
+                trace!(
+                    "Loading data subset ({:?}) for variable: {}",
+                    self.subset,
+                    varname
+                );
 
                 let variable = Array::open(self.source.clone(), &format!("/{varname}"))
                     .expect("Failed to open variable");
