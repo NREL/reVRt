@@ -17,6 +17,7 @@ use zarrs::storage::{
 use crate::ArrayIndex;
 use crate::cost::CostFunction;
 use crate::error::Result;
+use lazy_array::LazyDataset;
 pub(crate) use lazy_chunk::LazyChunk;
 pub(crate) use lazy_subset::LazySubset;
 
