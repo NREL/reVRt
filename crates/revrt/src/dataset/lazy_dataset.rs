@@ -52,6 +52,10 @@ impl<T: ElementOwned> LazyDataset<T> {
         }
     }
 
+    pub(crate) fn subset(&self) -> &ArraySubset {
+        &self.subset
+    }
+
     /// Get a data subset for the given variable name.
     pub(crate) fn get(
         &mut self,
