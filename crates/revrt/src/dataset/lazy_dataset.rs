@@ -20,8 +20,6 @@ use zarrs::array::{Array, ElementOwned};
 use zarrs::array_subset::ArraySubset;
 use zarrs::storage::ReadableListableStorage;
 
-use crate::error::Result;
-
 pub(crate) struct LazyDataset<T> {
     /// Source Zarr storage
     source: ReadableListableStorage,
@@ -97,7 +95,7 @@ mod tests {
     use super::*;
     use crate::dataset::samples;
     use std::sync::Arc;
-    use zarrs::storage::store::MemoryStore;
+    // use zarrs::storage::store::MemoryStore;
     use zarrs::storage::ReadableListableStorage;
 
     #[test]
