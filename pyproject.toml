@@ -208,6 +208,9 @@ build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.tasks]
 
+[tool.pixi.feature.build.tasks]
+build-wheel = { cmd = "maturin build" }
+
 [tool.pixi.feature.dev.tasks]
 make-html = { cmd = "make html", cwd = "docs"}
 tests = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
@@ -277,6 +280,7 @@ sphinxcontrib-mermaid = ">=1.0.0,<2"
 python-build = ">=1.2.2.post1,<2"
 pkginfo = ">=1.12.1.2,<2"
 twine = ">=6.1.0,<7"
+maturin = ">=1.9.3,<2"
 
 
 [tool.coverage.run]
