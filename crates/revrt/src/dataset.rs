@@ -231,13 +231,49 @@ impl Dataset {
 
         trace!("Read values {:?}", value);
 
-        let neighbors = i_range
+        trace!("Input index: (i={}, j={})", i, j);
+
+        /*
+         * The transition between two gridpoint centers is along half the distance
+         * on the original gridpoint, plus half the distance to the target gridpoint
+         * (center). Therefore, the transition cost is the average between the origin
+         * gridpoint cost and the target gridpoint cost.
+         * Note that the same principle is valid for diagonals, it is still the average
+         * of both values, but we have to scale for the longer distance along the
+         * diagonal, thus a sqrt(2) factor along the diagonals.
+         */
+
+        // Match the indices
+        let neighbors: Vec<((u64, u64), f32)> = i_range
             .flat_map(|e| iter::repeat(e).zip(j_range.clone()))
             .zip(value)
-            .filter(|((ir, jr), _)| !(*ir == i && *jr == j)) // no center point
-            .map(|((ir, jr), v)| (ArrayIndex { i: ir, j: jr }, v))
+            .map(|((ir, jr), v)| ((ir, jr), v))
             .collect();
+        trace!("Neighbors {:?}", neighbors);
+        dbg!(&neighbors);
 
+        // Extract the origin point.
+        let center = neighbors
+            .iter()
+            .find(|((ir, jr), _)| *ir == i && *jr == j)
+            .unwrap();
+        trace!("Center point: {:?}", center);
+
+        // Calculate the average with center point (half grid + other half grid).
+        // Also, apply the diagonal factor for the extra distance.
+        let neighbors = neighbors
+            .iter()
+            .filter(|((ir, jr), _)| !(*ir == i && *jr == j)) // no center point
+            .map(|((ir, jr), v)| ((ir, jr), 0.5 * (v + center.1)))
+            .map(|((ir, jr), v)| {
+                if *ir != i && *jr != j {
+                    ((ir, jr), v * f32::sqrt(2.0)) // Diagonal factor
+                } else {
+                    ((ir, jr), v)
+                }
+            })
+            .map(|((ir, jr), v)| (ArrayIndex { i: *ir, j: *jr }, v))
+            .collect::<Vec<_>>();
         trace!("Neighbors {:?}", neighbors);
 
         neighbors
