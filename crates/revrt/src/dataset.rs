@@ -564,15 +564,15 @@ mod tests {
         );
     }
 
-    #[test_case((0, 0), vec![(0, 1, 1.), (1, 0, 3.), (1, 1, 4.)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.), (0, 2, 2.), (1, 0, 3.), (1, 1, 4.), (1, 2, 5.)] ; "top middle")]
-    #[test_case((0, 2), vec![(0, 1, 1.), (1, 1, 4.), (1, 2, 5.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 0.), (0, 1, 1.), (1, 1, 4.), (2, 0, 6.), (2, 1, 7.)] ; "middle left")]
-    #[test_case((1, 1), vec![(0, 0, 0.), (0, 1, 1.), (0, 2, 2.), (1, 0, 3.), (1, 2, 5.), (2, 0, 6.), (2, 1, 7.), (2, 2, 8.)] ; "middle middle")]
-    #[test_case((1, 2), vec![(0, 1, 1.), (0, 2, 2.), (1, 1, 4.), (2, 1, 7.), (2, 2, 8.)] ; "middle right")]
-    #[test_case((2, 0), vec![(1, 0, 3.), (1, 1, 4.), (2, 1, 7.)] ; "bottom left corner")]
-    #[test_case((2, 1), vec![(1, 0, 3.), (1, 1, 4.), (1, 2, 5.), (2, 0, 6.), (2, 2, 8.)] ; "bottom middle")]
-    #[test_case((2, 2), vec![(1, 1, 4.), (1, 2, 5.), (2, 1, 7.)] ; "bottom right corner")]
+    #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 1.5), (1, 1, 2.0 * SQRT2)] ; "top left corner")]
+    #[test_case((0, 1), vec![(0, 0, 0.5), (0, 2, 1.5), (1, 0, 2.0 * SQRT2), (1, 1, 2.5), (1, 2, 3. * SQRT2)] ; "top middle")]
+    #[test_case((0, 2), vec![(0, 1, 1.5), (1, 1, 3.0 * SQRT2), (1, 2, 3.5)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 0, 1.5), (0, 1, 2.0 * SQRT2), (1, 1, 3.5), (2, 0, 4.5), (2, 1, 5.0 * SQRT2)] ; "middle left")]
+    #[test_case((1, 1), vec![(0, 0, 2.0 * SQRT2), (0, 1, 2.5), (0, 2, 3.0 * SQRT2), (1, 0, 3.5), (1, 2, 4.5), (2, 0, 5.0 * SQRT2), (2, 1, 5.5), (2, 2, 6.0 * SQRT2)] ; "middle middle")]
+    #[test_case((1, 2), vec![(0, 1, 3.0 * SQRT2), (0, 2, 3.5), (1, 1, 4.5), (2, 1, 6.0 * SQRT2), (2, 2, 6.5)] ; "middle right")]
+    #[test_case((2, 0), vec![(1, 0, 4.5), (1, 1, 5.0 * SQRT2), (2, 1, 6.5)] ; "bottom left corner")]
+    #[test_case((2, 1), vec![(1, 0, 5.0 * SQRT2), (1, 1, 5.5), (1, 2, 6.0 * SQRT2), (2, 0, 6.5), (2, 2, 7.5)] ; "bottom middle")]
+    #[test_case((2, 2), vec![(1, 1, 6.0 * SQRT2), (1, 2, 6.5), (2, 1, 7.5)] ; "bottom right corner")]
     fn test_get_3x3_three_by_three_array(
         (si, sj): (u64, u64),
         expected_output: Vec<(u64, u64, f32)>,
