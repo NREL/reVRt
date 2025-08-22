@@ -459,6 +459,8 @@ mod tests {
     use super::*;
     use test_case::test_case;
 
+    const SQRT2: f32 = 1.4142135623730951;
+
     #[test]
     fn test_simple_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
@@ -540,10 +542,10 @@ mod tests {
         assert_eq!(results, vec![]);
     }
 
-    #[test_case((0, 0), vec![(0, 1, 1.), (1, 0, 2.), (1, 1, 3.)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.), (1, 0, 2.), (1, 1, 3.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 0.), (0, 1, 1.), (1, 1, 3.)] ; "bottom left corner")]
-    #[test_case((1, 1), vec![(0, 0, 0.), (0, 1, 1.), (1, 0, 2.)] ; "bottom right corner")]
+    #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 1.0), (1, 1, 1.5*SQRT2)] ; "top left corner")]
+    #[test_case((0, 1), vec![(0, 0, 0.5), (1, 0, 1.5*SQRT2), (1, 1, 2.)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 0, 1.), (0, 1, 1.5*SQRT2), (1, 1, 2.5)] ; "bottom left corner")]
+    #[test_case((1, 1), vec![(0, 0, 1.5*SQRT2), (0, 1, 2.), (1, 0, 2.5)] ; "bottom right corner")]
     fn test_get_3x3_two_by_two_array((si, sj): (u64, u64), expected_output: Vec<(u64, u64, f32)>) {
         let path = samples::cost_as_index_zarr((2, 2), (2, 2));
         let cost_function =
