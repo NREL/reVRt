@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 import rioxarray
+import numpy as np
 from pyproj.crs import CRS
 from rasterio.transform import Affine
 
@@ -11,6 +12,7 @@ from revrt.utilities import LayeredFile
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
+    revrtKeyError,
     revrtValueError,
 )
 
@@ -115,6 +117,44 @@ def test_layered_file_handler_props(test_tl_fp):
         "spatial_ref",
     }
     assert set(lf.data_layers) == expected_data_layers
+
+
+def test_layered_file_handler_get_layer(test_tl_fp):
+    """Test LayeredFile get_layer method"""
+
+    lf = LayeredFile(test_tl_fp)
+
+    # Test getting a layer
+    layer_profile, layer = lf["tie_line_costs_400MW"]
+    assert layer.shape == (1, 1434, 972)
+    assert layer.dtype == np.dtype("float32")
+    assert layer.min() == -1
+    assert layer.max() > 1e6
+
+    # Test that it's there but don't compare on it
+    for key in ["crs", "nodata"]:
+        assert key in layer_profile
+        layer_profile.pop(key, None)
+
+    expected_profile = {
+        "width": 972,
+        "height": 1434,
+        "count": 1,
+        "dtype": np.dtype("float32"),
+        "transform": Affine(
+            90.0, 0.0, 65848.6171875, 0.0, -90.0, 103948.140625
+        ),
+    }
+    assert layer_profile == expected_profile
+
+
+def test_layered_file_handler_get_dne_layer(test_tl_fp):
+    """Test getting a non-existent layer"""
+    lf = LayeredFile(test_tl_fp)
+
+    with pytest.raises(revrtKeyError) as error:
+        lf["non_existent_layer"]
+    assert f"'non_existent_layer' is not present in {test_tl_fp}" in str(error)
 
 
 if __name__ == "__main__":

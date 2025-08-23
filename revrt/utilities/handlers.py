@@ -71,6 +71,18 @@ class LayeredFile:
             return f"{self.__class__.__name__} with 1 layer"
         return f"{self.__class__.__name__} with {num_layers:,d} layers"
 
+    def __getitem__(self, layer):
+        if layer not in self.layers:
+            msg = f"{layer!r} is not present in {self.fp}"
+            raise revrtKeyError(msg)
+
+        logger.debug("\t- Extracting %s from %s", layer, self.fp)
+        with xr.open_dataset(self.fp) as ds:
+            profile = self._layer_profile_from_open_ds(layer, ds)
+            values = ds[layer].values
+
+        return profile, values
+
     @property
     def template_file(self):
         """str: Path to template file"""
@@ -121,6 +133,44 @@ class LayeredFile:
             if layer_name
             not in {"band", "x", "y", "latitude", "longitude", "spatial_ref"}
         ]
+
+    def layer_profile(self, layer):
+        """Get layer profile as dictionary
+
+        Parameters
+        ----------
+        layer : str
+            Name of layer in file to get profile for.
+
+        Returns
+        -------
+        dict
+            Dictionary containing layer profile information, including
+            the following keys:
+
+                - "nodata": NoData value for layer
+                - "width": width of layer
+                - "height": height of layer
+                - "crs": :class:`pyproj.crs.CRS` object for layer
+                - "count": number of bands in layer
+                - "dtype": data type of layer
+                - "transform": :class:`Affine` transform for layer
+
+        """
+        with xr.open_dataset(self.fp) as ds:
+            return self._layer_profile_from_open_ds(layer, ds)
+
+    def _layer_profile_from_open_ds(self, layer, ds):
+        """Get layer profile from open dataset"""
+        return {
+            "nodata": ds[layer].rio.nodata,
+            "width": ds.rio.width,
+            "height": ds.rio.height,
+            "crs": ds.rio.crs,
+            "count": ds[layer].rio.count,
+            "dtype": ds[layer].dtype,
+            "transform": ds.rio.transform(),
+        }
 
 
 class LayeredTransmissionFile(LayeredFile):
