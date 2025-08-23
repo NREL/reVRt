@@ -76,6 +76,11 @@ class LayeredFile:
         """str: Path to template file"""
         return self._template_file
 
+    @template_file.setter
+    def template_file(self, new_template_file):
+        self._template_file = Path(new_template_file)
+        self._validate_template()
+
     @cached_property
     def profile(self):
         """dict: Template layer profile"""
