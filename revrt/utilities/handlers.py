@@ -31,9 +31,7 @@ class LayeredFile:
     LONGITUDE = "longitude"
     """Name of longitude values layer in :class:`LayeredFile`"""
 
-    def __init__(
-        self, fp, chunks=(128, 128), template_file=None, block_size=None
-    ):
+    def __init__(self, fp, chunks=(128, 128)):
         """
 
         Parameters
@@ -48,16 +46,6 @@ class LayeredFile:
             GeoTIFFs. By default, ``(128, 128)``.
         template_file : path-like, optional
             Path to template GeoTIFF (``*.tif`` or ``*.tiff``) or Zarr
-            (``*.zarr``) file containing the profile and transform to be
-            used for the layered file. If ``None``, then the `fp`
-            input is used as the template. By default, ``None``.
-        block_size : int, optional
-            Optional block size to use when building lat/lon datasets.
-            Setting this value can help reduce memory issues when
-            building a ``LayeredFile`` file. If ``None``, the lat/lon
-            arrays are processed in full. By default, ``None``.
-        """
-        self.fp = Path(fp)
         self._chunks = chunks
         self._template_file = Path(template_file or fp)
         self._block_size = block_size
@@ -71,27 +59,18 @@ class LayeredFile:
             return f"{self.__class__.__name__} with 1 layer"
         return f"{self.__class__.__name__} with {num_layers:,d} layers"
 
-    def __getitem__(self, layer):
+        # unlikely to be useful in practice since it loads the entire
+        # layer data all at once
         if layer not in self.layers:
             msg = f"{layer!r} is not present in {self.fp}"
             raise revrtKeyError(msg)
 
         logger.debug("\t- Extracting %s from %s", layer, self.fp)
         with xr.open_dataset(self.fp) as ds:
-            profile = self._layer_profile_from_open_ds(layer, ds)
+            profile = _layer_profile_from_open_ds(layer, ds)
             values = ds[layer].values
 
         return profile, values
-
-    @property
-    def template_file(self):
-        """str: Path to template file"""
-        return self._template_file
-
-    @template_file.setter
-    def template_file(self, new_template_file):
-        self._template_file = Path(new_template_file)
-        self._validate_template()
 
     @cached_property
     def profile(self):
@@ -106,12 +85,7 @@ class LayeredFile:
                 "width": ds.rio.width,
                 "height": ds.rio.height,
                 "crs": ds.rio.crs,
-                "transform": ds.rio.transform(),
-            }
-
-    @property
-    def shape(self):
-        """tuple: Template layer shape"""
+        with xr.open_dataset(self.fp) as ds:
         return self.profile["height"], self.profile["width"]
 
     @cached_property
