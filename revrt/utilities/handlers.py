@@ -7,6 +7,7 @@ from functools import cached_property
 import zarr
 import dask
 from pyproj import Transformer
+from pyproj.crs import CRS
 import rioxarray
 import numpy as np
 import xarray as xr
@@ -57,8 +58,8 @@ class LayeredFile:
         chunks : tuple, optional
             Chunk size of exclusions in layered file and any output
             GeoTIFFs. By default, ``(128, 128)``.
-        template_file : path-like, optional
-            Path to template GeoTIFF (``*.tif`` or ``*.tiff``) or Zarr
+        """
+        self.fp = Path(fp)
         self._chunks = chunks
 
     def __repr__(self):
@@ -87,10 +88,10 @@ class LayeredFile:
     def profile(self):
         """dict: Template layer profile"""
         with xr.open_dataset(self.fp) as ds:
-                "height": ds.rio.height,
-                "crs": ds.rio.crs,
             return {
                 "width": ds.rio.width,
+                "height": ds.rio.height,
+                "crs": ds.rio.crs,
                 "transform": ds.rio.transform(),
             }
 
@@ -143,8 +144,6 @@ class LayeredFile:
 
         """
         with xr.open_dataset(self.fp) as ds:
-            return self._layer_profile_from_open_ds(layer, ds)
-
             return _layer_profile_from_open_ds(layer, ds)
 
     def create_new(self, template_file, overwrite=False):
