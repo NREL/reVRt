@@ -38,14 +38,14 @@ def extract_geotiff(geotiff):
 def test_bad_file_format():
     """Test init with bad file format"""
 
-    lh5 = LayeredFile("test_file.h5")
+    lh5 = LayeredFile("test_file.zarr")
     with pytest.raises(revrtValueError) as error:
         lh5.template_file = "test_file.txt"
 
     assert "format is not supported" in str(error)
 
     with pytest.raises(revrtFileNotFoundError) as error:
-        lh5.template_file = "test_file.h5"
+        lh5.template_file = "test_file.zarr"
 
     assert "not found on disk" in str(error)
 
