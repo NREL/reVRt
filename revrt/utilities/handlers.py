@@ -60,8 +60,6 @@ class LayeredFile:
         template_file : path-like, optional
             Path to template GeoTIFF (``*.tif`` or ``*.tiff``) or Zarr
         self._chunks = chunks
-        self._template_file = Path(template_file or fp)
-        self._block_size = block_size
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.fp})"
@@ -90,12 +88,7 @@ class LayeredFile:
         """dict: Template layer profile"""
         open_method = (
             xr.open_dataset
-            if self.template_file.suffix == ".zarr"
-            else rioxarray.open_rasterio
-        )
-        with open_method(self.template_file) as ds:
-            return {
-                "width": ds.rio.width,
+        with xr.open_dataset(self.fp) as ds:
                 "height": ds.rio.height,
                 "crs": ds.rio.crs,
         with xr.open_dataset(self.fp) as ds:
@@ -105,7 +98,12 @@ class LayeredFile:
     def layers(self):
         """list: All available layers in file"""
         if not self.fp.exists():
-            msg = f"File {self.fp!r} not found"
+                "transform": ds.rio.transform(),
+            }
+
+    @property
+    def shape(self):
+        """tuple: Template layer shape"""
             raise revrtFileNotFoundError(msg)
 
         with xr.open_dataset(self.fp) as ds:
