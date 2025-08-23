@@ -29,6 +29,12 @@ def test_tl_fp(test_utility_data_dir):
     return test_utility_data_dir / "transmission_layers.zarr"
 
 
+@pytest.fixture(scope="module")
+def test_tiff_fp(test_utility_data_dir):
+    """Return path to TIFF file used for tests"""
+    return test_utility_data_dir / "ri_transmission_barriers.tif"
+
+
 def extract_geotiff(geotiff):
     """Test helper function to extract data from GeoTiff"""
     with rioxarray.open_rasterio(geotiff, chunks=(128, 128)) as tif:
@@ -40,14 +46,14 @@ def extract_geotiff(geotiff):
 def test_bad_file_format():
     """Test init with bad file format"""
 
-    lh5 = LayeredFile("test_file.zarr")
+    lf = LayeredFile("test_file.zarr")
     with pytest.raises(revrtValueError) as error:
-        lh5.template_file = "test_file.txt"
+        lf.create_new("test_file.txt")
 
     assert "format is not supported" in str(error)
 
     with pytest.raises(revrtFileNotFoundError) as error:
-        lh5.template_file = "test_file.zarr"
+        lf.create_new("test_file.zarr")
 
     assert "not found on disk" in str(error)
 
@@ -55,16 +61,12 @@ def test_bad_file_format():
 def test_not_overwrite_when_create_new_file(tmp_path):
     """Test not overwriting when creating a new file"""
 
-    test_fp = tmp_path / "test.h5"
+    test_fp = tmp_path / "test.zarr"
     test_fp.touch()
-    lh5 = LayeredFile(test_fp)
+    lf = LayeredFile(test_fp)
     with pytest.raises(revrtFileExistsError) as error:
-        lh5.create_new(overwrite=False)
+        lf.create_new(test_fp, overwrite=False)
     assert "exits and overwrite=False" in str(error)
-
-    with pytest.raises(revrtValueError) as error:
-        lh5.create_new(overwrite=True)
-    assert "Must provide template file" in str(error)
 
 
 def test_layered_file_handler_props(test_tl_fp):
