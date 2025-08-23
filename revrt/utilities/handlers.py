@@ -104,6 +104,13 @@ class LayeredFile:
     @property
     def shape(self):
         """tuple: Template layer shape"""
+        return self.profile["height"], self.profile["width"]
+
+    @cached_property
+    def layers(self):
+        """list: All available layers in file"""
+        if not self.fp.exists():
+            msg = f"File {self.fp!r} not found"
             raise revrtFileNotFoundError(msg)
 
         with xr.open_dataset(self.fp) as ds:
