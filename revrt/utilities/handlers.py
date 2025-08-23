@@ -4,13 +4,26 @@ import logging
 from pathlib import Path
 from functools import cached_property
 
+import zarr
+import dask
+from pyproj import Transformer
 import rioxarray
+import numpy as np
 import xarray as xr
 
-from revrt.exceptions import revrtFileNotFoundError
+from revrt.exceptions import (
+    revrtFileExistsError,
+    revrtFileNotFoundError,
+    revrtKeyError,
+    revrtProfileCheckError,
+    revrtValueError,
+)
 
 
 logger = logging.getLogger(__name__)
+ZARR_COMPRESSORS = zarr.codecs.BloscCodec(
+    cname="zstd", clevel=9, shuffle=zarr.codecs.BloscShuffle.shuffle
+)
 
 
 class LayeredFile:
