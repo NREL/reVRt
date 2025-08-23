@@ -86,18 +86,11 @@ class LayeredFile:
     @cached_property
     def profile(self):
         """dict: Template layer profile"""
-        open_method = (
-            xr.open_dataset
         with xr.open_dataset(self.fp) as ds:
                 "height": ds.rio.height,
                 "crs": ds.rio.crs,
-        with xr.open_dataset(self.fp) as ds:
-        return self.profile["height"], self.profile["width"]
-
-    @cached_property
-    def layers(self):
-        """list: All available layers in file"""
-        if not self.fp.exists():
+            return {
+                "width": ds.rio.width,
                 "transform": ds.rio.transform(),
             }
 
