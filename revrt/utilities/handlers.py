@@ -71,6 +71,8 @@ class LayeredFile:
             return f"{self.__class__.__name__} with 1 layer"
         return f"{self.__class__.__name__} with {num_layers:,d} layers"
 
+    def __getitem__(self, layer):
+        # This method is ported for backward compatibility, but it's
         # unlikely to be useful in practice since it loads the entire
         # layer data all at once
         if layer not in self.layers:
