@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 import rioxarray
 import numpy as np
+import xarray as xr
 from pyproj.crs import CRS
 from rasterio.transform import Affine
 
@@ -15,6 +16,31 @@ from revrt.exceptions import (
     revrtKeyError,
     revrtValueError,
 )
+
+
+@pytest.fixture(scope="module")
+def sample_tiff_fp(tmp_path_factory):
+    """Return path to TIFF file used for tests"""
+    width, height = 10, 10
+
+    data = np.arange(width * height, dtype=np.float32).reshape((height, width))
+
+    da = xr.DataArray(
+        data,
+        dims=("y", "x"),
+        coords={
+            "x": np.arange(width) * 10.0,
+            "y": np.arange(height) * -10.0,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("EPSG:4326")
+    da.rio.write_transform()
+
+    out_fp = tmp_path_factory.mktemp("data") / "sample.tif"
+    da.rio.to_raster(out_fp, driver="GTiff")
+    return out_fp
 
 
 @pytest.fixture(scope="module")
@@ -157,6 +183,31 @@ def test_layered_file_handler_get_dne_layer(test_tl_fp):
     with pytest.raises(revrtKeyError) as error:
         lf["non_existent_layer"]
     assert f"'non_existent_layer' is not present in {test_tl_fp}" in str(error)
+
+
+def test_create_new_file(tmp_path, sample_tiff_fp):
+    """Test creating a new file"""
+
+    test_fp = tmp_path / "test.zarr"
+    assert not test_fp.exists()
+
+    lf = LayeredFile(test_fp)
+    lf.create_new(sample_tiff_fp, overwrite=True)
+
+    assert test_fp.exists()
+
+    with (
+        xr.open_dataset(test_fp) as ds,
+        rioxarray.open_rasterio(sample_tiff_fp) as xds,
+    ):
+        lat_lon = xds.rio.reproject("EPSG:4326")
+        assert np.isclose(ds["longitude"].min(), lat_lon.x.min())
+        assert np.isclose(ds["longitude"].max(), lat_lon.x.max())
+        assert np.isclose(ds["latitude"].min(), lat_lon.y.min())
+        assert np.isclose(ds["latitude"].max(), lat_lon.y.max())
+        assert (*ds["band"].shape, *ds["y"].shape, *ds["x"].shape) == xds.shape
+        assert ds["latitude"].shape == xds.shape[1:]
+        assert ds["longitude"].shape == xds.shape[1:]
 
 
 if __name__ == "__main__":
