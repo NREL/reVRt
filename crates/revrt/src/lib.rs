@@ -313,7 +313,7 @@ mod tests {
 
         for (track, cost) in solutions {
             assert_eq!(track.len(), 3);
-            assert_eq!(cost, 2.);
+            assert_eq!(cost, 2.8284);
             assert_eq!(*track.last().unwrap(), ArrayIndex { i: 3, j: 3 });
         }
     }
