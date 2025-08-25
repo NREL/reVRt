@@ -226,7 +226,7 @@ NREL-reVRt = { path = ".", editable = true }
 [tool.pixi.dependencies]
 # system
 python = ">=3.11"
-rust = ">=1.88.0,<1.89"
+rust = ">=1.89.0,<1.90"
 # package
 affine = ">=2.4.0,<3"
 dask = ">=2025.4.1,<2026"
