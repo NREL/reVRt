@@ -15,3 +15,8 @@ dhat = { workspace = true }
 
 [features]
 dhat-heap = []
+
+[profile.release]
+# incremental = true
+debug = true
+# lto = "fat"

@@ -6,6 +6,14 @@
 Ideally this section should be empty, so whenever there is a chance, this
 points should be organized and moved to the appropriate section.
 
+- Miscellaneous topics to dive deeper later
+  - profile.release
+    - incremental
+    - lto
+      - lto off when running dhat
+  - Profile with: export RUSTFLAGS="-C target-cpu=native"
+  - Supported names: rustc --print target-cpus
+
 - Profiling memory usage:
   - Using dhat:
     - cargo run --release -p revrt-cli --features dhat-heap -- -vv -d ../transmission_costs.zarr --cost-function='{"cost_layers": [{"layer_name": "fmv_dollar_per_acre"}, {"layer_name": "swca_natural_resources_risk_2"}]}' --start 20012,40000 --end 20012,40100 --cache-size=250000
