@@ -267,7 +267,8 @@ impl Dataset {
             .map(|((ir, jr), v)| ((ir, jr), 0.5 * (v + center.1)))
             .map(|((ir, jr), v)| {
                 if *ir != i && *jr != j {
-                    ((ir, jr), v * f32::sqrt(2.0)) // Diagonal factor
+                    // Diagonal factor for longer distance (hypotenuse)
+                    ((ir, jr), v * f32::sqrt(2.0))
                 } else {
                     ((ir, jr), v)
                 }
