@@ -1446,7 +1446,7 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "revrt"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "criterion",
  "derive_builder",
@@ -1467,7 +1467,7 @@ dependencies = [
 
 [[package]]
 name = "revrt-cli"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "clap",
  "revrt",
