@@ -16203,7 +16203,7 @@ packages:
 - pypi: ./
   name: nrel-revrt
   version: 0.1.0
-  sha256: 46221fbf83f0090bf9e71b84ee6a4965e49d040ea21529b9e95b62e8dc0778c1
+  sha256: cf350bdb0e4451ce1d4e6b12e886be140ef6705150b229e269e2e0909430c46f
   requires_dist:
   - affine>=2.4.0,<3
   - dask>=2025.4.1,<2026
@@ -16217,7 +16217,7 @@ packages:
   - zarr>=3.0.7,<4
   - ipython>=9.1.0,<10 ; extra == 'dev'
   - jupyter>=1.1.1,<2 ; extra == 'dev'
-  - maturin>=1.8.6,<2 ; extra == 'dev'
+  - maturin>=1.9.3,<2 ; extra == 'dev'
   - pipreqs>=0.4.13,<0.5 ; extra == 'dev'
   - ruff>=0.11.5,<0.12 ; extra == 'dev'
   - ruff-lsp>=0.0.62,<0.0.63 ; extra == 'dev'
