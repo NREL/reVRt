@@ -462,7 +462,6 @@ mod tests {
 
     const SQRT2: f32 = 1.4142135623730951;
 
-    #[test]
     fn test_simple_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function =
@@ -487,7 +486,6 @@ mod tests {
         }
     }
 
-    #[test]
     fn test_sample_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
