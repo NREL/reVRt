@@ -27,7 +27,10 @@ points should be organized and moved to the appropriate section.
 - Benchmarking with smaply
   - cargo install --locked samply
 - Benchmarking with criterion:
-  - Instructions to run benchmark locally: `cargo bench --bench standard`
+  - Instructions to run benchmark locally:
+    - `cargo bench --bench standard`
+    - `cargo bench --bench serial -- --save-baseline mybaseline`
+    - `cargo criterion --output-format bencher --benches`
   - Visualize output at `target/criterion/`
 - Use a cache for the chunks.
 - Does it make sense a cache on the final weight calculated? Maybe
