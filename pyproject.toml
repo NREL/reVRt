@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.8.6,<2.0"]
+requires = ["maturin>=1.9.3,<2.0"]
 build-backend = "maturin"
 
 [project]
@@ -48,7 +48,7 @@ dependencies = [
 dev = [
   "ipython>=9.1.0,<10",
   "jupyter>=1.1.1,<2",
-  "maturin>=1.8.6,<2",
+  "maturin>=1.9.3,<2",
   "pipreqs>=0.4.13,<0.5",
   "ruff>=0.11.5,<0.12",
   "ruff-lsp>=0.0.62,<0.0.63",
