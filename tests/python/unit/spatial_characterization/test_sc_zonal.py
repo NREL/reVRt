@@ -252,8 +252,10 @@ def test_bad_callable(sample_raster, five_sample_zones):
     )
     with pytest.raises(
         revrtTypeError,
-        match="zone_func must be a callable function "
-        "which accepts a single `raster` arg",
+        match=(
+            "zone_func must be a callable function which accepts a "
+            "single `raster` arg"
+        ),
     ):
         stats = list(stats)
 
