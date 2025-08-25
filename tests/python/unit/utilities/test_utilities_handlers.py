@@ -1,5 +1,6 @@
 """Tests for reVRt utilities"""
 
+import contextlib
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ import xarray as xr
 from pyproj.crs import CRS
 from rasterio.transform import Affine
 
+import revrt
 from revrt.utilities import LayeredFile
 from revrt.exceptions import (
     revrtFileExistsError,
@@ -215,6 +217,34 @@ def test_create_new_file(tmp_path, sample_tiff_fp):
         assert (*ds["band"].shape, *ds["y"].shape, *ds["x"].shape) == xds.shape
         assert ds["latitude"].shape == xds.shape[1:]
         assert ds["longitude"].shape == xds.shape[1:]
+
+
+def test_cleanup_on_file_create_error(tmp_path, monkeypatch):
+    """Test cleanup on file create error"""
+
+    orig_func = revrt.utilities.handlers._save_ds_as_zarr_with_encodings
+
+    def _func_that_errors(out_ds, x, y, lat, lon, out_fp):
+        orig_func(out_ds, x, y, lat, lon, out_fp)
+        assert out_fp.exists()
+
+        msg = "A test error"
+        raise revrtValueError(msg)
+
+    monkeypatch.setattr(
+        revrt.utilities.handlers,
+        "_save_ds_as_zarr_with_encodings",
+        _func_that_errors,
+    )
+
+    test_fp = tmp_path / "test.zarr"
+    assert not test_fp.exists()
+
+    lf = LayeredFile(test_fp)
+    with contextlib.suppress(revrtValueError):
+        lf.create_new("test_file.txt")
+
+    assert not test_fp.exists()
 
 
 if __name__ == "__main__":
