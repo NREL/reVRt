@@ -247,7 +247,6 @@ impl Dataset {
         let neighbors: Vec<((u64, u64), f32)> = i_range
             .flat_map(|e| iter::repeat(e).zip(j_range.clone()))
             .zip(value)
-            .map(|((ir, jr), v)| ((ir, jr), v))
             .collect();
         trace!("Neighbors {:?}", neighbors);
         dbg!(&neighbors);
