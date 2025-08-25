@@ -22,10 +22,10 @@ from revrt.exceptions import (
 
 
 logger = logging.getLogger(__name__)
-ZARR_COMPRESSORS = zarr.codecs.BloscCodec(
+_ZARR_COMPRESSORS = zarr.codecs.BloscCodec(
     cname="zstd", clevel=9, shuffle=zarr.codecs.BloscShuffle.shuffle
 )
-NUM_GEOTIFF_DIMS = 3  # (band, y, x)
+_NUM_GEOTIFF_DIMS = 3  # (band, y, x)
 
 
 class LayeredFile:
@@ -378,8 +378,7 @@ def _init_zarr_file_from_tiff_template(
         main_attrs = {
             "crs": src_crs,
             "transform": transform,
-            "chunk_x": chunk_x,
-            "chunk_y": chunk_y,
+            "chunks": {"y": chunk_y, "x": chunk_x},
         }
 
         x, y, lat, lon = _compute_lat_lon(
@@ -450,18 +449,18 @@ def _save_ds_as_zarr_with_encodings(out_ds, chunk_x, chunk_y, out_fp):
         "y": {"dtype": "float32", "chunks": (chunk_y,)},
         "x": {"dtype": "float32", "chunks": (chunk_x,)},
         "longitude": {
-            "compressors": ZARR_COMPRESSORS,
+            "compressors": _ZARR_COMPRESSORS,
             "dtype": "float32",
             "chunks": (chunk_y, chunk_x),
         },
         "latitude": {
-            "compressors": ZARR_COMPRESSORS,
+            "compressors": _ZARR_COMPRESSORS,
             "dtype": "float32",
             "chunks": (chunk_y, chunk_x),
         },
     }
     logger.debug("Writing data to %s with encoding:\n %r", out_fp, encoding)
-    out_ds.to_zarr(out_fp, mode="w", encoding=encoding)
+    out_ds.to_zarr(out_fp, mode="w", encoding=encoding, consolidated=False)
 
 
 def _proj_to_lon_lat(xx_block, yy_block, src):
