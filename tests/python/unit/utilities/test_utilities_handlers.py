@@ -80,6 +80,14 @@ def test_bad_file_format():
         lf.create_new("test_file.zarr")
 
 
+def test_no_layers():
+    """Test getting layers for DNE file"""
+
+    lf = LayeredFile("test_file.zarr")
+    with pytest.raises(revrtFileNotFoundError, match=r"File .* not found"):
+        __ = lf.layers
+
+
 def test_not_overwrite_when_create_new_file(tmp_path):
     """Test not overwriting when creating a new file"""
 
