@@ -371,14 +371,15 @@ mod tests {
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+
         let start = vec![ArrayIndex { i: 0, j: 0 }];
         let end = vec![ArrayIndex { i: 0, j: 2 }];
         let mut solutions = simulation.scout(&start, end);
-        dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
 
         let (track, cost) = solutions.swap_remove(0);
-        assert_eq!(cost, 7.);
+        // 4 straight moves + 3 diagonal moves
+        assert_eq!(cost, 8.2426);
 
         let expected_track = vec![
             ArrayIndex { i: 0, j: 0 },
