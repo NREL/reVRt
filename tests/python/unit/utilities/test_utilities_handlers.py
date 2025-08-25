@@ -73,15 +73,11 @@ def test_bad_file_format():
     """Test init with bad file format"""
 
     lf = LayeredFile("test_file.zarr")
-    with pytest.raises(revrtValueError) as error:
+    with pytest.raises(revrtValueError, match="format is not supported"):
         lf.create_new("test_file.txt")
 
-    assert "format is not supported" in str(error)
-
-    with pytest.raises(revrtFileNotFoundError) as error:
+    with pytest.raises(revrtFileNotFoundError, match="not found on disk"):
         lf.create_new("test_file.zarr")
-
-    assert "not found on disk" in str(error)
 
 
 def test_not_overwrite_when_create_new_file(tmp_path):
@@ -90,9 +86,10 @@ def test_not_overwrite_when_create_new_file(tmp_path):
     test_fp = tmp_path / "test.zarr"
     test_fp.touch()
     lf = LayeredFile(test_fp)
-    with pytest.raises(revrtFileExistsError) as error:
+    with pytest.raises(
+        revrtFileExistsError, match="exits and overwrite=False"
+    ):
         lf.create_new(test_fp, overwrite=False)
-    assert "exits and overwrite=False" in str(error)
 
 
 def test_layered_file_handler_props(test_tl_fp):
@@ -180,9 +177,11 @@ def test_layered_file_handler_get_dne_layer(test_tl_fp):
     """Test getting a non-existent layer"""
     lf = LayeredFile(test_tl_fp)
 
-    with pytest.raises(revrtKeyError) as error:
+    with pytest.raises(
+        revrtKeyError,
+        match=f"'non_existent_layer' is not present in {test_tl_fp}",
+    ):
         lf["non_existent_layer"]
-    assert f"'non_existent_layer' is not present in {test_tl_fp}" in str(error)
 
 
 def test_create_new_file(tmp_path, sample_tiff_fp):
