@@ -71,8 +71,8 @@ def extract_geotiff(geotiff):
     return values, profile
 
 
-def test_bad_file_format():
-    """Test init with bad file format"""
+def test_methods_without_file():
+    """Test methods without file"""
 
     lf = LayeredFile("test_file.zarr")
     with pytest.raises(revrtValueError, match="format is not supported"):
@@ -80,6 +80,9 @@ def test_bad_file_format():
 
     with pytest.raises(revrtFileNotFoundError, match="not found on disk"):
         lf.create_new("test_file.zarr")
+
+    with pytest.raises(revrtFileNotFoundError, match=r"File .* not found"):
+        lf.write_layer(np.array([1, 2, 3]), layer_name="test_layer")
 
 
 def test_no_layers():
@@ -115,9 +118,9 @@ def test_layered_file_handler_props(test_tl_fp):
         "width": 972,
         "height": 1434,
         "crs": CRS(
-            "+proj=tmerc +lat_0=41.0833333333333 "
+            "+proj=tmerc +lat_0=41.0833333333333 "  # cspell:disable-line
             "+lon_0=-71.5 +k=0.99999375 +x_0=100000 +y_0=0 "
-            "+ellps=GRS80 +units=m +no_defs=True"
+            "+ellps=GRS80 +units=m +no_defs=True"  # cspell:disable-line
         ),
         "transform": Affine(
             90.0, 0.0, 65848.6171875, 0.0, -90.0, 103948.140625
@@ -159,7 +162,6 @@ def test_layered_file_handler_get_layer(test_tl_fp):
 
     lf = LayeredFile(test_tl_fp)
 
-    # Test getting a layer
     layer_profile, layer = lf["tie_line_costs_400MW"]
     assert layer.shape == (1, 1434, 972)
     assert layer.dtype == np.dtype("float32")
