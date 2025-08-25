@@ -287,15 +287,15 @@ mod tests {
         dbg!(&solutions);
         assert_eq!(solutions.len(), 3);
 
-        let expected_end_points = vec![
-            ArrayIndex { i: 1, j: 2 },
-            ArrayIndex { i: 4, j: 4 },
-            ArrayIndex { i: 4, j: 4 },
+        let expected_solution = vec![
+            (ArrayIndex { i: 1, j: 2 }, 1.0),
+            (ArrayIndex { i: 4, j: 4 }, 1.4142),
+            (ArrayIndex { i: 4, j: 4 }, 1.4142),
         ];
-        for ((track, cost), eep) in solutions.into_iter().zip(expected_end_points) {
+        for ((track, cost), eep) in solutions.into_iter().zip(expected_solution) {
             assert_eq!(track.len(), 2);
-            assert_eq!(cost, 1.);
-            assert_eq!(*track.last().unwrap(), eep);
+            assert_eq!(*track.last().unwrap(), eep.0);
+            assert_eq!(cost, eep.1);
         }
     }
 
