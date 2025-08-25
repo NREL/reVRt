@@ -11,7 +11,9 @@
       0.0,
       0.0,
       1.0
-    ]
+    ],
+    "chunk_x": 512,
+    "chunk_y": 512
   },
   "zarr_format": 3,
   "consolidated_metadata": {
@@ -30,8 +32,8 @@
           "configuration": {
             "chunk_shape": [
               1,
-              128,
-              128
+              512,
+              512
             ]
           }
         },
@@ -73,136 +75,8 @@
             1.0
           ],
           "nodata": 0.0,
-          "coordinates": "latitude longitude",
-          "_FillValue": "AAAAAAAA+H8="
-        },
-        "dimension_names": [
-          "band",
-          "y",
-          "x"
-        ],
-        "zarr_format": 3,
-        "node_type": "array",
-        "storage_transformers": []
-      },
-      "latitude": {
-        "shape": [
-          1434,
-          972
-        ],
-        "data_type": "float32",
-        "chunk_grid": {
-          "name": "regular",
-          "configuration": {
-            "chunk_shape": [
-              128,
-              128
-            ]
-          }
-        },
-        "chunk_key_encoding": {
-          "name": "default",
-          "configuration": {
-            "separator": "/"
-          }
-        },
-        "fill_value": 0.0,
-        "codecs": [
-          {
-            "name": "bytes",
-            "configuration": {
-              "endian": "little"
-            }
-          },
-          {
-            "name": "blosc",
-            "configuration": {
-              "typesize": 4,
-              "cname": "zstd",
-              "clevel": 9,
-              "shuffle": "shuffle",
-              "blocksize": 0
-            }
-          }
-        ],
-        "attributes": {
-          "transform": [
-            90.0,
-            0.0,
-            65848.61752782026,
-            0.0,
-            -90.0,
-            103948.14381277534,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "nodata": 0.0,
-          "_FillValue": "AAAAAAAA+H8="
-        },
-        "dimension_names": [
-          "y",
-          "x"
-        ],
-        "zarr_format": 3,
-        "node_type": "array",
-        "storage_transformers": []
-      },
-      "tie_line_costs_400MW": {
-        "shape": [
-          1,
-          1434,
-          972
-        ],
-        "data_type": "float32",
-        "chunk_grid": {
-          "name": "regular",
-          "configuration": {
-            "chunk_shape": [
-              1,
-              128,
-              128
-            ]
-          }
-        },
-        "chunk_key_encoding": {
-          "name": "default",
-          "configuration": {
-            "separator": "/"
-          }
-        },
-        "fill_value": 0.0,
-        "codecs": [
-          {
-            "name": "bytes",
-            "configuration": {
-              "endian": "little"
-            }
-          },
-          {
-            "name": "blosc",
-            "configuration": {
-              "typesize": 4,
-              "cname": "zstd",
-              "clevel": 9,
-              "shuffle": "shuffle",
-              "blocksize": 0
-            }
-          }
-        ],
-        "attributes": {
-          "transform": [
-            90.0,
-            0.0,
-            65848.61752782026,
-            0.0,
-            -90.0,
-            103948.14381277534,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
           "coordinates": "latitude longitude",
           "_FillValue": "AAAAAAAA+H8="
         },
@@ -227,8 +101,8 @@
           "configuration": {
             "chunk_shape": [
               1,
-              128,
-              128
+              512,
+              512
             ]
           }
         },
@@ -270,6 +144,8 @@
             1.0
           ],
           "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
           "coordinates": "latitude longitude",
           "_FillValue": "AAAAAAAA+H8="
         },
@@ -292,8 +168,8 @@
           "name": "regular",
           "configuration": {
             "chunk_shape": [
-              128,
-              128
+              512,
+              512
             ]
           }
         },
@@ -335,6 +211,8 @@
             1.0
           ],
           "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
           "_FillValue": "AAAAAAAA+H8="
         },
         "dimension_names": [
@@ -345,9 +223,53 @@
         "node_type": "array",
         "storage_transformers": []
       },
-      "ISO_regions": {
+      "x": {
         "shape": [
-          1,
+          972
+        ],
+        "data_type": "float32",
+        "chunk_grid": {
+          "name": "regular",
+          "configuration": {
+            "chunk_shape": [
+              2048
+            ]
+          }
+        },
+        "chunk_key_encoding": {
+          "name": "default",
+          "configuration": {
+            "separator": "/"
+          }
+        },
+        "fill_value": 0.0,
+        "codecs": [
+          {
+            "name": "bytes",
+            "configuration": {
+              "endian": "little"
+            }
+          },
+          {
+            "name": "zstd",
+            "configuration": {
+              "level": 0,
+              "checksum": false
+            }
+          }
+        ],
+        "attributes": {
+          "_FillValue": "AAAAAAAA+H8="
+        },
+        "dimension_names": [
+          "x"
+        ],
+        "zarr_format": 3,
+        "node_type": "array",
+        "storage_transformers": []
+      },
+      "latitude": {
+        "shape": [
           1434,
           972
         ],
@@ -356,9 +278,8 @@
           "name": "regular",
           "configuration": {
             "chunk_shape": [
-              1,
-              128,
-              128
+              512,
+              512
             ]
           }
         },
@@ -400,11 +321,11 @@
             1.0
           ],
           "nodata": 0.0,
-          "coordinates": "latitude longitude",
+          "chunk_x": 512,
+          "chunk_y": 512,
           "_FillValue": "AAAAAAAA+H8="
         },
         "dimension_names": [
-          "band",
           "y",
           "x"
         ],
@@ -421,7 +342,7 @@
           "name": "regular",
           "configuration": {
             "chunk_shape": [
-              128
+              2048
             ]
           }
         },
@@ -457,52 +378,7 @@
         "node_type": "array",
         "storage_transformers": []
       },
-      "x": {
-        "shape": [
-          972
-        ],
-        "data_type": "float32",
-        "chunk_grid": {
-          "name": "regular",
-          "configuration": {
-            "chunk_shape": [
-              128
-            ]
-          }
-        },
-        "chunk_key_encoding": {
-          "name": "default",
-          "configuration": {
-            "separator": "/"
-          }
-        },
-        "fill_value": 0.0,
-        "codecs": [
-          {
-            "name": "bytes",
-            "configuration": {
-              "endian": "little"
-            }
-          },
-          {
-            "name": "zstd",
-            "configuration": {
-              "level": 0,
-              "checksum": false
-            }
-          }
-        ],
-        "attributes": {
-          "_FillValue": "AAAAAAAA+H8="
-        },
-        "dimension_names": [
-          "x"
-        ],
-        "zarr_format": 3,
-        "node_type": "array",
-        "storage_transformers": []
-      },
-      "tie_line_costs_3000MW": {
+      "tie_line_costs_400MW": {
         "shape": [
           1,
           1434,
@@ -514,8 +390,8 @@
           "configuration": {
             "chunk_shape": [
               1,
-              128,
-              128
+              512,
+              512
             ]
           }
         },
@@ -557,6 +433,8 @@
             1.0
           ],
           "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
           "coordinates": "latitude longitude",
           "_FillValue": "AAAAAAAA+H8="
         },
@@ -581,8 +459,8 @@
           "configuration": {
             "chunk_shape": [
               1,
-              128,
-              128
+              512,
+              512
             ]
           }
         },
@@ -624,73 +502,8 @@
             1.0
           ],
           "nodata": 0.0,
-          "coordinates": "latitude longitude",
-          "_FillValue": "AAAAAAAA+H8="
-        },
-        "dimension_names": [
-          "band",
-          "y",
-          "x"
-        ],
-        "zarr_format": 3,
-        "node_type": "array",
-        "storage_transformers": []
-      },
-      "tie_line_costs_102MW": {
-        "shape": [
-          1,
-          1434,
-          972
-        ],
-        "data_type": "float32",
-        "chunk_grid": {
-          "name": "regular",
-          "configuration": {
-            "chunk_shape": [
-              1,
-              128,
-              128
-            ]
-          }
-        },
-        "chunk_key_encoding": {
-          "name": "default",
-          "configuration": {
-            "separator": "/"
-          }
-        },
-        "fill_value": 0.0,
-        "codecs": [
-          {
-            "name": "bytes",
-            "configuration": {
-              "endian": "little"
-            }
-          },
-          {
-            "name": "blosc",
-            "configuration": {
-              "typesize": 4,
-              "cname": "zstd",
-              "clevel": 9,
-              "shuffle": "shuffle",
-              "blocksize": 0
-            }
-          }
-        ],
-        "attributes": {
-          "transform": [
-            90.0,
-            0.0,
-            65848.61752782026,
-            0.0,
-            -90.0,
-            103948.14381277534,
-            0.0,
-            0.0,
-            1.0
-          ],
-          "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
           "coordinates": "latitude longitude",
           "_FillValue": "AAAAAAAA+H8="
         },
@@ -715,8 +528,8 @@
           "configuration": {
             "chunk_shape": [
               1,
-              128,
-              128
+              512,
+              512
             ]
           }
         },
@@ -758,6 +571,8 @@
             1.0
           ],
           "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
           "coordinates": "latitude longitude"
         },
         "dimension_names": [
@@ -769,16 +584,20 @@
         "node_type": "array",
         "storage_transformers": []
       },
-      "band": {
+      "ISO_regions": {
         "shape": [
-          1
+          1,
+          1434,
+          972
         ],
-        "data_type": "int64",
+        "data_type": "float32",
         "chunk_grid": {
           "name": "regular",
           "configuration": {
             "chunk_shape": [
-              1
+              1,
+              512,
+              512
             ]
           }
         },
@@ -788,7 +607,7 @@
             "separator": "/"
           }
         },
-        "fill_value": 0,
+        "fill_value": 0.0,
         "codecs": [
           {
             "name": "bytes",
@@ -797,16 +616,38 @@
             }
           },
           {
-            "name": "zstd",
+            "name": "blosc",
             "configuration": {
-              "level": 0,
-              "checksum": false
+              "typesize": 4,
+              "cname": "zstd",
+              "clevel": 9,
+              "shuffle": "shuffle",
+              "blocksize": 0
             }
           }
         ],
-        "attributes": {},
+        "attributes": {
+          "transform": [
+            90.0,
+            0.0,
+            65848.61752782026,
+            0.0,
+            -90.0,
+            103948.14381277534,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
+          "coordinates": "latitude longitude",
+          "_FillValue": "AAAAAAAA+H8="
+        },
         "dimension_names": [
-          "band"
+          "band",
+          "y",
+          "x"
         ],
         "zarr_format": 3,
         "node_type": "array",
@@ -863,6 +704,187 @@
           "spatial_ref": "PROJCS[\"unknown\",GEOGCS[\"unknown\",DATUM[\"Unknown based on GRS 1980 ellipsoid\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",41.0833333333333],PARAMETER[\"central_meridian\",-71.5],PARAMETER[\"scale_factor\",0.99999375],PARAMETER[\"false_easting\",100000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
           "GeoTransform": "65848.61752782026 90.0 0.0 103948.14381277534 0.0 -90.0"
         },
+        "zarr_format": 3,
+        "node_type": "array",
+        "storage_transformers": []
+      },
+      "tie_line_costs_3000MW": {
+        "shape": [
+          1,
+          1434,
+          972
+        ],
+        "data_type": "float32",
+        "chunk_grid": {
+          "name": "regular",
+          "configuration": {
+            "chunk_shape": [
+              1,
+              512,
+              512
+            ]
+          }
+        },
+        "chunk_key_encoding": {
+          "name": "default",
+          "configuration": {
+            "separator": "/"
+          }
+        },
+        "fill_value": 0.0,
+        "codecs": [
+          {
+            "name": "bytes",
+            "configuration": {
+              "endian": "little"
+            }
+          },
+          {
+            "name": "blosc",
+            "configuration": {
+              "typesize": 4,
+              "cname": "zstd",
+              "clevel": 9,
+              "shuffle": "shuffle",
+              "blocksize": 0
+            }
+          }
+        ],
+        "attributes": {
+          "transform": [
+            90.0,
+            0.0,
+            65848.61752782026,
+            0.0,
+            -90.0,
+            103948.14381277534,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
+          "coordinates": "latitude longitude",
+          "_FillValue": "AAAAAAAA+H8="
+        },
+        "dimension_names": [
+          "band",
+          "y",
+          "x"
+        ],
+        "zarr_format": 3,
+        "node_type": "array",
+        "storage_transformers": []
+      },
+      "tie_line_costs_102MW": {
+        "shape": [
+          1,
+          1434,
+          972
+        ],
+        "data_type": "float32",
+        "chunk_grid": {
+          "name": "regular",
+          "configuration": {
+            "chunk_shape": [
+              1,
+              512,
+              512
+            ]
+          }
+        },
+        "chunk_key_encoding": {
+          "name": "default",
+          "configuration": {
+            "separator": "/"
+          }
+        },
+        "fill_value": 0.0,
+        "codecs": [
+          {
+            "name": "bytes",
+            "configuration": {
+              "endian": "little"
+            }
+          },
+          {
+            "name": "blosc",
+            "configuration": {
+              "typesize": 4,
+              "cname": "zstd",
+              "clevel": 9,
+              "shuffle": "shuffle",
+              "blocksize": 0
+            }
+          }
+        ],
+        "attributes": {
+          "transform": [
+            90.0,
+            0.0,
+            65848.61752782026,
+            0.0,
+            -90.0,
+            103948.14381277534,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "nodata": 0.0,
+          "chunk_x": 512,
+          "chunk_y": 512,
+          "coordinates": "latitude longitude",
+          "_FillValue": "AAAAAAAA+H8="
+        },
+        "dimension_names": [
+          "band",
+          "y",
+          "x"
+        ],
+        "zarr_format": 3,
+        "node_type": "array",
+        "storage_transformers": []
+      },
+      "band": {
+        "shape": [
+          1
+        ],
+        "data_type": "int64",
+        "chunk_grid": {
+          "name": "regular",
+          "configuration": {
+            "chunk_shape": [
+              1
+            ]
+          }
+        },
+        "chunk_key_encoding": {
+          "name": "default",
+          "configuration": {
+            "separator": "/"
+          }
+        },
+        "fill_value": 0,
+        "codecs": [
+          {
+            "name": "bytes",
+            "configuration": {
+              "endian": "little"
+            }
+          },
+          {
+            "name": "zstd",
+            "configuration": {
+              "level": 0,
+              "checksum": false
+            }
+          }
+        ],
+        "attributes": {},
+        "dimension_names": [
+          "band"
+        ],
         "zarr_format": 3,
         "node_type": "array",
         "storage_transformers": []

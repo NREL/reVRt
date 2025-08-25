@@ -8,8 +8,8 @@
     "name": "regular",
     "configuration": {
       "chunk_shape": [
-        128,
-        128
+        512,
+        512
       ]
     }
   },
@@ -51,6 +51,8 @@
       1.0
     ],
     "nodata": 0.0,
+    "chunk_x": 512,
+    "chunk_y": 512,
     "_FillValue": "AAAAAAAA+H8="
   },
   "dimension_names": [

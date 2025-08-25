@@ -7,7 +7,7 @@
     "name": "regular",
     "configuration": {
       "chunk_shape": [
-        128
+        2048
       ]
     }
   },
