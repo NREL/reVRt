@@ -51,8 +51,10 @@
       1.0
     ],
     "nodata": 0.0,
-    "chunk_x": 512,
-    "chunk_y": 512,
+    "chunks": {
+      "y": 512,
+      "x": 512
+    },
     "_FillValue": "AAAAAAAA+H8="
   },
   "dimension_names": [
