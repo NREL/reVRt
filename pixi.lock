@@ -3,8 +3,6 @@ environments:
   build:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
-    - url: https://conda.anaconda.org/anaconda/
-    - url: https://conda.anaconda.org/main/
     indexes:
     - https://pypi.org/simple
     packages:
