@@ -166,6 +166,8 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)]
+    // Due to truncation solution to handle f32 costs.
     fn minimalist() {
         let store_path = dataset::samples::multi_variable_zarr();
         let cost_function = cost::sample::cost_function();
@@ -180,6 +182,8 @@ mod tests {
         assert!(cost > &0.);
     }
 
+    // Due to truncation solution to handle f32 costs.
+    #[allow(clippy::approx_constant)]
     #[test_case((1, 1), (1, 1), 1, 0.; "no movement")]
     #[test_case((1, 1), (1, 2), 2, 1.; "step one cell to the side")]
     #[test_case((1, 1), (2, 1), 2, 1.; "step one cell down")]
@@ -268,6 +272,8 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)]
+    // Due to truncation solution to handle f32 costs.
     fn routing_many_to_many() {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
         let cost_function =
