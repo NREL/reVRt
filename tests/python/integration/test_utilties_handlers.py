@@ -11,25 +11,25 @@ from revrt.utilities import LayeredFile
 
 
 @pytest.fixture(scope="module")
-def test_tiff_fp(test_data_dir):
+def ri_tiff_fp(test_data_dir):
     """Return path to TIFF file used for tests"""
     return test_data_dir / "utilities" / "ri_transmission_barriers.tif"
 
 
-def test_create_new_file(tmp_path, test_tiff_fp):
+def test_create_new_file(tmp_path, ri_tiff_fp):
     """Test creating a new file"""
 
     test_fp = tmp_path / "test.zarr"
     assert not test_fp.exists()
 
     lf = LayeredFile(test_fp)
-    lf.create_new(test_tiff_fp, overwrite=True)
+    lf.create_new(ri_tiff_fp, overwrite=True)
 
     assert test_fp.exists()
 
     with (
         xr.open_dataset(test_fp) as ds,
-        rioxarray.open_rasterio(test_tiff_fp) as xds,
+        rioxarray.open_rasterio(ri_tiff_fp) as xds,
     ):
         lat_lon = xds.rio.reproject("EPSG:4326")
         assert np.isclose(ds["longitude"].min(), lat_lon.x.min())
