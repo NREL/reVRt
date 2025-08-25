@@ -460,6 +460,7 @@ mod tests {
     use std::f32::consts::SQRT_2;
     use test_case::test_case;
 
+    #[allow(dead_code)]
     fn test_simple_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function =
@@ -484,6 +485,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     fn test_sample_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
