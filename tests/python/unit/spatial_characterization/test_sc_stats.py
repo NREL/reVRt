@@ -1,5 +1,6 @@
 """Test statistic computation functions for spatial characterization"""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -20,13 +21,11 @@ from revrt.exceptions import revrtNotImplementedError, revrtValueError
 def test_ni_error_message():
     """Test error message for not implemented stat"""
 
-    with pytest.raises(revrtNotImplementedError) as exc_info:
+    with pytest.raises(
+        revrtNotImplementedError,
+        match="Default computation unavailable for 'pixel_count'",
+    ):
         Stat.PIXEL_COUNT.compute(1, 2, 3, "a", kw="another")
-
-    assert (
-        str(exc_info.value)
-        == "Default computation unavailable for 'pixel_count'"
-    )
 
 
 @pytest.mark.parametrize(
@@ -241,32 +240,30 @@ def test_computable_stats_from_other_iterable(in_iter):
 
 def test_computable_stats_unknown_stat():
     """Test that an unknown stat raises error"""
-    with pytest.raises(revrtValueError) as exc_info:
+    with pytest.raises(
+        revrtValueError,
+        match=r"Stat 'DNE' not valid; must be one of:\n.*\{.*\}",
+    ):
         ComputableStats.from_iter("DNE")
-
-    exc_info = str(exc_info.value)
-    assert "Stat 'DNE' not valid; must be one of:" in exc_info
-    assert "{" in exc_info
-    assert "}" in exc_info
 
 
 def test_computable_stats_bad_percentile():
     """Test that a bad percentile raises error"""
-    with pytest.raises(revrtValueError) as exc_info:
+    with pytest.raises(
+        revrtValueError,
+        match=re.escape(
+            "Percentiles must be between 0 and 100 (inclusive). Got: 100.5"
+        ),
+    ):
         ComputableStats.from_iter(f"{_PCT_PREFIX}100.5")
 
-    assert (
-        str(exc_info.value)
-        == "Percentiles must be between 0 and 100 (inclusive). Got: 100.5"
-    )
-
-    with pytest.raises(revrtValueError) as exc_info:
+    with pytest.raises(
+        revrtValueError,
+        match=re.escape(
+            "Percentiles must be between 0 and 100 (inclusive). Got: -10.0"
+        ),
+    ):
         ComputableStats.from_iter(f"{_PCT_PREFIX}-10")
-
-    assert (
-        str(exc_info.value)
-        == "Percentiles must be between 0 and 100 (inclusive). Got: -10.0"
-    )
 
 
 @pytest.mark.parametrize(
