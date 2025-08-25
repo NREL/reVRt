@@ -183,8 +183,8 @@ mod tests {
     #[test_case((1, 1), (1, 1), 1, 0.; "no movement")]
     #[test_case((1, 1), (1, 2), 2, 1.; "step one cell to the side")]
     #[test_case((1, 1), (2, 1), 2, 1.; "step one cell down")]
-    #[test_case((1, 1), (2, 2), 2, 1.; "step one cell diagonally")]
-    #[test_case((1, 1), (2, 3), 3, 2.; "step diagonally and across")]
+    #[test_case((1, 1), (2, 2), 2, 1.4142; "step one cell diagonally")]
+    #[test_case((1, 1), (2, 3), 3, 2.4142; "step diagonally and across")]
     fn basic_routing_point_to_point(
         (si, sj): (u64, u64),
         (ei, ej): (u64, u64),
