@@ -249,7 +249,6 @@ impl Dataset {
             .zip(value)
             .collect();
         trace!("Neighbors {:?}", neighbors);
-        dbg!(&neighbors);
 
         // Extract the origin point.
         let center = neighbors
