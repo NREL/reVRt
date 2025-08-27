@@ -1,13 +1,14 @@
 """Handler for file containing GeoTIFF layers"""
 
+import shutil
 import logging
 from pathlib import Path
 from functools import cached_property
 
+
 import zarr
 import dask
 from pyproj import Transformer
-from pyproj.crs import CRS
 import rioxarray
 import numpy as np
 import xarray as xr
@@ -46,6 +47,9 @@ class LayeredFile:
     LONGITUDE = "longitude"
     """Name of longitude values layer in :class:`LayeredFile`"""
 
+    TRANSFORM_ATOL = 0.01
+    """Tolerance in transform comparison when checking GeoTIFFs"""
+
     def __init__(self, fp):
         """
 
@@ -77,7 +81,7 @@ class LayeredFile:
             raise revrtKeyError(msg)
 
         logger.debug("\t- Extracting %s from %s", layer, self.fp)
-        with xr.open_dataset(self.fp) as ds:
+        with xr.open_dataset(self.fp, consolidated=False) as ds:
             profile = _layer_profile_from_open_ds(layer, ds)
             values = ds[layer].values
 
@@ -86,7 +90,7 @@ class LayeredFile:
     @cached_property
     def profile(self):
         """dict: Template layer profile"""
-        with xr.open_dataset(self.fp) as ds:
+        with xr.open_dataset(self.fp, consolidated=False) as ds:
             return {
                 "width": ds.rio.width,
                 "height": ds.rio.height,
@@ -99,17 +103,17 @@ class LayeredFile:
         """tuple: Template layer shape"""
         return self.profile["height"], self.profile["width"]
 
-    @cached_property
+    @property
     def layers(self):
         """list: All available layers in file"""
         if not self.fp.exists():
             msg = f"File {self.fp} not found"
             raise revrtFileNotFoundError(msg)
 
-        with xr.open_dataset(self.fp) as ds:
+        with xr.open_dataset(self.fp, consolidated=False) as ds:
             return list(ds.variables)
 
-    @cached_property
+    @property
     def data_layers(self):
         """list: Available data layers in file"""
         return [
@@ -142,7 +146,7 @@ class LayeredFile:
                 - "transform": :class:`Affine` transform for layer
 
         """
-        with xr.open_dataset(self.fp) as ds:
+        with xr.open_dataset(self.fp, consolidated=False) as ds:
             return _layer_profile_from_open_ds(layer, ds)
 
     # TODO: allow template_file to be another zarr file
@@ -182,7 +186,235 @@ class LayeredFile:
         except Exception:
             logger.exception("Error initializing %s", self.fp)
             if self.fp.exists():
-                self.fp.unlink()
+                delete_data_file(self.fp)
+
+    def write_layer(
+        self,
+        values,
+        layer_name,
+        description=None,
+        overwrite=False,
+        nodata=None,
+    ):
+        """Write a layer to the file
+
+        Parameters
+        ----------
+        values : array-like
+            Layer data (can be numpy array, xarray.DataArray, or
+            dask.array).
+        layer_name : str
+            Name of layer to be written to file.
+        description : str, optional
+            Description of layer being added. By default, ``None``.
+        overwrite : bool, default=False
+            Option to overwrite layer data if layer already exists in
+            ``LayerFile``.
+
+            .. IMPORTANT::
+              When overwriting data, the encoding (and therefore things
+              like data type) is not allowed to change. If you need to
+              overwrite an existing layer with a new type of data,
+              manually remove it from the file first.
+
+            By default, ``False``.
+        nodata : int | float, optional
+            Optional nodata value for the raster layer. This value will
+            be added to the layer's attributes meta dictionary under the
+            "nodata" key.
+
+            .. WARNING::
+               ``rioxarray`` does not recognize the "nodata" value when
+               reading from a zarr file (because zarr uses the
+               ``_FillValue`` encoding internally). To get the correct
+               "nodata" value back when reading a ``LayerFile``, you can
+               either 1) read from ``da.rio.encoded_nodata`` or 2) check
+               the layer's attributes for the ``"nodata"`` key, and if
+               present, use ``da.rio.write_nodata`` to write the nodata
+               value so that ``da.rio.nodata`` gives the right value.
+
+        Raises
+        ------
+        revrtFileNotFoundError
+            If ``LayerFile`` does not exist.
+        revrtKeyError
+            If layer with the same name already exists and
+            ``overwrite=False``.
+        """
+        if not self.fp.exists():
+            msg = (
+                f"File {self.fp} not found. Please create the file before "
+                "adding layers."
+            )
+            raise revrtFileNotFoundError(msg)
+
+        self._check_for_existing_layer(layer_name, overwrite)
+
+        if values.ndim < _NUM_GEOTIFF_DIMS:
+            values = np.expand_dims(values, 0)
+
+        if values.shape[1:] != self.shape:
+            msg = (
+                f"Shape of provided data {values.shape[1:]} does "
+                f"not match shape of LayerFile: {self.shape}"
+            )
+            raise revrtValueError(msg)
+
+        with xr.open_dataset(self.fp, consolidated=False) as ds:
+            attrs = ds.attrs
+            crs = ds.rio.crs
+            transform = ds.rio.transform()
+            layer_exists = layer_name in ds
+            coords = ds.coords
+
+        chunks = (1, attrs["chunks"]["y"], attrs["chunks"]["x"])
+
+        da = xr.DataArray(values, dims=("band", "y", "x"), attrs=attrs)
+        da = da.assign_coords(coords)
+        da.attrs["count"] = 1
+        da.attrs["description"] = description
+        if nodata is not None:
+            nodata = da.dtype.type(nodata)
+            da = da.rio.write_nodata(nodata)
+            da.attrs["nodata"] = nodata
+
+        ds_to_add = xr.Dataset({layer_name: da}, attrs=attrs)
+        da = da.rio.write_crs(crs)
+        da = da.rio.write_transform(transform)
+        da = da.rio.write_grid_mapping()
+
+        encoding = None
+        if not layer_exists:
+            encoding = {layer_name: da.encoding or {}}
+            encoding[layer_name].update(
+                {
+                    "compressors": _ZARR_COMPRESSORS,
+                    "dtype": da.dtype,
+                    "chunks": chunks,
+                }
+            )
+
+        ds_to_add.to_zarr(
+            self.fp,
+            mode="a",
+            encoding=encoding,
+            zarr_format=3,
+            consolidated=False,
+            compute=True,
+        )
+
+    def _check_for_existing_layer(self, layer_name, overwrite):
+        """Warn about existing layers"""
+        if layer_name not in self.layers:
+            return
+
+        msg = f"{layer_name!r} is already present in {self.fp}"
+        if not overwrite:
+            msg = f"{msg} and 'overwrite=False'"
+            raise revrtKeyError(msg)
+
+        msg = f"{msg} and will be replaced"
+        logger.info(msg)
+
+    def write_geotiff_to_file(
+        self,
+        geotiff,
+        layer_name,
+        check_tiff=True,
+        description=None,
+        overwrite=True,
+        nodata=None,
+    ):
+        """Transfer GeoTIFF to layered file
+
+        Parameters
+        ----------
+        geotiff : path-like
+            Path to GeoTIFF file.
+        layer_name : str
+            Name of layer to be written to file.
+        check_tiff : bool, optional
+            Option to check GeoTIFF profile, CRS, and shape against
+            layered file profile, CRS, and shape. By default, ``True``.
+        description : str, optional
+            Description of layer being added. By default, ``None``.
+        overwrite : bool, default=False
+            Option to overwrite layer data if layer already exists in
+            ``LayerFile``.
+
+            .. IMPORTANT::
+              When overwriting data, the encoding (and therefore things
+              like data type) is not allowed to change. If you need to
+              overwrite an existing layer with a new type of data,
+              manually remove it from the file first.
+
+            By default, ``False``.
+        nodata : int | float, optional
+            Optional nodata value for the raster layer. This value will
+            be added to the layer's attributes meta dictionary under the
+            "nodata" key.
+
+            .. WARNING::
+               ``rioxarray`` does not recognize the "nodata" value when
+               reading from a zarr file (because zarr uses the
+               ``_FillValue`` encoding internally). To get the correct
+               "nodata" value back when reading a ``LayerFile``, you can
+               either 1) read from ``da.rio.encoded_nodata`` or 2) check
+               the layer's attributes for the ``"nodata"`` key, and if
+               present, use ``da.rio.write_nodata`` to write the nodata
+               value so that ``da.rio.nodata`` gives the right value.
+
+        """
+        if not self.fp.exists():
+            logger.info("%s not found - creating from %s...", self.fp, geotiff)
+            self.create_new(geotiff)
+
+        logger.info(
+            "%s being extracted from %s and added to %s",
+            layer_name,
+            geotiff,
+            self.fp,
+        )
+
+        if check_tiff:
+            logger.debug("\t- Checking %s against %s", geotiff, self.fp)
+            check_geotiff(self.fp, geotiff, transform_atol=self.TRANSFORM_ATOL)
+
+        with rioxarray.open_rasterio(geotiff, chunks="auto") as tif:
+            logger.debug("\t- Writing data from %s to %s", geotiff, self.fp)
+            self.write_layer(
+                tif,
+                layer_name,
+                description=description,
+                overwrite=overwrite,
+                nodata=nodata,
+            )
+
+    def layer_to_geotiff(self, layer, geotiff, **profile_kwargs):
+        """Extract layer from file and write to GeoTIFF file
+
+        Parameters
+        ----------
+        layer : str
+            Layer to extract,
+        geotiff : path-like
+            Path to output GeoTIFF file.
+        **profile_kwargs
+            Additional keyword arguments to pass into writing the
+            raster. The following attributes ar ignored (they are set
+            using properties of the source :class:`LayeredFile`):
+
+                - nodata
+                - transform
+                - crs
+                - count
+                - width
+                - height
+
+        """
+        logger.debug("\t- Writing %s from %s to %s", layer, self.fp, geotiff)
+        with xr.open_dataset(self.fp, chunks="auto", consolidated=False) as ds:
+            ds[layer].rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
 
 
 class LayeredTransmissionFile(LayeredFile):
@@ -249,28 +481,36 @@ class LayeredTransmissionFile(LayeredFile):
         )
 
 
-def check_geotiff(h5, geotiff, chunks=(2048, 2048), transform_atol=0.01):
+def delete_data_file(fp):
+    """Delete data file (can be Zarr, which is a directory)
+
+    Parameters
+    ----------
+    fp : path-like
+        Path to data file (or directory in case of Zarr).
+    """
+    fp = Path(fp)
+    if not fp.exists():
+        return
+
+    if fp.is_dir():
+        shutil.rmtree(fp)
+    else:
+        fp.unlink()
+
+
+def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
     """Compare GeoTIFF with exclusion layer and raise errors if mismatch
 
     Parameters
     ----------
-    h5 : :class:`LayeredFile`
-        ``LayeredFile`` instance containing `shape`, `profile`, and
-        attributes.
-    geotiff : str
+    layer_file_fp : path-like
+        Path to data representing a ``LayeredFile`` instance.
+    geotiff : path-like
         Path to GeoTIFF file.
-    chunks : tuple
-        Chunk size of exclusions in GeoTIFF,
-    transform_atol : float
+    transform_atol : float, default=0.01
         Absolute tolerance parameter when comparing GeoTIFF transform
         data.
-
-    Returns
-    -------
-    profile : dict
-        GeoTIFF profile (attributes).
-    values : ndarray
-        GeoTIFF data.
 
     Raises
     ------
@@ -278,62 +518,42 @@ def check_geotiff(h5, geotiff, chunks=(2048, 2048), transform_atol=0.01):
         If shape, profile, or transform don;t match between layered file
         and GeoTIFF file.
     """
-    with rioxarray.open_rasterio(geotiff, chunks=chunks) as tif:
+    with (
+        xr.open_dataset(layer_file_fp, consolidated=False) as ds,
+        rioxarray.open_rasterio(geotiff) as tif,
+    ):
         if tif.band > 1:
             msg = f"{geotiff} contains more than one band!"
             raise revrtProfileCheckError(msg)
 
-        if not np.array_equal(h5.shape, tif.shape[1:]):
+        layered_file_shape = ds.sizes["band"], ds.sizes["y"], ds.sizes["x"]
+        if layered_file_shape != tif.shape:
             msg = (
-                f"Shape of exclusion data in {geotiff} and {h5.fp} "
-                "do not match!"
+                f"Shape of exclusion data in {geotiff} and {layer_file_fp} "
+                f"do not match!\n {tif.shape} !=\n {layered_file_shape}"
             )
             raise revrtProfileCheckError(msg)
 
-        h5_crs = CRS.from_string(h5.profile["crs"]).to_dict()
-        tif_crs = tif.rio.crs.to_dict()
-        if not crs_match(h5_crs, tif_crs):
+        layered_file_crs = ds.rio.crs
+        tif_crs = tif.rio.crs
+        if layered_file_crs != tif_crs:
             msg = (
-                f'Geospatial "CRS" in {geotiff} and {h5.fp} do not '
-                f"match!\n {tif_crs} !=\n {h5_crs}"
+                f'Geospatial "CRS" in {geotiff} and {layer_file_fp} do not '
+                f"match!\n {tif_crs} !=\n {layered_file_crs}"
             )
             raise revrtProfileCheckError(msg)
 
+        layered_file_transform = ds.rio.transform()
+        tif_transform = tif.rio.transform()
         if not np.allclose(
-            h5.profile["transform"], tif.rio.transform(), atol=transform_atol
+            layered_file_transform, tif_transform, atol=transform_atol
         ):
             msg = (
-                f'Geospatial "transform" in {geotiff} and {h5.fp} '
-                f"do not match!\n {h5.profile['transform']} !=\n "
-                f"{tif.rio.transform()}"
+                f'Geospatial "transform" in {geotiff} and {layer_file_fp} '
+                f"do not match!\n {tif_transform} !=\n "
+                f"{layered_file_transform}"
             )
             raise revrtProfileCheckError(msg)
-
-
-def crs_match(baseline_crs, test_crs, ignore_keys=("no_defs",)):
-    """Compare baseline and test CRS values
-
-    Parameters
-    ----------
-    baseline_crs : dict
-        Baseline CRS to use a truth, must be a dict
-    test_crs : dict
-        Test CRS to compare with baseline, must be a dictionary.
-    ignore_keys : tuple, optional
-        Keys to not check. By default, ``('no_defs',)``.
-
-    Returns
-    -------
-    crs_match : bool
-        ``True`` if crs' match, ``False`` otherwise
-    """
-    for k, true_v in baseline_crs.items():
-        if k not in ignore_keys:
-            test_v = test_crs.get(k, true_v)
-            if true_v != test_v:
-                return False
-
-    return True
 
 
 def _layer_profile_from_open_ds(layer, ds):
@@ -374,12 +594,7 @@ def _init_zarr_file_from_tiff_template(
     """Initialize Zarr file from GeoTIFF template"""
     with rioxarray.open_rasterio(template_file) as geo:
         transform = geo.rio.transform()
-        src_crs = geo.rio.crs.to_string()
-        main_attrs = {
-            "crs": src_crs,
-            "transform": transform,
-            "chunks": {"y": chunk_y, "x": chunk_x},
-        }
+        src_crs = geo.rio.crs
 
         x, y, lat, lon = _compute_lat_lon(
             geo.sizes["y"],
@@ -390,7 +605,9 @@ def _init_zarr_file_from_tiff_template(
             chunk_y=chunk_y,
         )
 
-        out_ds = _compile_ds(x, y, lat, lon, main_attrs)
+        out_ds = _compile_ds(
+            x, y, lat, lon, transform, src_crs, chunk_x, chunk_y
+        )
         _save_ds_as_zarr_with_encodings(
             out_ds, chunk_x=chunk_x, chunk_y=chunk_y, out_fp=out_fp
         )
@@ -416,7 +633,7 @@ def _compute_lat_lon(ny, nx, src_crs, transform, chunk_x=2048, chunk_y=2048):
         _proj_to_lon_lat,
         x_mesh_transformed,
         y_mesh_transformed,
-        src_crs,
+        src_crs.to_string(),
         dtype="float32",
         new_axis=(0,),  # we add a new leading axis of length 2
         chunks=((2,), *x_mesh_transformed.chunks),  # chunk sizes for [2, y, x]
@@ -431,16 +648,22 @@ def _compute_lat_lon(ny, nx, src_crs, transform, chunk_x=2048, chunk_y=2048):
     return x, y, lat, lon
 
 
-def _compile_ds(x, y, lat, lon, attrs):
+def _compile_ds(x, y, lat, lon, transform, src_crs, chunk_x, chunk_y):
     """Create an xarray Dataset with coordinates and attributes"""
+    attrs = {"chunks": {"y": chunk_y, "x": chunk_x}}
+
     out_ds = xr.Dataset(attrs=attrs)
-    return out_ds.assign_coords(
+    out_ds = out_ds.assign_coords(
         band=(("band"), [0]),
         y=(("y"), y.astype(np.float32)),
         x=(("x"), x.astype(np.float32)),
         longitude=(("y", "x"), lon),
         latitude=(("y", "x"), lat),
     )
+
+    out_ds = out_ds.rio.write_crs(src_crs)
+    out_ds = out_ds.rio.write_transform(transform)
+    return out_ds.rio.write_grid_mapping()
 
 
 def _save_ds_as_zarr_with_encodings(out_ds, chunk_x, chunk_y, out_fp):
@@ -460,7 +683,9 @@ def _save_ds_as_zarr_with_encodings(out_ds, chunk_x, chunk_y, out_fp):
         },
     }
     logger.debug("Writing data to %s with encoding:\n %r", out_fp, encoding)
-    out_ds.to_zarr(out_fp, mode="w", encoding=encoding, consolidated=False)
+    out_ds.to_zarr(
+        out_fp, mode="w", encoding=encoding, zarr_format=3, consolidated=False
+    )
 
 
 def _proj_to_lon_lat(xx_block, yy_block, src):

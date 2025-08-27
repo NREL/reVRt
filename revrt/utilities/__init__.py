@@ -1,3 +1,8 @@
 """reVRt utilities"""
 
-from .handlers import LayeredFile, LayeredTransmissionFile
+from .handlers import (
+    check_geotiff,
+    delete_data_file,
+    LayeredFile,
+    LayeredTransmissionFile,
+)
