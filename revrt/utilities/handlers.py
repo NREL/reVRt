@@ -12,6 +12,7 @@ from pyproj import Transformer
 import rioxarray
 import numpy as np
 import xarray as xr
+from rasterio.warp import Resampling
 
 from revrt.exceptions import (
     revrtFileExistsError,
@@ -435,6 +436,65 @@ class LayeredFile:
         with xr.open_dataset(self.fp, chunks="auto", consolidated=False) as ds:
             ds[layer].rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
 
+    def save_data_using_layer_file_profile(
+        self, data, geotiff, nodata=None, **profile_kwargs
+    ):
+        """Write to GeoTIFF file
+
+        Parameters
+        ----------
+        data : array-like
+            Data to write to geotiff using ``LayeredFile`` profile.
+        geotiff : path-like
+            Path to output GeoTIFF file.
+        nodata : int | float, optional
+            Optional nodata value for the raster layer. By default,
+            ``None``, which does not add a "nodata" value.
+        **profile_kwargs
+            Additional keyword arguments to pass into writing the
+            raster. The following attributes ar ignored (they are set
+            using properties of the source :class:`LayeredFile`):
+
+                - nodata
+                - transform
+                - crs
+                - count
+                - width
+                - height
+
+        Raises
+        ------
+        revrtValueError
+            If shape of provided data does not match shape of
+            :class:`LayeredFile`.
+        """
+        if data.ndim < _NUM_GEOTIFF_DIMS:
+            data = np.expand_dims(data, 0)
+
+        if data.shape[1:] != self.shape:
+            msg = (
+                f"Shape of provided data {data.shape[1:]} does "
+                f"not match shape of LayeredFile: {self.shape}"
+            )
+            raise revrtValueError(msg)
+
+        if data.dtype.name == "bool":
+            data = data.astype("uint8")
+
+        with xr.open_dataset(self.fp, consolidated=False) as ds:
+            crs = ds.rio.crs
+            transform = ds.rio.transform()
+
+        da = xr.DataArray(data, dims=("band", "y", "x"))
+        da.attrs["count"] = 1
+        da = da.rio.write_crs(crs)
+        da = da.rio.write_transform(transform)
+        if nodata is not None:
+            nodata = da.dtype.type(nodata)
+            da = da.rio.write_nodata(nodata)
+
+        da.rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
+
     def extract_layers(self, layers, **profile_kwargs):
         """Extract layers from file and save to disk as GeoTIFFs
 
@@ -529,9 +589,6 @@ class LayeredTransmissionFile(LayeredFile):
         reproject : bool, optional
             Reproject raster to standard CRS and transform if True.
             By default, ``False``.
-        skip_profile_test: bool, optional
-            Skip checking that shape, transform, and CRS match template
-            raster if ``True``. By default, ``False``.
 
         Returns
         -------
@@ -545,12 +602,8 @@ class LayeredTransmissionFile(LayeredFile):
                 msg = f"Unable to find file {geotiff}"
                 raise revrtFileNotFoundError(msg)
 
-        skip_test = skip_profile_test
         return super().load_data_using_h5_profile(
-            geotiff=full_fname,
-            band=band,
-            reproject=reproject,
-            skip_profile_test=skip_test,
+            geotiff=full_fname, band=band, reproject=reproject
         )
 
 
