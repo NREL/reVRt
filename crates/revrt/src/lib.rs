@@ -166,6 +166,8 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)]
+    // Due to truncation solution to handle f32 costs.
     fn minimalist() {
         let store_path = dataset::samples::multi_variable_zarr();
         let cost_function = cost::sample::cost_function();
@@ -180,11 +182,13 @@ mod tests {
         assert!(cost > &0.);
     }
 
+    // Due to truncation solution to handle f32 costs.
+    #[allow(clippy::approx_constant)]
     #[test_case((1, 1), (1, 1), 1, 0.; "no movement")]
     #[test_case((1, 1), (1, 2), 2, 1.; "step one cell to the side")]
     #[test_case((1, 1), (2, 1), 2, 1.; "step one cell down")]
-    #[test_case((1, 1), (2, 2), 2, 1.; "step one cell diagonally")]
-    #[test_case((1, 1), (2, 3), 3, 2.; "step diagonally and across")]
+    #[test_case((1, 1), (2, 2), 2, 1.4142; "step one cell diagonally")]
+    #[test_case((1, 1), (2, 3), 3, 2.4142; "step diagonally and across")]
     fn basic_routing_point_to_point(
         (si, sj): (u64, u64),
         (ei, ej): (u64, u64),
@@ -268,6 +272,8 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)]
+    // Due to truncation solution to handle f32 costs.
     fn routing_many_to_many() {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
         let cost_function =
@@ -287,15 +293,15 @@ mod tests {
         dbg!(&solutions);
         assert_eq!(solutions.len(), 3);
 
-        let expected_end_points = vec![
-            ArrayIndex { i: 1, j: 2 },
-            ArrayIndex { i: 4, j: 4 },
-            ArrayIndex { i: 4, j: 4 },
+        let expected_solution = vec![
+            (ArrayIndex { i: 1, j: 2 }, 1.0),
+            (ArrayIndex { i: 4, j: 4 }, 1.4142),
+            (ArrayIndex { i: 4, j: 4 }, 1.4142),
         ];
-        for ((track, cost), eep) in solutions.into_iter().zip(expected_end_points) {
+        for ((track, cost), eep) in solutions.into_iter().zip(expected_solution) {
             assert_eq!(track.len(), 2);
-            assert_eq!(cost, 1.);
-            assert_eq!(*track.last().unwrap(), eep);
+            assert_eq!(*track.last().unwrap(), eep.0);
+            assert_eq!(cost, eep.1);
         }
     }
 
@@ -313,7 +319,7 @@ mod tests {
 
         for (track, cost) in solutions {
             assert_eq!(track.len(), 3);
-            assert_eq!(cost, 2.);
+            assert_eq!(cost, 2.8284);
             assert_eq!(*track.last().unwrap(), ArrayIndex { i: 3, j: 3 });
         }
     }
@@ -371,14 +377,15 @@ mod tests {
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+
         let start = vec![ArrayIndex { i: 0, j: 0 }];
         let end = vec![ArrayIndex { i: 0, j: 2 }];
         let mut solutions = simulation.scout(&start, end);
-        dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
 
         let (track, cost) = solutions.swap_remove(0);
-        assert_eq!(cost, 7.);
+        // 4 straight moves + 3 diagonal moves
+        assert_eq!(cost, 8.2426);
 
         let expected_track = vec![
             ArrayIndex { i: 0, j: 0 },

@@ -13,6 +13,7 @@
 //! - Single chunk with reasonable size: How well we parallelize
 //!   calculating the cost.
 
+use core::time::Duration;
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
@@ -154,10 +155,8 @@ fn range_distance(c: &mut Criterion) {
 }
 
 criterion_group!(
-    benches,
-    standard_ones,
-    standard_random,
-    single_chunk,
-    range_distance
+    name = benches;
+    config = Criterion::default().measurement_time(Duration::from_secs(12));
+    targets = standard_ones, standard_random, single_chunk, range_distance
 );
 criterion_main!(benches);

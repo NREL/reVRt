@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.8.6,<2.0"]
+requires = ["maturin>=1.9.3,<2.0"]
 build-backend = "maturin"
 
 [project]
@@ -49,7 +49,7 @@ dependencies = [
 dev = [
   "ipython>=9.1.0,<10",
   "jupyter>=1.1.1,<2",
-  "maturin>=1.8.6,<2",
+  "maturin>=1.9.3,<2",
   "pipreqs>=0.4.13,<0.5",
   "ruff>=0.11.5,<0.12",
   "ruff-lsp>=0.0.62,<0.0.63",
@@ -196,7 +196,7 @@ max-positional-args = 10
 
 
 [tool.pixi.project]
-channels = ["conda-forge", "anaconda", "main"]
+channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "win-64", "linux-64"]
 
 
@@ -208,6 +208,9 @@ test = { features = ["test"], solve-group = "default" }
 build = { features = ["build"], solve-group = "default" }
 
 [tool.pixi.tasks]
+
+[tool.pixi.feature.build.tasks]
+build-wheel = { cmd = "maturin build" }
 
 [tool.pixi.feature.dev.tasks]
 make-html = { cmd = "make html", cwd = "docs"}
@@ -224,7 +227,7 @@ NREL-reVRt = { path = ".", editable = true }
 [tool.pixi.dependencies]
 # system
 python = ">=3.11"
-rust = ">=1.88.0,<1.89"
+rust = ">=1.89.0,<1.90"
 # package
 affine = ">=2.4.0,<3"
 dask = ">=2025.4.1,<2026"
@@ -245,7 +248,6 @@ hdf5 = ">=1.14.6,<2"
 ipython = ">=9.1.0,<10"
 jupyter = ">=1.1.1,<2"
 matplotlib = ">=3.10.1,<4"
-maturin = ">=1.8.6,<2"
 pip = ">=25.1.1,<26"
 pipreqs = ">=0.4.13,<0.5"
 ruff = ">=0.11.5,<0.12"
@@ -280,6 +282,7 @@ sphinxcontrib-mermaid = ">=1.0.0,<2"
 python-build = ">=1.2.2.post1,<2"
 pkginfo = ">=1.12.1.2,<2"
 twine = ">=6.1.0,<7"
+maturin = ">=1.9.3,<2"
 
 
 [tool.coverage.run]

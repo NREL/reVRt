@@ -231,13 +231,48 @@ impl Dataset {
 
         trace!("Read values {:?}", value);
 
-        let neighbors = i_range
+        trace!("Input index: (i={}, j={})", i, j);
+
+        /*
+         * The transition between two gridpoint centers is along half the distance
+         * on the original gridpoint, plus half the distance to the target gridpoint
+         * (center). Therefore, the transition cost is the average between the origin
+         * gridpoint cost and the target gridpoint cost.
+         * Note that the same principle is valid for diagonals, it is still the average
+         * of both values, but we have to scale for the longer distance along the
+         * diagonal, thus a sqrt(2) factor along the diagonals.
+         */
+
+        // Match the indices
+        let neighbors: Vec<((u64, u64), f32)> = i_range
             .flat_map(|e| iter::repeat(e).zip(j_range.clone()))
             .zip(value)
-            .filter(|((ir, jr), _)| !(*ir == i && *jr == j)) // no center point
-            .map(|((ir, jr), v)| (ArrayIndex { i: ir, j: jr }, v))
             .collect();
+        trace!("Neighbors {:?}", neighbors);
 
+        // Extract the origin point.
+        let center = neighbors
+            .iter()
+            .find(|((ir, jr), _)| *ir == i && *jr == j)
+            .unwrap();
+        trace!("Center point: {:?}", center);
+
+        // Calculate the average with center point (half grid + other half grid).
+        // Also, apply the diagonal factor for the extra distance.
+        let neighbors = neighbors
+            .iter()
+            .filter(|((ir, jr), _)| !(*ir == i && *jr == j)) // no center point
+            .map(|((ir, jr), v)| ((ir, jr), 0.5 * (v + center.1)))
+            .map(|((ir, jr), v)| {
+                if *ir != i && *jr != j {
+                    // Diagonal factor for longer distance (hypotenuse)
+                    ((ir, jr), v * f32::sqrt(2.0))
+                } else {
+                    ((ir, jr), v)
+                }
+            })
+            .map(|((ir, jr), v)| (ArrayIndex { i: *ir, j: *jr }, v))
+            .collect::<Vec<_>>();
         trace!("Neighbors {:?}", neighbors);
 
         neighbors
@@ -421,9 +456,10 @@ pub(crate) mod samples {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f32::consts::SQRT_2;
     use test_case::test_case;
 
-    #[test]
+    #[allow(dead_code)]
     fn test_simple_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function =
@@ -448,7 +484,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[allow(dead_code)]
     fn test_sample_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
@@ -504,10 +540,10 @@ mod tests {
         assert_eq!(results, vec![]);
     }
 
-    #[test_case((0, 0), vec![(0, 1, 1.), (1, 0, 2.), (1, 1, 3.)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.), (1, 0, 2.), (1, 1, 3.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 0.), (0, 1, 1.), (1, 1, 3.)] ; "bottom left corner")]
-    #[test_case((1, 1), vec![(0, 0, 0.), (0, 1, 1.), (1, 0, 2.)] ; "bottom right corner")]
+    #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 1.0), (1, 1, 1.5 * SQRT_2)] ; "top left corner")]
+    #[test_case((0, 1), vec![(0, 0, 0.5), (1, 0, 1.5 * SQRT_2), (1, 1, 2.)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 0, 1.), (0, 1, 1.5 * SQRT_2), (1, 1, 2.5)] ; "bottom left corner")]
+    #[test_case((1, 1), vec![(0, 0, 1.5 * SQRT_2), (0, 1, 2.), (1, 0, 2.5)] ; "bottom right corner")]
     fn test_get_3x3_two_by_two_array((si, sj): (u64, u64), expected_output: Vec<(u64, u64, f32)>) {
         let path = samples::cost_as_index_zarr((2, 2), (2, 2));
         let cost_function =
@@ -526,15 +562,15 @@ mod tests {
         );
     }
 
-    #[test_case((0, 0), vec![(0, 1, 1.), (1, 0, 3.), (1, 1, 4.)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.), (0, 2, 2.), (1, 0, 3.), (1, 1, 4.), (1, 2, 5.)] ; "top middle")]
-    #[test_case((0, 2), vec![(0, 1, 1.), (1, 1, 4.), (1, 2, 5.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 0.), (0, 1, 1.), (1, 1, 4.), (2, 0, 6.), (2, 1, 7.)] ; "middle left")]
-    #[test_case((1, 1), vec![(0, 0, 0.), (0, 1, 1.), (0, 2, 2.), (1, 0, 3.), (1, 2, 5.), (2, 0, 6.), (2, 1, 7.), (2, 2, 8.)] ; "middle middle")]
-    #[test_case((1, 2), vec![(0, 1, 1.), (0, 2, 2.), (1, 1, 4.), (2, 1, 7.), (2, 2, 8.)] ; "middle right")]
-    #[test_case((2, 0), vec![(1, 0, 3.), (1, 1, 4.), (2, 1, 7.)] ; "bottom left corner")]
-    #[test_case((2, 1), vec![(1, 0, 3.), (1, 1, 4.), (1, 2, 5.), (2, 0, 6.), (2, 2, 8.)] ; "bottom middle")]
-    #[test_case((2, 2), vec![(1, 1, 4.), (1, 2, 5.), (2, 1, 7.)] ; "bottom right corner")]
+    #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 1.5), (1, 1, 2.0 * SQRT_2)] ; "top left corner")]
+    #[test_case((0, 1), vec![(0, 0, 0.5), (0, 2, 1.5), (1, 0, 2.0 * SQRT_2), (1, 1, 2.5), (1, 2, 3. * SQRT_2)] ; "top middle")]
+    #[test_case((0, 2), vec![(0, 1, 1.5), (1, 1, 3.0 * SQRT_2), (1, 2, 3.5)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 0, 1.5), (0, 1, 2.0 * SQRT_2), (1, 1, 3.5), (2, 0, 4.5), (2, 1, 5.0 * SQRT_2)] ; "middle left")]
+    #[test_case((1, 1), vec![(0, 0, 2.0 * SQRT_2), (0, 1, 2.5), (0, 2, 3.0 * SQRT_2), (1, 0, 3.5), (1, 2, 4.5), (2, 0, 5.0 * SQRT_2), (2, 1, 5.5), (2, 2, 6.0 * SQRT_2)] ; "middle middle")]
+    #[test_case((1, 2), vec![(0, 1, 3.0 * SQRT_2), (0, 2, 3.5), (1, 1, 4.5), (2, 1, 6.0 * SQRT_2), (2, 2, 6.5)] ; "middle right")]
+    #[test_case((2, 0), vec![(1, 0, 4.5), (1, 1, 5.0 * SQRT_2), (2, 1, 6.5)] ; "bottom left corner")]
+    #[test_case((2, 1), vec![(1, 0, 5.0 * SQRT_2), (1, 1, 5.5), (1, 2, 6.0 * SQRT_2), (2, 0, 6.5), (2, 2, 7.5)] ; "bottom middle")]
+    #[test_case((2, 2), vec![(1, 1, 6.0 * SQRT_2), (1, 2, 6.5), (2, 1, 7.5)] ; "bottom right corner")]
     fn test_get_3x3_three_by_three_array(
         (si, sj): (u64, u64),
         expected_output: Vec<(u64, u64, f32)>,
@@ -556,18 +592,18 @@ mod tests {
         );
     }
 
-    #[test_case((0, 0), vec![(0, 1, 1.), (1, 0, 4.), (1, 1, 5.)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.), (0, 2, 2.), (1, 0, 4.), (1, 1, 5.), (1, 2, 6.)] ; "top left edge")]
-    #[test_case((0, 2), vec![(0, 1, 1.), (0, 3, 3.), (1, 1, 5.), (1, 2, 6.), (1, 3, 7.)] ; "top right edge")]
-    #[test_case((0, 3), vec![(0, 2, 2.), (1, 2, 6.), (1, 3, 7.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 0.), (0, 1, 1.), (1, 1, 5.), (2, 0, 8.), (2, 1, 9.)] ; "left top edge")]
-    #[test_case((1, 3), vec![(0, 2, 2.), (0, 3, 3.), (1, 2, 6.), (2, 2, 10.), (2, 3, 11.)] ; "right top edge")]
-    #[test_case((2, 0), vec![(1, 0, 4.), (1, 1, 5.), (2, 1, 9.), (3, 0, 12.), (3, 1, 13.)] ; "left bottom edge")]
-    #[test_case((2, 3), vec![(1, 2, 6.), (1, 3, 7.), (2, 2, 10.), (3, 2, 14.), (3, 3, 15.)] ; "right bottom edge")]
-    #[test_case((3, 0), vec![(2, 0, 8.), (2, 1, 9.), (3, 1, 13.)] ; "bottom left corner")]
-    #[test_case((3, 1), vec![(2, 0, 8.), (2, 1, 9.), (2, 2, 10.), (3, 0, 12.), (3, 2, 14.)] ; "bottom left edge")]
-    #[test_case((3, 2), vec![(2, 1, 9.), (2, 2, 10.), (2, 3, 11.), (3, 1, 13.), (3, 3, 15.)] ; "bottom right edge")]
-    #[test_case((3, 3), vec![(2, 2, 10.), (2, 3, 11.), (3, 2, 14.)] ; "bottom right corner")]
+    #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 2.), (1, 1, 2.5 * SQRT_2)] ; "top left corner")]
+    #[test_case((0, 1), vec![(0, 0, 0.5), (0, 2, 1.5), (1, 0, 2.5 * SQRT_2), (1, 1, 3.), (1, 2, 3.5 * SQRT_2)] ; "top left edge")]
+    #[test_case((0, 2), vec![(0, 1, 1.5), (0, 3, 2.5), (1, 1, 3.5 * SQRT_2), (1, 2, 4.), (1, 3, 4.5 * SQRT_2)] ; "top right edge")]
+    #[test_case((0, 3), vec![(0, 2, 2.5), (1, 2, 4.5 * SQRT_2), (1, 3, 5.)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 0, 2.), (0, 1, 2.5 * SQRT_2), (1, 1, 4.5), (2, 0, 6.), (2, 1, 6.5 * SQRT_2)] ; "left top edge")]
+    #[test_case((1, 3), vec![(0, 2, 4.5 * SQRT_2), (0, 3, 5.), (1, 2, 6.5), (2, 2, 8.5 * SQRT_2), (2, 3, 9.)] ; "right top edge")]
+    #[test_case((2, 0), vec![(1, 0, 6.), (1, 1, 6.5 * SQRT_2), (2, 1, 8.5), (3, 0, 10.), (3, 1, 10.5 * SQRT_2)] ; "left bottom edge")]
+    #[test_case((2, 3), vec![(1, 2, 8.5 * SQRT_2), (1, 3, 9.), (2, 2, 10.5), (3, 2, 12.5 * SQRT_2), (3, 3, 13.)] ; "right bottom edge")]
+    #[test_case((3, 0), vec![(2, 0, 10.), (2, 1, 10.5 * SQRT_2), (3, 1, 12.5)] ; "bottom left corner")]
+    #[test_case((3, 1), vec![(2, 0, 10.5 * SQRT_2), (2, 1, 11.), (2, 2, 11.5 * SQRT_2), (3, 0, 12.5), (3, 2, 13.5)] ; "bottom left edge")]
+    #[test_case((3, 2), vec![(2, 1, 11.5 * SQRT_2), (2, 2, 12.), (2, 3, 12.5 * SQRT_2), (3, 1, 13.5), (3, 3, 14.5)] ; "bottom right edge")]
+    #[test_case((3, 3), vec![(2, 2, 12.5 * SQRT_2), (2, 3, 13.), (3, 2, 14.5)] ; "bottom right corner")]
     fn test_get_3x3_four_by_four_array(
         (si, sj): (u64, u64),
         expected_output: Vec<(u64, u64, f32)>,

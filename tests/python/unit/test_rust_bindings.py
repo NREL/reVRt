@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 import xarray as xr
-from skimage.graph import MCP
+from skimage.graph import MCP_Geometric
 
 from revrt import find_paths
 
@@ -46,11 +46,11 @@ def test_basic_single_route(tmp_path):
     assert len(results) == 1
     test_path, test_cost = results[0]
 
-    mcp = MCP(da.values)
+    mcp = MCP_Geometric(da.values)
     costs, __ = mcp.find_costs(starts=[(1, 1)], ends=[(2, 6)])
 
     assert test_path == mcp.traceback((2, 6))
-    assert np.isclose(test_cost, costs[(2, 6)] - da[(1, 1)])
+    assert np.isclose(test_cost, costs[(2, 6)])
 
 
 if __name__ == "__main__":
