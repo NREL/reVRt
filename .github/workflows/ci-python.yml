@@ -49,7 +49,7 @@ jobs:
         cache-write: ${{ github.ref == 'refs/heads/main' }}
         environments: dev
 
-    - run:
+    - run: |
         pixi reinstall -e dev NREL-reVRt
         pixi run -e dev --frozen tests-u
 
