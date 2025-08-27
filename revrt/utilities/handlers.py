@@ -25,8 +25,10 @@ from revrt.warn import revrtWarning
 
 
 logger = logging.getLogger(__name__)
-_ZARR_COMPRESSORS = zarr.codecs.BloscCodec(
-    cname="zstd", clevel=9, shuffle=zarr.codecs.BloscShuffle.shuffle
+_ZARR_COMPRESSORS = zarr.codecs.BloscCodec(  # cspell:disable-line
+    cname="zstd",
+    clevel=9,  # cspell:disable-line
+    shuffle=zarr.codecs.BloscShuffle.shuffle,  # cspell:disable-line
 )
 _NUM_GEOTIFF_DIMS = 3  # (band, y, x)
 
@@ -192,7 +194,7 @@ class LayeredFile:
             logger.info(
                 "Layered file %s created from %s!", self.fp, template_file
             )
-        except Exception:
+        except Exception:  # pragma: no cover
             logger.exception("Error initializing %s", self.fp)
             if self.fp.exists():
                 delete_data_file(self.fp)
@@ -527,6 +529,79 @@ class LayeredFile:
             )
 
         return tif
+
+    def layers_to_file(
+        self,
+        layers,
+        check_tiff=True,
+        descriptions=None,
+        overwrite=False,
+        nodata=None,
+    ):
+        """Transfer GeoTIFF layers into layered file
+
+        If layered file does not exist, it is created and populated.
+
+        Parameters
+        ----------
+        layers : list | dict
+            Dictionary mapping layer names to GeoTIFFs filepaths. Each
+            GeoTIFF will be loaded into the :class:`LayeredFile` user
+            the layer name. If a list of GeoTIFFs filepaths is provided,
+            the file name stems are used as the layer names.
+        check_tiff : bool, optional
+            Flag to check tiff profile and coordinates against layered
+            file profile and coordinates. By default, ``True``.
+        description : dict, optional
+            Mapping of layer name to layer description of layers.
+            By default, ``None``, which does not store any descriptions.
+        overwrite : bool, default=False
+            Option to overwrite layer data if layer already exists in
+            :class:`LayeredFile`.
+
+            .. IMPORTANT::
+              When overwriting data, the encoding (and therefore things
+              like data type, nodata value, etc) is not allowed to
+              change. If you need to overwrite an existing layer with a
+              new type of data, manually remove it from the file first.
+
+            By default, ``False``.
+        nodata : int | float, optional
+            Optional nodata value for the raster layer. This value will
+            be added to the layer's attributes meta dictionary under the
+            "nodata" key.
+
+            .. WARNING::
+               ``rioxarray`` does not recognize the "nodata" value when
+               reading from a zarr file (because zarr uses the
+               ``_FillValue`` encoding internally). To get the correct
+               "nodata" value back when reading a :class:`LayeredFile`,
+               you can either 1) read from ``da.rio.encoded_nodata`` or
+               2) check the layer's attributes for the ``"nodata"`` key,
+               and if present, use ``da.rio.write_nodata`` to write the
+               nodata value so that ``da.rio.nodata`` gives the right
+               value.
+
+        """
+        if isinstance(layers, list):
+            layers = {Path(fp).stem: fp for fp in layers}
+
+        if descriptions is None:
+            descriptions = {}
+
+        logger.info("Moving layers to %s", self.fp)
+        for layer_name, geotiff in layers.items():
+            logger.info("- Transferring %s", layer_name)
+            description = descriptions.get(layer_name, None)
+
+            self.write_geotiff_to_file(
+                geotiff,
+                layer_name,
+                check_tiff=check_tiff,
+                description=description,
+                overwrite=overwrite,
+                nodata=nodata,
+            )
 
     def extract_layers(self, layers, **profile_kwargs):
         """Extract layers from file and save to disk as GeoTIFFs

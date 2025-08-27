@@ -76,7 +76,7 @@ def sample_tiff_fp_2x(tmp_path_factory):
     da = da.rio.write_crs("EPSG:4326")
     da.rio.write_transform(_EXPECTED_TRANSFORM)
 
-    out_fp = tmp_path_factory.mktemp("data") / "sample.tif"
+    out_fp = tmp_path_factory.mktemp("data") / "sample_2x.tif"
     da.rio.to_raster(out_fp, driver="GTiff")
     return out_fp
 
@@ -311,7 +311,7 @@ def test_create_new_file(tmp_path, sample_tiff_fp):
     assert test_fp.exists()
 
     with (
-        xr.open_dataset(test_fp) as ds,
+        xr.open_dataset(test_fp, consolidated=False) as ds,
         rioxarray.open_rasterio(sample_tiff_fp) as xds,
     ):
         lat_lon = xds.rio.reproject("EPSG:4326")
@@ -366,7 +366,7 @@ def test_write_layer(sample_tiff_fp, tmp_path):
 
     assert test_fp.exists()
 
-    with xr.open_dataset(test_fp) as ds:
+    with xr.open_dataset(test_fp, consolidated=False) as ds:
         _validate_top_level_ds_props(ds)
         assert "test_layer" not in ds
 
@@ -377,7 +377,7 @@ def test_write_layer(sample_tiff_fp, tmp_path):
         .astype(np.float32)
     )
     lf.write_layer(new_data, "test_layer")
-    with xr.open_dataset(test_fp) as ds:
+    with xr.open_dataset(test_fp, consolidated=False) as ds:
         _validate_top_level_ds_props(ds)
         assert "test_layer" in ds
         _validate_random_data_layer(ds["test_layer"])
@@ -402,7 +402,7 @@ def test_write_layer(sample_tiff_fp, tmp_path):
     new_data_2 /= new_data_2.max()
 
     lf.write_layer(new_data_2, "test_layer", overwrite=True)
-    with xr.open_dataset(test_fp) as ds:
+    with xr.open_dataset(test_fp, consolidated=False) as ds:
         _validate_top_level_ds_props(ds)
         assert "test_layer" in ds
         _validate_random_data_layer(ds["test_layer"])
@@ -415,7 +415,7 @@ def test_write_layer(sample_tiff_fp, tmp_path):
     lf.write_layer(
         new_data, "original_layer", description="My desc", nodata=255
     )
-    with xr.open_dataset(test_fp) as ds:
+    with xr.open_dataset(test_fp, consolidated=False) as ds:
         _validate_top_level_ds_props(ds)
         assert "original_layer" in ds
         _validate_random_data_layer(ds["original_layer"])
@@ -440,7 +440,7 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
     lf.write_geotiff_to_file(sample_tiff_fp, "test_layer", nodata=255)
 
     with (
-        xr.open_dataset(test_fp) as ds,
+        xr.open_dataset(test_fp, consolidated=False) as ds,
         rioxarray.open_rasterio(sample_tiff_fp) as tif,
     ):
         _validate_top_level_ds_props(ds)
@@ -452,7 +452,7 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
 
     lf.write_geotiff_to_file(sample_tiff_fp_2x, "test_layer_2")
     with (
-        xr.open_dataset(test_fp) as ds,
+        xr.open_dataset(test_fp, consolidated=False) as ds,
         rioxarray.open_rasterio(sample_tiff_fp_2x) as tif,
     ):
         _validate_top_level_ds_props(ds)
@@ -473,7 +473,7 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
             check_tiff=False,
         )
 
-    with xr.open_dataset(test_fp) as ds:
+    with xr.open_dataset(test_fp, consolidated=False) as ds:
         _validate_top_level_ds_props(ds)
         assert "test_layer" in ds
         assert "test_layer_2" in ds
@@ -645,6 +645,43 @@ def test_load_data_using_layered_transmission_file_profile(
 
     with pytest.raises(revrtFileNotFoundError, match="Unable to find file"):
         lf.load_data_using_layer_file_profile("DNE")
+
+
+@pytest.mark.parametrize("as_list", [True, False])
+def test_layers_to_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path, as_list):
+    """Test adding multiple layers to file at once"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+
+    if as_list:
+        layers = [sample_tiff_fp, sample_tiff_fp_2x]
+        descriptions = None
+        tl1_name = sample_tiff_fp.stem
+        tl2_name = sample_tiff_fp_2x.stem
+    else:
+        tl1_name = "test_layer"
+        tl2_name = "test_layer_2"
+        layers = {
+            tl1_name: sample_tiff_fp,
+            tl2_name: sample_tiff_fp_2x,
+        }
+        descriptions = {tl1_name: "desc_1", tl2_name: "desc_2"}
+
+    lf.layers_to_file(layers, descriptions=descriptions)
+
+    with (
+        xr.open_dataset(test_fp, consolidated=False) as ds,
+        rioxarray.open_rasterio(sample_tiff_fp) as truth_tif,
+        rioxarray.open_rasterio(sample_tiff_fp_2x) as truth_tif_2,
+    ):
+        assert tl1_name in set(ds.variables)
+        assert tl2_name in set(ds.variables)
+        assert ds[tl1_name].rio.crs == truth_tif.rio.crs
+        assert ds[tl2_name].rio.crs == truth_tif_2.rio.crs
+        assert ds[tl1_name].rio.transform() == truth_tif.rio.transform()
+        assert ds[tl2_name].rio.transform() == truth_tif_2.rio.transform()
+        assert np.allclose(ds[tl1_name], truth_tif)
+        assert np.allclose(ds[tl2_name], truth_tif_2)
 
 
 if __name__ == "__main__":
