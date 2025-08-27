@@ -7,6 +7,10 @@ use tracing::{debug, info, trace};
 
 use revrt::resolve;
 
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
 #[derive(Parser)]
 #[command(version, about, author, long_about = None)]
 struct Cli {
@@ -30,6 +34,9 @@ struct Cli {
 }
 
 fn main() {
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
     let cli = Cli::parse();
 
     let tracing_level = match cli.verbose {
