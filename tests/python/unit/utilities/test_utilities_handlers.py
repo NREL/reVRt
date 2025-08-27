@@ -18,6 +18,7 @@ from revrt.exceptions import (
     revrtKeyError,
     revrtValueError,
 )
+from revrt.warn import revrtWarning
 
 _TEST_WIDTH = 6
 _TEST_HEIGHT = 10
@@ -246,6 +247,30 @@ def test_layered_file_handler_get_layer(test_tl_fp):
     assert layer_profile == expected_profile
 
 
+def test_layered_file_layer_profile(test_tl_fp):
+    """Test LayeredFile layer_profile method"""
+
+    lf = LayeredFile(test_tl_fp)
+
+    layer_profile = lf.layer_profile("tie_line_costs_400MW")
+
+    # Test that it's there but don't compare on it
+    for key in ["crs", "nodata"]:
+        assert key in layer_profile
+        layer_profile.pop(key, None)
+
+    expected_profile = {
+        "width": 972,
+        "height": 1434,
+        "count": 1,
+        "dtype": np.dtype("float32"),
+        "transform": Affine(
+            90.0, 0.0, 65848.6171875, 0.0, -90.0, 103948.140625
+        ),
+    }
+    assert layer_profile == expected_profile
+
+
 def test_layered_file_handler_get_dne_layer(test_tl_fp):
     """Test getting a non-existent layer"""
     lf = LayeredFile(test_tl_fp)
@@ -385,9 +410,76 @@ def test_write_layer(sample_tiff_fp, tmp_path):
 
     with pytest.raises(
         revrtValueError,
-        match=r"Shape of provided data .* does not match shape of LayerFile",
+        match=r"Shape of provided data .* does not match shape of LayeredFile",
     ):
         lf.write_layer(new_data_2[:, :1, :1], "test_layer_2")
+
+
+def test_write_tiff_to_layer_file(sample_tiff_fp, tmp_path):
+    """Test writing GeoTIFFs to a layered file"""
+
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer", nodata=255)
+
+    with (
+        xr.open_dataset(test_fp) as ds,
+        rioxarray.open_rasterio(sample_tiff_fp) as tif,
+    ):
+        _validate_top_level_ds_props(ds)
+        assert "test_layer" in ds
+        assert "test_layer_2" not in ds
+        assert np.allclose(ds["test_layer"], tif)
+        assert "nodata" in ds["test_layer"].attrs
+        assert np.isclose(ds["test_layer"].rio.encoded_nodata, 255)
+
+    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32) * 2
+    da = xr.DataArray(
+        data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
+        dims=("y", "x"),
+        coords={
+            "x": np.arange(_TEST_WIDTH) * _CELL_SIZE,
+            "y": np.arange(_TEST_HEIGHT) * -_CELL_SIZE,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("EPSG:4326")
+    da.rio.write_transform()
+
+    sample_tiff_fp_2 = tmp_path / "sample_2x.tif"
+    da.rio.to_raster(sample_tiff_fp_2, driver="GTiff")
+
+    lf.write_geotiff_to_file(sample_tiff_fp_2, "test_layer_2")
+    with (
+        xr.open_dataset(test_fp) as ds,
+        rioxarray.open_rasterio(sample_tiff_fp_2) as tif,
+    ):
+        _validate_top_level_ds_props(ds)
+        assert "test_layer" in ds
+        assert "test_layer_2" in ds
+        assert np.allclose(ds["test_layer_2"], tif)
+        assert "nodata" not in ds["test_layer_2"].attrs
+        assert np.isnan(ds["test_layer_2"].rio.nodata)
+        assert np.isnan(ds["test_layer_2"].rio.encoded_nodata)
+
+    with pytest.warns(revrtWarning, match="Attempting to set ``nodata``"):
+        lf.write_geotiff_to_file(
+            sample_tiff_fp_2,
+            "test_layer",
+            overwrite=True,
+            description="My desc",
+            nodata=100,
+            check_tiff=False,
+        )
+
+    with xr.open_dataset(test_fp) as ds:
+        _validate_top_level_ds_props(ds)
+        assert "test_layer" in ds
+        assert "test_layer_2" in ds
+        assert np.allclose(ds["test_layer_2"], ds["test_layer"])
+        assert "nodata" in ds["test_layer"].attrs
+        assert np.isclose(ds["test_layer"].rio.encoded_nodata, 255)
 
 
 if __name__ == "__main__":

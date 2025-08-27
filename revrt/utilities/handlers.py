@@ -3,8 +3,8 @@
 import shutil
 import logging
 from pathlib import Path
+from warnings import warn
 from functools import cached_property
-
 
 import zarr
 import dask
@@ -20,6 +20,7 @@ from revrt.exceptions import (
     revrtProfileCheckError,
     revrtValueError,
 )
+from revrt.warn import revrtWarning
 
 
 logger = logging.getLogger(__name__)
@@ -209,13 +210,13 @@ class LayeredFile:
             Description of layer being added. By default, ``None``.
         overwrite : bool, default=False
             Option to overwrite layer data if layer already exists in
-            ``LayerFile``.
+            :class:`LayeredFile`.
 
             .. IMPORTANT::
               When overwriting data, the encoding (and therefore things
-              like data type) is not allowed to change. If you need to
-              overwrite an existing layer with a new type of data,
-              manually remove it from the file first.
+              like data type, nodata value, etc) is not allowed to
+              change. If you need to overwrite an existing layer with a
+              new type of data, manually remove it from the file first.
 
             By default, ``False``.
         nodata : int | float, optional
@@ -227,16 +228,17 @@ class LayeredFile:
                ``rioxarray`` does not recognize the "nodata" value when
                reading from a zarr file (because zarr uses the
                ``_FillValue`` encoding internally). To get the correct
-               "nodata" value back when reading a ``LayerFile``, you can
-               either 1) read from ``da.rio.encoded_nodata`` or 2) check
-               the layer's attributes for the ``"nodata"`` key, and if
-               present, use ``da.rio.write_nodata`` to write the nodata
-               value so that ``da.rio.nodata`` gives the right value.
+               "nodata" value back when reading a :class:`LayeredFile`,
+               you can either 1) read from ``da.rio.encoded_nodata`` or
+               2) check the layer's attributes for the ``"nodata"`` key,
+               and if present, use ``da.rio.write_nodata`` to write the
+               nodata value so that ``da.rio.nodata`` gives the right
+               value.
 
         Raises
         ------
         revrtFileNotFoundError
-            If ``LayerFile`` does not exist.
+            If :class:`LayeredFile` does not exist.
         revrtKeyError
             If layer with the same name already exists and
             ``overwrite=False``.
@@ -256,7 +258,7 @@ class LayeredFile:
         if values.shape[1:] != self.shape:
             msg = (
                 f"Shape of provided data {values.shape[1:]} does "
-                f"not match shape of LayerFile: {self.shape}"
+                f"not match shape of LayeredFile: {self.shape}"
             )
             raise revrtValueError(msg)
 
@@ -264,7 +266,7 @@ class LayeredFile:
             attrs = ds.attrs
             crs = ds.rio.crs
             transform = ds.rio.transform()
-            layer_exists = layer_name in ds
+            layer_is_new = layer_name not in ds
             coords = ds.coords
 
         chunks = (1, attrs["chunks"]["y"], attrs["chunks"]["x"])
@@ -274,9 +276,18 @@ class LayeredFile:
         da.attrs["count"] = 1
         da.attrs["description"] = description
         if nodata is not None:
-            nodata = da.dtype.type(nodata)
-            da = da.rio.write_nodata(nodata)
-            da.attrs["nodata"] = nodata
+            if layer_is_new:
+                nodata = da.dtype.type(nodata)
+                da = da.rio.write_nodata(nodata)
+                da.attrs["nodata"] = nodata
+            else:
+                msg = (
+                    "Attempting to set ``nodata`` value when overwriting "
+                    "layer - this is not allowed. ``nodata`` value must be "
+                    "set when layer is first created. User-provided "
+                    f"``nodata`` value ({nodata}) will be ignored."
+                )
+                warn(msg, revrtWarning)
 
         ds_to_add = xr.Dataset({layer_name: da}, attrs=attrs)
         da = da.rio.write_crs(crs)
@@ -284,7 +295,7 @@ class LayeredFile:
         da = da.rio.write_grid_mapping()
 
         encoding = None
-        if not layer_exists:
+        if layer_is_new:
             encoding = {layer_name: da.encoding or {}}
             encoding[layer_name].update(
                 {
@@ -340,13 +351,13 @@ class LayeredFile:
             Description of layer being added. By default, ``None``.
         overwrite : bool, default=False
             Option to overwrite layer data if layer already exists in
-            ``LayerFile``.
+            :class:`LayeredFile`.
 
             .. IMPORTANT::
               When overwriting data, the encoding (and therefore things
-              like data type) is not allowed to change. If you need to
-              overwrite an existing layer with a new type of data,
-              manually remove it from the file first.
+              like data type, nodata value, etc) is not allowed to
+              change. If you need to overwrite an existing layer with a
+              new type of data, manually remove it from the file first.
 
             By default, ``False``.
         nodata : int | float, optional
@@ -358,11 +369,12 @@ class LayeredFile:
                ``rioxarray`` does not recognize the "nodata" value when
                reading from a zarr file (because zarr uses the
                ``_FillValue`` encoding internally). To get the correct
-               "nodata" value back when reading a ``LayerFile``, you can
-               either 1) read from ``da.rio.encoded_nodata`` or 2) check
-               the layer's attributes for the ``"nodata"`` key, and if
-               present, use ``da.rio.write_nodata`` to write the nodata
-               value so that ``da.rio.nodata`` gives the right value.
+               "nodata" value back when reading a :class:`LayeredFile`,
+               you can either 1) read from ``da.rio.encoded_nodata`` or
+               2) check the layer's attributes for the ``"nodata"`` key,
+               and if present, use ``da.rio.write_nodata`` to write the
+               nodata value so that ``da.rio.nodata`` gives the right
+               value.
 
         """
         if not self.fp.exists():
@@ -505,7 +517,7 @@ def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
     Parameters
     ----------
     layer_file_fp : path-like
-        Path to data representing a ``LayeredFile`` instance.
+        Path to data representing a :class:`LayeredFile` instance.
     geotiff : path-like
         Path to GeoTIFF file.
     transform_atol : float, default=0.01
@@ -515,7 +527,7 @@ def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
     Raises
     ------
     revrtProfileCheckError
-        If shape, profile, or transform don;t match between layered file
+        If shape, profile, or transform don't match between layered file
         and GeoTIFF file.
     """
     with (
@@ -559,7 +571,7 @@ def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
 def _layer_profile_from_open_ds(layer, ds):
     """Get layer profile from open dataset"""
     return {
-        "nodata": ds[layer].rio.nodata,
+        "nodata": ds[layer].attrs.get("nodata", ds[layer].rio.encoded_nodata),
         "width": ds.rio.width,
         "height": ds.rio.height,
         "crs": ds.rio.crs,
