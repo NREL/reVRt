@@ -45,6 +45,7 @@ points should be organized and moved to the appropriate section.
     - 300 (5 features, 1 chunk): 104MB (3.6 GB), 442s
     - 500 (5 features, 3 chunks): 161MB (9.7GB), 1193s
     - 1000 (5 features, 6 chunks): 230MB (34GB), 4246s
+    - 1500 (5 features, 8 chunks): 794MB (96GB), 12144s - Cache size 125MB
 - Benchmarking with smaply
   - cargo install --locked samply
   - cargo build --release -p revrt-cli
