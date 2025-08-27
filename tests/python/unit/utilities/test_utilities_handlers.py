@@ -57,6 +57,29 @@ def sample_tiff_fp(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def sample_tiff_fp_2x(tmp_path_factory):
+    """Return path to TIFF file used for tests"""
+
+    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32) * 2
+    da = xr.DataArray(
+        data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
+        dims=("y", "x"),
+        coords={
+            "x": np.arange(_TEST_WIDTH) * _CELL_SIZE,
+            "y": np.arange(_TEST_HEIGHT) * -_CELL_SIZE,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("EPSG:4326")
+    da.rio.write_transform()
+
+    out_fp = tmp_path_factory.mktemp("data") / "sample.tif"
+    da.rio.to_raster(out_fp, driver="GTiff")
+    return out_fp
+
+
+@pytest.fixture(scope="module")
 def test_exclusion_fp(test_utility_data_dir):
     """Return path to exclusion test file"""
     return test_utility_data_dir / "ri_exclusions.zarr"
@@ -415,7 +438,7 @@ def test_write_layer(sample_tiff_fp, tmp_path):
         lf.write_layer(new_data_2[:, :1, :1], "test_layer_2")
 
 
-def test_write_tiff_to_layer_file(sample_tiff_fp, tmp_path):
+def test_write_tiff_to_layer_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
     """Test writing GeoTIFFs to a layered file"""
 
     test_fp = tmp_path / "test.zarr"
@@ -433,27 +456,10 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, tmp_path):
         assert "nodata" in ds["test_layer"].attrs
         assert np.isclose(ds["test_layer"].rio.encoded_nodata, 255)
 
-    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32) * 2
-    da = xr.DataArray(
-        data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
-        dims=("y", "x"),
-        coords={
-            "x": np.arange(_TEST_WIDTH) * _CELL_SIZE,
-            "y": np.arange(_TEST_HEIGHT) * -_CELL_SIZE,
-        },
-        name="test_band",
-    )
-
-    da = da.rio.write_crs("EPSG:4326")
-    da.rio.write_transform()
-
-    sample_tiff_fp_2 = tmp_path / "sample_2x.tif"
-    da.rio.to_raster(sample_tiff_fp_2, driver="GTiff")
-
-    lf.write_geotiff_to_file(sample_tiff_fp_2, "test_layer_2")
+    lf.write_geotiff_to_file(sample_tiff_fp_2x, "test_layer_2")
     with (
         xr.open_dataset(test_fp) as ds,
-        rioxarray.open_rasterio(sample_tiff_fp_2) as tif,
+        rioxarray.open_rasterio(sample_tiff_fp_2x) as tif,
     ):
         _validate_top_level_ds_props(ds)
         assert "test_layer" in ds
@@ -465,7 +471,7 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, tmp_path):
 
     with pytest.warns(revrtWarning, match="Attempting to set ``nodata``"):
         lf.write_geotiff_to_file(
-            sample_tiff_fp_2,
+            sample_tiff_fp_2x,
             "test_layer",
             overwrite=True,
             description="My desc",
@@ -480,6 +486,76 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, tmp_path):
         assert np.allclose(ds["test_layer_2"], ds["test_layer"])
         assert "nodata" in ds["test_layer"].attrs
         assert np.isclose(ds["test_layer"].rio.encoded_nodata, 255)
+
+
+def test_layer_to_geotiff_file(sample_tiff_fp, tmp_path):
+    """Test writing a layer to GeoTIFF file"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    out_tiff_fp = tmp_path / "out.tif"
+    lf.layer_to_geotiff("test_layer", out_tiff_fp)
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp) as truth_tif,
+        rioxarray.open_rasterio(out_tiff_fp) as test_tif,
+    ):
+        assert np.allclose(truth_tif, test_tif)
+
+
+def test_extract_layers(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
+    """Test extracting layers to GeoTIFF files"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+    lf.write_geotiff_to_file(sample_tiff_fp_2x, "test_layer_2")
+
+    out_tiff_fp_1 = tmp_path / "out_1.tif"
+    out_tiff_fp_2 = tmp_path / "out_2.tif"
+    lf.extract_layers(
+        {"test_layer": out_tiff_fp_1, "test_layer_2": out_tiff_fp_2}
+    )
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp) as truth_tif,
+        rioxarray.open_rasterio(out_tiff_fp_1) as test_tif,
+    ):
+        assert np.allclose(truth_tif, test_tif)
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp_2x) as truth_tif,
+        rioxarray.open_rasterio(out_tiff_fp_2) as test_tif,
+    ):
+        assert np.allclose(truth_tif, test_tif)
+
+
+@pytest.mark.parametrize("use_sub_dir", [True, False])
+def test_extract_all_layers(
+    sample_tiff_fp, sample_tiff_fp_2x, tmp_path, use_sub_dir
+):
+    """Test extracting layers to GeoTIFF files"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+    lf.write_geotiff_to_file(sample_tiff_fp_2x, "test_layer_2")
+
+    out_dir = tmp_path / "sub_dir" if use_sub_dir else tmp_path
+    lf.extract_all_layers(out_dir)
+
+    assert len(list(out_dir.glob("*.tif"))) == 2
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp) as truth_tif,
+        rioxarray.open_rasterio(out_dir / "test_layer.tif") as test_tif,
+    ):
+        assert np.allclose(truth_tif, test_tif)
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp_2x) as truth_tif,
+        rioxarray.open_rasterio(out_dir / "test_layer_2.tif") as test_tif,
+    ):
+        assert np.allclose(truth_tif, test_tif)
 
 
 if __name__ == "__main__":

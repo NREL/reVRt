@@ -121,7 +121,14 @@ class LayeredFile:
             layer_name
             for layer_name in self.layers
             if layer_name
-            not in {"band", "x", "y", "latitude", "longitude", "spatial_ref"}
+            not in {
+                "band",
+                "x",
+                "y",
+                "spatial_ref",
+                self.LATITUDE,
+                self.LONGITUDE,
+            }
         ]
 
     def layer_profile(self, layer):
@@ -427,6 +434,60 @@ class LayeredFile:
         logger.debug("\t- Writing %s from %s to %s", layer, self.fp, geotiff)
         with xr.open_dataset(self.fp, chunks="auto", consolidated=False) as ds:
             ds[layer].rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
+
+    def extract_layers(self, layers, **profile_kwargs):
+        """Extract layers from file and save to disk as GeoTIFFs
+
+        Parameters
+        ----------
+        layers : dict
+            Dictionary mapping layer names to GeoTIFF files to create.
+        **profile_kwargs
+            Additional keyword arguments to pass into writing the
+            raster. The following attributes ar ignored (they are set
+            using properties of the source :class:`LayeredFile`):
+
+                - nodata
+                - transform
+                - crs
+                - count
+                - width
+                - height
+        """
+        logger.info("Extracting layers from %s", self.fp)
+        for layer_name, geotiff in layers.items():
+            logger.info("- Extracting %s", layer_name)
+            self.layer_to_geotiff(layer_name, geotiff, **profile_kwargs)
+
+    def extract_all_layers(self, out_dir, **profile_kwargs):
+        """Extract all layers from file and save to disk as GeoTIFFs
+
+        Parameters
+        ----------
+        out_dir : str
+            Path to output directory into which layers should be saved
+            as GeoTIFFs.
+        **profile_kwargs
+            Additional keyword arguments to pass into writing the
+            raster. The following attributes ar ignored (they are set
+            using properties of the source :class:`LayeredFile`):
+
+                - nodata
+                - transform
+                - crs
+                - count
+                - width
+                - height
+        """
+        out_dir = Path(out_dir)
+        if not out_dir.exists():
+            out_dir.mkdir(parents=True)
+
+        layers = {
+            layer_name: out_dir / f"{layer_name}.tif"
+            for layer_name in self.data_layers
+        }
+        self.extract_layers(layers, **profile_kwargs)
 
 
 class LayeredTransmissionFile(LayeredFile):
