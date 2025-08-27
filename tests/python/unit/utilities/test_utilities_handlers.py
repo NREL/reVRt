@@ -558,5 +558,32 @@ def test_extract_all_layers(
         assert np.allclose(truth_tif, test_tif)
 
 
+@pytest.mark.parametrize("use_full_shape", [True, False])
+@pytest.mark.parametrize("nodata", [None, 1024])
+def test_write_tiff_using_layer_profile(
+    sample_tiff_fp, tmp_path, use_full_shape, nodata
+):
+    """Test writing data to GeoTIFF file using layer profile"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    new_data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32)
+    if use_full_shape:
+        new_data = new_data.reshape((1, _TEST_HEIGHT, _TEST_WIDTH)) * 3
+    else:
+        new_data = new_data.reshape((_TEST_HEIGHT, _TEST_WIDTH)) * 3
+
+    out_tiff_fp = tmp_path / "test.tif"
+    assert not out_tiff_fp.exists()
+    lf.save_data_using_layer_file_profile(new_data, out_tiff_fp, nodata=nodata)
+
+    assert out_tiff_fp.exists()
+    with rioxarray.open_rasterio(out_tiff_fp) as tif:
+        assert np.allclose(tif, new_data)
+        if nodata:
+            assert np.isclose(tif.rio.nodata, nodata)
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
