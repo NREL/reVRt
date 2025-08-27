@@ -84,12 +84,6 @@ def sample_tiff_fp_2x(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def test_exclusion_fp(test_utility_data_dir):
-    """Return path to exclusion test file"""
-    return test_utility_data_dir / "ri_exclusions.zarr"
-
-
-@pytest.fixture(scope="module")
 def test_tl_fp(test_utility_data_dir):
     """Return path to transmission layers test file"""
     return test_utility_data_dir / "transmission_layers.zarr"
