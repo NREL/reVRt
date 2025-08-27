@@ -11,7 +11,7 @@ from pyproj.crs import CRS
 from rasterio.transform import Affine
 
 import revrt
-from revrt.utilities import LayeredFile
+from revrt.utilities import LayeredFile, delete_data_file
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
@@ -19,20 +19,30 @@ from revrt.exceptions import (
     revrtValueError,
 )
 
+_TEST_WIDTH = 6
+_TEST_HEIGHT = 10
+_CELL_SIZE = 10
+_EXPECTED_TRANSFORM = Affine(
+    _CELL_SIZE,
+    0.0,
+    -1 * _CELL_SIZE / 2,
+    0.0,
+    -1 * _CELL_SIZE,
+    _CELL_SIZE / 2,
+)
+
 
 @pytest.fixture(scope="module")
 def sample_tiff_fp(tmp_path_factory):
     """Return path to TIFF file used for tests"""
-    width, height = 10, 10
 
-    data = np.arange(width * height, dtype=np.float32).reshape((height, width))
-
+    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32)
     da = xr.DataArray(
-        data,
+        data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
         dims=("y", "x"),
         coords={
-            "x": np.arange(width) * 10.0,
-            "y": np.arange(height) * -10.0,
+            "x": np.arange(_TEST_WIDTH) * _CELL_SIZE,
+            "y": np.arange(_TEST_HEIGHT) * -_CELL_SIZE,
         },
         name="test_band",
     )
@@ -63,12 +73,63 @@ def test_tiff_fp(test_utility_data_dir):
     return test_utility_data_dir / "ri_transmission_barriers.tif"
 
 
+def _validate_top_level_ds_props(ds):
+    """Validate top level dataset properties"""
+    assert ds.rio.crs == CRS("EPSG:4326")
+    assert ds.rio.transform() == _EXPECTED_TRANSFORM
+    assert set(ds.coords) == {
+        "band",
+        "latitude",
+        "longitude",
+        "spatial_ref",
+        "x",
+        "y",
+    }
+    assert ds.rio.grid_mapping == "spatial_ref"
+    assert "nodata" not in ds.attrs
+    assert "count" not in ds.attrs
+
+
+def _validate_random_data_layer(layer):
+    """Validate data layer made of random numbers"""
+    assert layer.shape == (1, _TEST_HEIGHT, _TEST_WIDTH)
+    assert layer.dtype == np.dtype("float32")
+    assert layer.min() >= 0
+    assert layer.max() <= 1
+    assert layer.rio.crs == CRS("EPSG:4326")
+    assert layer.rio.transform() == _EXPECTED_TRANSFORM
+    assert layer.rio.grid_mapping == "spatial_ref"
+
+
 def extract_geotiff(geotiff):
     """Test helper function to extract data from GeoTiff"""
     with rioxarray.open_rasterio(geotiff, chunks=(128, 128)) as tif:
         values, profile = tif.values, tif.profile
 
     return values, profile
+
+
+@pytest.mark.parametrize("test_as_dir", [True, False])
+def test_delete_data_file(tmp_path, test_as_dir):
+    """Test not overwriting when creating a new file"""
+
+    test_fp = tmp_path / "test.zarr"
+    assert not test_fp.exists()
+
+    delete_data_file(test_fp)
+    assert not test_fp.exists()
+
+    if test_as_dir:
+        test_fp.mkdir()
+    else:
+        test_fp.touch()
+    assert test_fp.exists()
+
+    delete_data_file(test_fp)
+    assert not test_fp.exists()
+
+    delete_data_file(test_fp)
+    assert not test_fp.exists()
 
 
 def test_methods_without_file():
@@ -203,7 +264,7 @@ def test_create_new_file(tmp_path, sample_tiff_fp):
     assert not test_fp.exists()
 
     lf = LayeredFile(test_fp)
-    lf.create_new(sample_tiff_fp, overwrite=True)
+    lf.create_new(sample_tiff_fp, overwrite=True, chunk_x=100, chunk_y=50)
 
     assert test_fp.exists()
 
@@ -219,6 +280,9 @@ def test_create_new_file(tmp_path, sample_tiff_fp):
         assert (*ds["band"].shape, *ds["y"].shape, *ds["x"].shape) == xds.shape
         assert ds["latitude"].shape == xds.shape[1:]
         assert ds["longitude"].shape == xds.shape[1:]
+
+        _validate_top_level_ds_props(ds)
+        assert ds.attrs["chunks"] == {"x": 100, "y": 50}
 
 
 def test_cleanup_on_file_create_error(tmp_path, monkeypatch):
@@ -247,6 +311,83 @@ def test_cleanup_on_file_create_error(tmp_path, monkeypatch):
         lf.create_new("test_file.txt")
 
     assert not test_fp.exists()
+
+
+def test_write_layer(sample_tiff_fp, tmp_path):
+    """Test writing a layer to file"""
+
+    test_fp = tmp_path / "test.zarr"
+    assert not test_fp.exists()
+
+    lf = LayeredFile(test_fp)
+    lf.create_new(sample_tiff_fp, overwrite=True)
+
+    assert test_fp.exists()
+
+    with xr.open_dataset(test_fp) as ds:
+        _validate_top_level_ds_props(ds)
+        assert "test_layer" not in ds
+
+    new_data = (
+        np.random.default_rng()
+        .random(_TEST_WIDTH * _TEST_HEIGHT)
+        .reshape((_TEST_HEIGHT, _TEST_WIDTH))
+        .astype(np.float32)
+    )
+    lf.write_layer(new_data, "test_layer")
+    with xr.open_dataset(test_fp) as ds:
+        _validate_top_level_ds_props(ds)
+        assert "test_layer" in ds
+        _validate_random_data_layer(ds["test_layer"])
+        assert np.allclose(ds["test_layer"], new_data)
+        assert "nodata" not in ds["test_layer"].attrs
+        assert np.isnan(ds["test_layer"].rio.nodata)
+        assert np.isnan(ds["test_layer"].rio.encoded_nodata)
+
+    with pytest.raises(
+        revrtKeyError, match="'test_layer' is already present in"
+    ):
+        lf.write_layer(new_data, "test_layer")
+
+    new_data_2 = (
+        np.random.default_rng()
+        .random(_TEST_WIDTH * _TEST_HEIGHT)
+        .reshape((1, _TEST_HEIGHT, _TEST_WIDTH))
+        .astype(np.float32)
+    )
+    new_data_2 -= new_data
+    new_data_2 -= new_data_2.min()
+    new_data_2 /= new_data_2.max()
+
+    lf.write_layer(new_data_2, "test_layer", overwrite=True)
+    with xr.open_dataset(test_fp) as ds:
+        _validate_top_level_ds_props(ds)
+        assert "test_layer" in ds
+        _validate_random_data_layer(ds["test_layer"])
+        assert not np.allclose(ds["test_layer"], new_data)
+        assert np.allclose(ds["test_layer"], new_data_2)
+        assert "nodata" not in ds["test_layer"].attrs
+        assert np.isnan(ds["test_layer"].rio.nodata)
+        assert np.isnan(ds["test_layer"].rio.encoded_nodata)
+
+    lf.write_layer(
+        new_data, "original_layer", description="My desc", nodata=255
+    )
+    with xr.open_dataset(test_fp) as ds:
+        _validate_top_level_ds_props(ds)
+        assert "original_layer" in ds
+        _validate_random_data_layer(ds["original_layer"])
+        assert np.allclose(ds["original_layer"], new_data)
+        assert not np.allclose(ds["original_layer"], new_data_2)
+        assert ds["original_layer"].attrs["description"] == "My desc"
+        assert np.isclose(ds["original_layer"].attrs["nodata"], 255)
+        assert np.isclose(ds["original_layer"].rio.encoded_nodata, 255)
+
+    with pytest.raises(
+        revrtValueError,
+        match=r"Shape of provided data .* does not match shape of LayerFile",
+    ):
+        lf.write_layer(new_data_2[:, :1, :1], "test_layer_2")
 
 
 if __name__ == "__main__":
