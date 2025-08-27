@@ -5,6 +5,8 @@ from typing import Literal, TypedDict
 
 from pydantic import BaseModel, DirectoryPath, FilePath
 
+from revrt.constants import ALL, CELL_SIZE, BARRIER_H5_LAYER_NAME
+
 
 Extents = Literal["all", "wet", "wet+", "landfall", "dry+", "dry"]
 """Terms for specifying masks
@@ -19,10 +21,6 @@ Defined as follows:
     - 'dry': onshore extent only
 
 """
-CELL_SIZE = 90
-"""Standard size of reV exclusions cell (m). Both dims must be equal"""
-BARRIER_H5_LAYER_NAME = "transmission_barrier"
-"""Combined friction and barrier layer name"""
 
 
 class LandUseMultipliers(TypedDict, total=False):
@@ -115,7 +113,7 @@ class LayerBuildConfig(BaseModel, extra="forbid"):
     `forced_inclusion` are exclusive, but exactly one must be specified.
     """
 
-    extent: Extents = "all"
+    extent: Extents = ALL
     """Extent to apply map or range to
 
     Must be one of the following:
