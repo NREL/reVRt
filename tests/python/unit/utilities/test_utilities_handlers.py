@@ -4,11 +4,14 @@ import contextlib
 from pathlib import Path
 
 import pytest
+import pyproj
 import rioxarray
 import numpy as np
 import xarray as xr
 from pyproj.crs import CRS
 from rasterio.transform import Affine
+from rasterio.warp import Resampling
+from rasterio.transform import from_origin
 
 import revrt
 from revrt.utilities import LayeredFile, delete_data_file
@@ -22,15 +25,9 @@ from revrt.warn import revrtWarning
 
 _TEST_WIDTH = 6
 _TEST_HEIGHT = 10
-_CELL_SIZE = 10
-_EXPECTED_TRANSFORM = Affine(
-    _CELL_SIZE,
-    0.0,
-    -1 * _CELL_SIZE / 2,
-    0.0,
-    -1 * _CELL_SIZE,
-    _CELL_SIZE / 2,
-)
+_CELL_SIZE = 0.5
+_X0, _Y0 = 0, 40
+_EXPECTED_TRANSFORM = from_origin(_X0, _Y0, _CELL_SIZE, _CELL_SIZE)
 
 
 @pytest.fixture(scope="module")
@@ -42,14 +39,14 @@ def sample_tiff_fp(tmp_path_factory):
         data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
         dims=("y", "x"),
         coords={
-            "x": np.arange(_TEST_WIDTH) * _CELL_SIZE,
-            "y": np.arange(_TEST_HEIGHT) * -_CELL_SIZE,
+            "x": _X0 + np.arange(_TEST_WIDTH) * _CELL_SIZE + _CELL_SIZE / 2,
+            "y": _Y0 - np.arange(_TEST_HEIGHT) * _CELL_SIZE - _CELL_SIZE / 2,
         },
         name="test_band",
     )
 
     da = da.rio.write_crs("EPSG:4326")
-    da.rio.write_transform()
+    da.rio.write_transform(_EXPECTED_TRANSFORM)
 
     out_fp = tmp_path_factory.mktemp("data") / "sample.tif"
     da.rio.to_raster(out_fp, driver="GTiff")
@@ -65,14 +62,14 @@ def sample_tiff_fp_2x(tmp_path_factory):
         data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
         dims=("y", "x"),
         coords={
-            "x": np.arange(_TEST_WIDTH) * _CELL_SIZE,
-            "y": np.arange(_TEST_HEIGHT) * -_CELL_SIZE,
+            "x": _X0 + np.arange(_TEST_WIDTH) * _CELL_SIZE + _CELL_SIZE / 2,
+            "y": _Y0 - np.arange(_TEST_HEIGHT) * _CELL_SIZE - _CELL_SIZE / 2,
         },
         name="test_band",
     )
 
     da = da.rio.write_crs("EPSG:4326")
-    da.rio.write_transform()
+    da.rio.write_transform(_EXPECTED_TRANSFORM)
 
     out_fp = tmp_path_factory.mktemp("data") / "sample.tif"
     da.rio.to_raster(out_fp, driver="GTiff")
@@ -123,14 +120,6 @@ def _validate_random_data_layer(layer):
     assert layer.rio.crs == CRS("EPSG:4326")
     assert layer.rio.transform() == _EXPECTED_TRANSFORM
     assert layer.rio.grid_mapping == "spatial_ref"
-
-
-def extract_geotiff(geotiff):
-    """Test helper function to extract data from GeoTiff"""
-    with rioxarray.open_rasterio(geotiff, chunks=(128, 128)) as tif:
-        values, profile = tif.values, tif.profile
-
-    return values, profile
 
 
 @pytest.mark.parametrize("test_as_dir", [True, False])
@@ -583,6 +572,46 @@ def test_write_tiff_using_layer_profile(
         assert np.allclose(tif, new_data)
         if nodata:
             assert np.isclose(tif.rio.nodata, nodata)
+
+
+def test_load_data_using_layer_file_profile(sample_tiff_fp, tmp_path):
+    """Test loading data from GeoTIFF file using layer profile"""
+    proj = pyproj.Transformer.from_crs(
+        "EPSG:4326", "EPSG:3857", always_xy=True
+    )
+    x0, y0 = proj.transform(_X0, _Y0)
+
+    target_crs = "EPSG:3857"
+    target_shape = (_TEST_HEIGHT, _TEST_WIDTH)
+    target_transform = from_origin(x0, y0, 111320, 111320)
+
+    out_fp = tmp_path / "test.tif"
+    with rioxarray.open_rasterio(sample_tiff_fp) as tif:
+        tif.rio.reproject(
+            dst_crs=target_crs,
+            shape=target_shape,
+            transform=target_transform,
+            num_threads=4,
+            resampling=Resampling.nearest,
+            INIT_DEST=0,
+        ).rio.to_raster(out_fp, driver="GTiff")
+
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    test_tif = lf.load_data_using_layer_file_profile(sample_tiff_fp)
+    test_tif_2 = lf.load_data_using_layer_file_profile(out_fp)
+
+    with rioxarray.open_rasterio(sample_tiff_fp) as tif:
+        assert test_tif.rio.crs == tif.rio.crs
+        assert test_tif_2.rio.crs == tif.rio.crs
+        assert np.allclose(test_tif, tif)
+
+        assert test_tif_2.shape == tif.shape
+        assert test_tif_2.any()
+        assert not np.isnan(test_tif_2).all()
+        assert np.allclose(test_tif_2[:, :-1], tif[:, :-1], atol=7)
 
 
 if __name__ == "__main__":

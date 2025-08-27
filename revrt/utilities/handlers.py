@@ -495,6 +495,39 @@ class LayeredFile:
 
         da.rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
 
+    def load_data_using_layer_file_profile(self, geotiff):
+        """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
+
+        Parameters
+        ----------
+        geotiff : path-like
+            Path to GeoTIFF from which data should be read.
+
+        Returns
+        -------
+        array-like
+            Raster data.
+        """
+        tif = rioxarray.open_rasterio(geotiff, chunks="auto")
+
+        try:
+            check_geotiff(self.fp, geotiff, transform_atol=self.TRANSFORM_ATOL)
+        except revrtProfileCheckError:
+            logger.debug(
+                "Profile of %s does not match template, reprojecting...",
+                geotiff,
+            )
+            return tif.rio.reproject(
+                dst_crs=self.profile["crs"],
+                shape=self.shape,
+                transform=self.profile["transform"],
+                num_threads=4,
+                resampling=Resampling.nearest,
+                INIT_DEST=0,
+            )
+
+        return tif
+
     def extract_layers(self, layers, **profile_kwargs):
         """Extract layers from file and save to disk as GeoTIFFs
 
@@ -573,9 +606,7 @@ class LayeredTransmissionFile(LayeredFile):
         super().__init__(fp=fp)
         self._layer_dir = Path(layer_dir)
 
-    def load_data_using_h5_profile(
-        self, geotiff, band=1, reproject=False, skip_profile_test=False
-    ):
+    def load_data_using_h5_profile(self, geotiff):
         """Load GeoTIFF data, converting to H5 profile if necessary
 
         Parameters
@@ -584,11 +615,6 @@ class LayeredTransmissionFile(LayeredFile):
             Path to GeoTIFF from which data should be read. If just the
             file name is provided, the class `layer_dir` attribute value
             is prepended to get the full path.
-        band : int, optional
-            Band to load from GeoTIFF. By default, ``1``.
-        reproject : bool, optional
-            Reproject raster to standard CRS and transform if True.
-            By default, ``False``.
 
         Returns
         -------
@@ -602,9 +628,7 @@ class LayeredTransmissionFile(LayeredFile):
                 msg = f"Unable to find file {geotiff}"
                 raise revrtFileNotFoundError(msg)
 
-        return super().load_data_using_h5_profile(
-            geotiff=full_fname, band=band, reproject=reproject
-        )
+        return super().load_data_using_h5_profile(geotiff=full_fname)
 
 
 def delete_data_file(fp):
