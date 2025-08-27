@@ -155,7 +155,12 @@ class LayeredFile:
             return _layer_profile_from_open_ds(layer, ds)
 
     def create_new(
-        self, template_file, overwrite=False, chunk_x=2048, chunk_y=2048
+        self,
+        template_file,
+        overwrite=False,
+        chunk_x=2048,
+        chunk_y=2048,
+        read_chunks="auto",
     ):
         """Create a new layered file
 
@@ -169,8 +174,14 @@ class LayeredFile:
         overwrite : bool, optional
             Overwrite file if is exists. By default, ``False``.
         chunk_x, chunk_y : int, default=2048
-            Chunk size of x and y dimension for layered file and any
-            output created from it GeoTIFFs. By default, ``2048``.
+            Chunk size of x and y dimension for newly-created layered
+            file. By default, ``2048``.
+        read_chunks : int | str, default="auto"
+            Chunk size to use when reading the template file. This will
+            be passed down as the ``chunks`` argument to
+            :meth:`rioxarray.open_rasterio` or
+            :meth:`xarray.open_dataset`, depending on what template file
+            is passed in. By default, ``"auto"``.
         """
         if self.fp.exists() and not overwrite:
             msg = f"File {self.fp!r} exits and overwrite=False"
@@ -182,7 +193,11 @@ class LayeredFile:
 
         try:
             _init_zarr_file_from_template(
-                template_file, self.fp, chunk_x=chunk_x, chunk_y=chunk_y
+                template_file,
+                self.fp,
+                chunk_x=chunk_x,
+                chunk_y=chunk_y,
+                read_chunks=read_chunks,
             )
             logger.info(
                 "Layered file %s created from %s!", self.fp, template_file
@@ -339,6 +354,7 @@ class LayeredFile:
         description=None,
         overwrite=True,
         nodata=None,
+        tiff_chunks="auto",
     ):
         """Transfer GeoTIFF to layered file
 
@@ -380,6 +396,10 @@ class LayeredFile:
                nodata value so that ``da.rio.nodata`` gives the right
                value.
 
+        tiff_chunks : int | str, default="auto"
+            Chunk size to use when reading the GeoTIFF file. This will
+            be passed down as the ``chunks`` argument to
+            :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
         """
         if not self.fp.exists():
             logger.info("%s not found - creating from %s...", self.fp, geotiff)
@@ -396,7 +416,7 @@ class LayeredFile:
             logger.debug("\t- Checking %s against %s", geotiff, self.fp)
             check_geotiff(self.fp, geotiff, transform_atol=self.TRANSFORM_ATOL)
 
-        with rioxarray.open_rasterio(geotiff, chunks="auto") as tif:
+        with rioxarray.open_rasterio(geotiff, chunks=tiff_chunks) as tif:
             logger.debug("\t- Writing data from %s to %s", geotiff, self.fp)
             self.write_layer(
                 tif,
@@ -406,7 +426,9 @@ class LayeredFile:
                 nodata=nodata,
             )
 
-    def layer_to_geotiff(self, layer, geotiff, **profile_kwargs):
+    def layer_to_geotiff(
+        self, layer, geotiff, ds_chunks="auto", **profile_kwargs
+    ):
         """Extract layer from file and write to GeoTIFF file
 
         Parameters
@@ -415,6 +437,10 @@ class LayeredFile:
             Layer to extract,
         geotiff : path-like
             Path to output GeoTIFF file.
+        ds_chunks : int | str, default="auto"
+            Chunk size to use when reading the :class:`LayeredFile`.
+            This will be passed down as the ``chunks`` argument to
+            :meth:`xarray.open_dataset`. By default, ``"auto"``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
@@ -429,7 +455,9 @@ class LayeredFile:
 
         """
         logger.debug("\t- Writing %s from %s to %s", layer, self.fp, geotiff)
-        with xr.open_dataset(self.fp, chunks="auto", consolidated=False) as ds:
+        with xr.open_dataset(
+            self.fp, chunks=ds_chunks, consolidated=False
+        ) as ds:
             ds[layer].rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
 
     def save_data_using_layer_file_profile(
@@ -491,7 +519,7 @@ class LayeredFile:
 
         da.rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
 
-    def load_data_using_layer_file_profile(self, geotiff):
+    def load_data_using_layer_file_profile(self, geotiff, tiff_chunks="auto"):
         """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
 
         Parameters
@@ -504,7 +532,7 @@ class LayeredFile:
         array-like
             Raster data.
         """
-        tif = rioxarray.open_rasterio(geotiff, chunks="auto")
+        tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
 
         try:
             check_geotiff(self.fp, geotiff, transform_atol=self.TRANSFORM_ATOL)
@@ -804,24 +832,28 @@ def _validate_template(template_file):
         raise revrtFileNotFoundError(msg)
 
 
-def _init_zarr_file_from_template(template_file, out_fp, chunk_x, chunk_y):
+def _init_zarr_file_from_template(
+    template_file, out_fp, chunk_x, chunk_y, read_chunks="auto"
+):
     """Initialize Zarr file from GeoTIFF template"""
     template_file = Path(template_file)
     if template_file.suffix == ".zarr":
         return _init_zarr_file_from_zarr_template(
-            template_file, out_fp, chunk_x, chunk_y
+            template_file, out_fp, chunk_x, chunk_y, ds_chunks=read_chunks
         )
 
     return _init_zarr_file_from_tiff_template(
-        template_file, out_fp, chunk_x, chunk_y
+        template_file, out_fp, chunk_x, chunk_y, tiff_chunks=read_chunks
     )
 
 
 def _init_zarr_file_from_zarr_template(
-    template_file, out_fp, chunk_x, chunk_y
+    template_file, out_fp, chunk_x, chunk_y, ds_chunks="auto"
 ):
     """Initialize Zarr file from a Zarr template"""
-    with xr.open_dataset(template_file, consolidated=False) as ds:
+    with xr.open_dataset(
+        template_file, chunks=ds_chunks, consolidated=False
+    ) as ds:
         transform = ds.rio.transform()
         src_crs = ds.rio.crs
 
@@ -841,10 +873,10 @@ def _init_zarr_file_from_zarr_template(
 
 
 def _init_zarr_file_from_tiff_template(
-    template_file, out_fp, chunk_x, chunk_y
+    template_file, out_fp, chunk_x, chunk_y, tiff_chunks="auto"
 ):
     """Initialize Zarr file from GeoTIFF template"""
-    with rioxarray.open_rasterio(template_file) as geo:
+    with rioxarray.open_rasterio(template_file, chunks=tiff_chunks) as geo:
         transform = geo.rio.transform()
         src_crs = geo.rio.crs
 
