@@ -244,6 +244,7 @@ zarr = ">=3.0.7,<4"
 packaging = ">=24.2,<25"
 
 [tool.pixi.feature.dev.dependencies]
+contextily = ">=1.6.2,<2"
 hdf5 = ">=1.14.6,<2"
 ipython = ">=9.1.0,<10"
 jupyter = ">=1.1.1,<2"
