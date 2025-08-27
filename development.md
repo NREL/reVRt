@@ -6,7 +6,56 @@
 Ideally this section should be empty, so whenever there is a chance, this
 points should be organized and moved to the appropriate section.
 
-- Instructions to run benchmark locally: `cargo bench --bench standard`
+- Miscellaneous topics to dive deeper later
+  - profile.release
+    - incremental
+    - lto
+      - lto off when running dhat
+  - Profile with: export RUSTFLAGS="-C target-cpu=native"
+  - Supported names: rustc --print target-cpus
+  - Profile with `Cargo.toml`:
+    ```
+    [profile.release]
+    debug = "line-tables-only"
+    ```
+
+- Profiling memory usage:
+  - Using dhat:
+    - cargo run --release -p revrt-cli --features dhat-heap -- -vv -d ../transmission_costs.zarr --cost-function='{"cost_layers": [{"layer_name": "fmv_dollar_per_acre"}, {"layer_name": "swca_natural_resources_risk_2"}]}' --start 20012,40000 --end 20012,40100 --cache-size=250000
+      Which gives this:
+      ```
+      dhat: Total:     730,183,928 bytes in 5,192,541 blocks
+      dhat: At t-gmax: 80,245,023 bytes in 428 blocks
+      dhat: At t-end:  158,992 bytes in 268 blocks
+      dhat: The data has been saved to dhat-heap.json, and is viewable with dhat/dh_view.html
+      ```
+  - Somes results:
+    - distance: t-gmax (Total)
+    - 0: 2.7MB
+    - 1: 56MB
+    - 2: 56MB
+    - 10: 56MB (120MB
+    - 20 (1 feature): 32MB
+    - 20 (5 features, 1 chunks): 104MB
+    - 20 (5 features, 2 chunks): 104MB
+    - 20 (5 features, 4 chunks): 104MB
+    - 25: 56MB (150MB)
+    - 100: 56MB (496MB)
+    - 200: 56MB (1.8 GB)
+    - 300 (5 features, 1 chunk): 104MB (3.6 GB), 442s
+    - 500 (5 features, 3 chunks): 161MB (9.7GB), 1193s
+    - 1000 (5 features, 6 chunks): 230MB (34GB), 4246s
+    - 1500 (5 features, 8 chunks): 794MB (96GB), 12144s - Cache size 125MB
+- Benchmarking with smaply
+  - cargo install --locked samply
+  - cargo build --release -p revrt-cli
+  - samply record  ./target/release/revrt-cli  -vv -d ../transmission_costs.zarr --cost-function='{"cost_layers": [{"layer_name": "fmv_dollar_per_acre"}, {"layer_name": "swca_natural_resources_risk_2"}]}' --start 20500,40500 --end 20500,40600 --cache-size=250000
+- Benchmarking with criterion:
+  - Instructions to run benchmark locally:
+    - `cargo bench --bench standard`
+    - `cargo bench --bench serial -- --save-baseline mybaseline`
+    - `cargo criterion --output-format bencher --benches`
+  - Visualize output at `target/criterion/`
 - Use a cache for the chunks.
 - Does it make sense a cache on the final weight calculated? Maybe
   a HashMap with (x, y), and rolling the oldest out to minimize
