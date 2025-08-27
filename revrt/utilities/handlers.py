@@ -34,13 +34,7 @@ _NUM_GEOTIFF_DIMS = 3  # (band, y, x)
 
 
 class LayeredFile:
-    """Handler for file containing GeTIFF layers
-
-    This handler represents a file that stores various layers
-    (i.e. exclusion layers, setback layers, transmission layers, etc).
-    This file contains profile information, and this handler can be used
-    to convert to and from such files.
-    """
+    """Handler for file containing GeoTIFF layers"""
 
     SUPPORTED_FILE_ENDINGS = {".zarr", ".tif", ".tiff"}
     """Supported template file endings"""
@@ -744,14 +738,14 @@ def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
         xr.open_dataset(layer_file_fp, consolidated=False) as ds,
         rioxarray.open_rasterio(geotiff) as tif,
     ):
-        if tif.band > 1:
+        if len(tif.band) > 1:
             msg = f"{geotiff} contains more than one band!"
             raise revrtProfileCheckError(msg)
 
         layered_file_shape = ds.sizes["band"], ds.sizes["y"], ds.sizes["x"]
         if layered_file_shape != tif.shape:
             msg = (
-                f"Shape of exclusion data in {geotiff} and {layer_file_fp} "
+                f"Shape of layer data in {geotiff} and {layer_file_fp} "
                 f"do not match!\n {tif.shape} !=\n {layered_file_shape}"
             )
             raise revrtProfileCheckError(msg)

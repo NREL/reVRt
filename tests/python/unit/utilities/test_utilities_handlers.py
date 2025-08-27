@@ -18,11 +18,13 @@ import revrt
 from revrt.utilities import (
     LayeredFile,
     LayeredTransmissionFile,
+    check_geotiff,
     delete_data_file,
 )
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
+    revrtProfileCheckError,
     revrtKeyError,
     revrtValueError,
 )
@@ -682,6 +684,99 @@ def test_layers_to_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path, as_list):
         assert ds[tl2_name].rio.transform() == truth_tif_2.rio.transform()
         assert np.allclose(ds[tl1_name], truth_tif)
         assert np.allclose(ds[tl2_name], truth_tif_2)
+
+
+def test_check_geotiff_bad_bands(sample_tiff_fp, tmp_path):
+    """Test check_geotiff with bad number of bands"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    test_tiff_fp = tmp_path / "test.tif"
+    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT * 2, dtype=np.float32)
+    da = xr.DataArray(
+        data.reshape((2, _TEST_HEIGHT, _TEST_WIDTH)),
+        dims=("band", "y", "x"),
+        coords={
+            "x": _X0 + np.arange(_TEST_WIDTH) * _CELL_SIZE + _CELL_SIZE / 2,
+            "y": _Y0 - np.arange(_TEST_HEIGHT) * _CELL_SIZE - _CELL_SIZE / 2,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("EPSG:4326")
+    da.rio.write_transform(_EXPECTED_TRANSFORM)
+    da.rio.to_raster(test_tiff_fp, driver="GTiff")
+
+    with pytest.raises(
+        revrtProfileCheckError, match="contains more than one band"
+    ):
+        check_geotiff(test_fp, test_tiff_fp)
+
+
+def test_check_geotiff_bad_shape(sample_tiff_fp, tmp_path):
+    """Test check_geotiff with bad number of bands"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    test_tiff_fp = tmp_path / "test.tif"
+    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT * 4, dtype=np.float32)
+    da = xr.DataArray(
+        data.reshape((_TEST_WIDTH * 2, _TEST_HEIGHT * 2)),
+        dims=("y", "x"),
+        coords={
+            "x": _X0
+            + np.arange(_TEST_HEIGHT * 2) * _CELL_SIZE
+            + _CELL_SIZE / 2,
+            "y": _Y0
+            - np.arange(_TEST_WIDTH * 2) * _CELL_SIZE
+            - _CELL_SIZE / 2,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("EPSG:4326")
+    da.rio.write_transform(_EXPECTED_TRANSFORM)
+    da.rio.to_raster(test_tiff_fp, driver="GTiff")
+
+    with pytest.raises(
+        revrtProfileCheckError, match=r"Shape of layer data .* do not match.*"
+    ):
+        check_geotiff(test_fp, test_tiff_fp)
+
+
+def test_check_geotiff_bad_transform(sample_tiff_fp, tmp_path):
+    """Test check_geotiff with bad number of bands"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    test_tiff_fp = tmp_path / "test.tif"
+    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32)
+    da = xr.DataArray(
+        data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
+        dims=("y", "x"),
+        coords={
+            "x": 2 * _X0
+            + np.arange(_TEST_WIDTH) * _CELL_SIZE
+            + _CELL_SIZE / 2,
+            "y": 2 * _Y0
+            - np.arange(_TEST_HEIGHT) * _CELL_SIZE
+            - _CELL_SIZE / 2,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("EPSG:4326")
+    da.rio.write_transform()
+    da.rio.to_raster(test_tiff_fp, driver="GTiff")
+
+    with pytest.raises(
+        revrtProfileCheckError,
+        match=r'Geospatial "transform" .* do not match.*',
+    ):
+        check_geotiff(test_fp, test_tiff_fp)
 
 
 if __name__ == "__main__":
