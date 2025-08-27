@@ -68,12 +68,12 @@ def test_create_new_file(tmp_path, ri_tb_tiff_fp):
 
     assert test_fp.exists()
 
-    with xr.open_dataset(test_fp, consolidated=False) as ds:
+    with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
         _validate_top_level_ds_props(ds)
         assert "iso_regions" not in ds
 
     with (
-        xr.open_dataset(test_fp, consolidated=False) as ds,
+        xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds,
         rioxarray.open_rasterio(ri_tb_tiff_fp) as xds,
     ):
         lat_lon = xds.rio.reproject("EPSG:4326")
@@ -97,7 +97,7 @@ def test_write_layer(tmp_path, ri_regions_fp):
 
     assert test_fp.exists()
 
-    with xr.open_dataset(test_fp, consolidated=False) as ds:
+    with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
         _validate_top_level_ds_props(ds)
         assert "iso_regions" not in ds
 
@@ -108,7 +108,7 @@ def test_write_layer(tmp_path, ri_regions_fp):
 
     lf.write_layer(data, "iso_regions", description="ISO")
 
-    with xr.open_dataset(test_fp, consolidated=False) as ds:
+    with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
         assert "iso_regions" in ds
         assert np.allclose(ds["iso_regions"], data[None])
         assert ds["iso_regions"].attrs["description"] == "ISO"
@@ -127,7 +127,7 @@ def test_extract_layer(tmp_path, ri_regions_fp):
 
     assert test_fp.exists()
 
-    with xr.open_dataset(test_fp, consolidated=False) as ds:
+    with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
         _validate_top_level_ds_props(ds)
         assert "iso_regions" not in ds
 
@@ -151,7 +151,7 @@ def test_extract_layer_to_geotiff(tmp_path, ri_regions_fp):
 
     assert test_fp.exists()
 
-    with xr.open_dataset(test_fp, consolidated=False) as ds:
+    with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
         _validate_top_level_ds_props(ds)
         assert "iso_regions" not in ds
 
@@ -186,7 +186,7 @@ def test_write_geotiff_to_layer_file(tmp_path, ri_tb_tiff_fp, ri_regions_fp):
 
     with (
         rioxarray.open_rasterio(ri_regions_fp) as tif,
-        xr.open_dataset(test_fp, consolidated=False) as ds,
+        xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds,
     ):
         assert np.allclose(ds["iso_regions"], tif)
         assert np.allclose(
@@ -257,7 +257,7 @@ def test_geotiff_to_layer_file(tif, tmp_path, test_utility_data_dir):
 
     with (
         rioxarray.open_rasterio(in_tiff_fp) as truth_tif,
-        xr.open_dataset(test_fp, consolidated=False) as ds,
+        xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds,
     ):
         assert np.allclose(ds[layer], truth_tif)
         assert np.allclose(
@@ -291,7 +291,7 @@ def test_roundtrip(as_list, tmp_path, test_utility_data_dir):
         with (
             rioxarray.open_rasterio(truth_fp) as truth_tif,
             rioxarray.open_rasterio(test_tiff_fp) as test_tif,
-            xr.open_dataset(test_fp, consolidated=False) as ds,
+            xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds,
         ):
             assert np.allclose(ds[layer], truth_tif)
             assert np.allclose(test_tif, truth_tif)

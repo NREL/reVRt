@@ -79,7 +79,7 @@ class LayeredFile:
             raise revrtKeyError(msg)
 
         logger.debug("\t- Extracting %s from %s", layer, self.fp)
-        with xr.open_dataset(self.fp, consolidated=False) as ds:
+        with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
             profile = _layer_profile_from_open_ds(layer, ds)
             values = ds[layer].values
 
@@ -88,7 +88,7 @@ class LayeredFile:
     @cached_property
     def profile(self):
         """dict: Template layer profile"""
-        with xr.open_dataset(self.fp, consolidated=False) as ds:
+        with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
             return {
                 "width": ds.rio.width,
                 "height": ds.rio.height,
@@ -108,7 +108,7 @@ class LayeredFile:
             msg = f"File {self.fp} not found"
             raise revrtFileNotFoundError(msg)
 
-        with xr.open_dataset(self.fp, consolidated=False) as ds:
+        with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
             return list(ds.variables)
 
     @property
@@ -151,7 +151,7 @@ class LayeredFile:
                 - "transform": :class:`Affine` transform for layer
 
         """
-        with xr.open_dataset(self.fp, consolidated=False) as ds:
+        with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
             return _layer_profile_from_open_ds(layer, ds)
 
     def create_new(
@@ -281,7 +281,7 @@ class LayeredFile:
             )
             raise revrtValueError(msg)
 
-        with xr.open_dataset(self.fp, consolidated=False) as ds:
+        with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
             attrs = ds.attrs
             crs = ds.rio.crs
             transform = ds.rio.transform()
@@ -456,7 +456,7 @@ class LayeredFile:
         """
         logger.debug("\t- Writing %s from %s to %s", layer, self.fp, geotiff)
         with xr.open_dataset(
-            self.fp, chunks=ds_chunks, consolidated=False
+            self.fp, chunks=ds_chunks, consolidated=False, engine="zarr"
         ) as ds:
             ds[layer].rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
 
@@ -505,7 +505,7 @@ class LayeredFile:
         if data.dtype.name == "bool":
             data = data.astype("uint8")
 
-        with xr.open_dataset(self.fp, consolidated=False) as ds:
+        with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
             crs = ds.rio.crs
             transform = ds.rio.transform()
 
@@ -763,7 +763,9 @@ def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
         and GeoTIFF file.
     """
     with (
-        xr.open_dataset(layer_file_fp, consolidated=False) as ds,
+        xr.open_dataset(
+            layer_file_fp, consolidated=False, engine="zarr"
+        ) as ds,
         rioxarray.open_rasterio(geotiff) as tif,
     ):
         if len(tif.band) > 1:
@@ -852,7 +854,7 @@ def _init_zarr_file_from_zarr_template(
 ):
     """Initialize Zarr file from a Zarr template"""
     with xr.open_dataset(
-        template_file, chunks=ds_chunks, consolidated=False
+        template_file, chunks=ds_chunks, consolidated=False, engine="zarr"
     ) as ds:
         transform = ds.rio.transform()
         src_crs = ds.rio.crs
