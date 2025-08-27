@@ -524,6 +524,8 @@ def test_layer_to_geotiff_file(sample_tiff_fp, tmp_path):
         rioxarray.open_rasterio(out_tiff_fp) as test_tif,
     ):
         assert np.allclose(truth_tif, test_tif)
+        assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
+        assert truth_tif.rio.crs == test_tif.rio.crs
 
 
 def test_extract_layers(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
@@ -544,12 +546,16 @@ def test_extract_layers(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
         rioxarray.open_rasterio(out_tiff_fp_1) as test_tif,
     ):
         assert np.allclose(truth_tif, test_tif)
+        assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
+        assert truth_tif.rio.crs == test_tif.rio.crs
 
     with (
         rioxarray.open_rasterio(sample_tiff_fp_2x) as truth_tif,
         rioxarray.open_rasterio(out_tiff_fp_2) as test_tif,
     ):
         assert np.allclose(truth_tif, test_tif)
+        assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
+        assert truth_tif.rio.crs == test_tif.rio.crs
 
 
 @pytest.mark.parametrize("use_sub_dir", [True, False])
@@ -572,12 +578,16 @@ def test_extract_all_layers(
         rioxarray.open_rasterio(out_dir / "test_layer.tif") as test_tif,
     ):
         assert np.allclose(truth_tif, test_tif)
+        assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
+        assert truth_tif.rio.crs == test_tif.rio.crs
 
     with (
         rioxarray.open_rasterio(sample_tiff_fp_2x) as truth_tif,
         rioxarray.open_rasterio(out_dir / "test_layer_2.tif") as test_tif,
     ):
         assert np.allclose(truth_tif, test_tif)
+        assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
+        assert truth_tif.rio.crs == test_tif.rio.crs
 
 
 @pytest.mark.parametrize("use_full_shape", [True, False])
@@ -707,6 +717,7 @@ def test_load_data_using_layered_transmission_file_profile(
     with rioxarray.open_rasterio(sample_tiff_fp) as tif:
         assert test_tif.rio.crs == tif.rio.crs
         assert np.allclose(test_tif, tif)
+        assert np.allclose(tif.rio.transform(), test_tif.rio.transform())
 
     with pytest.raises(revrtFileNotFoundError, match="Unable to find file"):
         lf.load_data_using_layer_file_profile("DNE")
