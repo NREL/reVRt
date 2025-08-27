@@ -468,7 +468,7 @@ class LayeredFile:
         Parameters
         ----------
         data : array-like
-            Data to write to geotiff using ``LayeredFile`` profile.
+            Data to write to GeoTIFF using ``LayeredFile`` profile.
         geotiff : path-like
             Path to output GeoTIFF file.
         nodata : int | float, optional
