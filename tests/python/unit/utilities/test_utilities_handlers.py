@@ -581,6 +581,43 @@ def test_write_tiff_using_layer_profile(
             assert np.isclose(tif.rio.nodata, nodata)
 
 
+def test_write_tiff_using_layer_profile_bad_shape(sample_tiff_fp, tmp_path):
+    """Test writing data to file using layer profile with bad shape"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    new_data = np.arange(_TEST_WIDTH * _TEST_HEIGHT * 4, dtype=np.float32)
+    new_data = new_data.reshape((_TEST_HEIGHT * 2, _TEST_WIDTH * 2))
+
+    out_tiff_fp = tmp_path / "test.tif"
+
+    with pytest.raises(
+        revrtValueError,
+        match=r"Shape of provided data .* does not match shape of LayeredFile",
+    ):
+        lf.save_data_using_layer_file_profile(new_data, out_tiff_fp)
+
+
+def test_write_tiff_using_layer_profile_bool(sample_tiff_fp, tmp_path):
+    """Test writing bool data to GeoTIFF file using layer profile"""
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    new_data = np.full(_TEST_WIDTH * _TEST_HEIGHT, True, dtype="bool")
+    new_data = new_data.reshape((1, _TEST_HEIGHT, _TEST_WIDTH))
+
+    out_tiff_fp = tmp_path / "test.tif"
+    assert not out_tiff_fp.exists()
+    lf.save_data_using_layer_file_profile(new_data, out_tiff_fp)
+
+    assert out_tiff_fp.exists()
+    with rioxarray.open_rasterio(out_tiff_fp) as tif:
+        assert np.allclose(tif, 1)
+        assert tif.dtype == np.dtype("uint8")
+
+
 def test_load_data_using_layer_file_profile(sample_tiff_fp, tmp_path):
     """Test loading data from GeoTIFF file using layer profile"""
     proj = pyproj.Transformer.from_crs(
