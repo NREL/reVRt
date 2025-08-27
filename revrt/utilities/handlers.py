@@ -614,7 +614,7 @@ class LayeredFile:
         logger.info("Moving layers to %s", self.fp)
         for layer_name, geotiff in layers.items():
             logger.info("- Transferring %s", layer_name)
-            description = descriptions.get(layer_name, None)
+            description = descriptions.get(layer_name)
 
             self.write_geotiff_to_file(
                 geotiff,
