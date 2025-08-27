@@ -13,6 +13,11 @@ points should be organized and moved to the appropriate section.
       - lto off when running dhat
   - Profile with: export RUSTFLAGS="-C target-cpu=native"
   - Supported names: rustc --print target-cpus
+  - Profile with `Cargo.toml`:
+    ```
+    [profile.release]
+    debug = "line-tables-only"
+    ```
 
 - Profiling memory usage:
   - Using dhat:
@@ -24,8 +29,26 @@ points should be organized and moved to the appropriate section.
       dhat: At t-end:  158,992 bytes in 268 blocks
       dhat: The data has been saved to dhat-heap.json, and is viewable with dhat/dh_view.html
       ```
+  - Somes results:
+    - distance: t-gmax (Total)
+    - 0: 2.7MB
+    - 1: 56MB
+    - 2: 56MB
+    - 10: 56MB (120MB
+    - 20 (1 feature): 32MB
+    - 20 (5 features, 1 chunks): 104MB
+    - 20 (5 features, 2 chunks): 104MB
+    - 20 (5 features, 4 chunks): 104MB
+    - 25: 56MB (150MB)
+    - 100: 56MB (496MB)
+    - 200: 56MB (1.8 GB)
+    - 300 (5 features, 1 chunk): 104MB (3.6 GB), 442s
+    - 500 (5 features, 3 chunks): 161MB (9.7GB), 1193s
+    - 1000 (5 features, 6 chunks): 230MB (34GB), 4246s
 - Benchmarking with smaply
   - cargo install --locked samply
+  - cargo build --release -p revrt-cli
+  - samply record  ./target/release/revrt-cli  -vv -d ../transmission_costs.zarr --cost-function='{"cost_layers": [{"layer_name": "fmv_dollar_per_acre"}, {"layer_name": "swca_natural_resources_risk_2"}]}' --start 20500,40500 --end 20500,40600 --cache-size=250000
 - Benchmarking with criterion:
   - Instructions to run benchmark locally:
     - `cargo bench --bench standard`
