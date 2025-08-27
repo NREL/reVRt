@@ -1,5 +1,6 @@
 """Tests for reVRt utilities"""
 
+import shutil
 import contextlib
 from pathlib import Path
 
@@ -14,7 +15,11 @@ from rasterio.warp import Resampling
 from rasterio.transform import from_origin
 
 import revrt
-from revrt.utilities import LayeredFile, delete_data_file
+from revrt.utilities import (
+    LayeredFile,
+    LayeredTransmissionFile,
+    delete_data_file,
+)
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
@@ -612,6 +617,34 @@ def test_load_data_using_layer_file_profile(sample_tiff_fp, tmp_path):
         assert test_tif_2.any()
         assert not np.isnan(test_tif_2).all()
         assert np.allclose(test_tif_2[:, :-1], tif[:, :-1], atol=7)
+
+
+@pytest.mark.parametrize("in_layer_dir", [True, False])
+def test_load_data_using_layered_transmission_file_profile(
+    sample_tiff_fp, tmp_path, in_layer_dir
+):
+    """Test loading data using layered transmission file profile"""
+
+    layer_dir = tmp_path / "layers"
+    layer_dir.mkdir()
+
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredTransmissionFile(test_fp, layer_dir=layer_dir)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+
+    if in_layer_dir:
+        in_fp = "test.tif"
+        shutil.copy(sample_tiff_fp, layer_dir / in_fp)
+    else:
+        in_fp = sample_tiff_fp
+
+    test_tif = lf.load_data_using_layer_file_profile(in_fp)
+    with rioxarray.open_rasterio(sample_tiff_fp) as tif:
+        assert test_tif.rio.crs == tif.rio.crs
+        assert np.allclose(test_tif, tif)
+
+    with pytest.raises(revrtFileNotFoundError, match="Unable to find file"):
+        lf.load_data_using_layer_file_profile("DNE")
 
 
 if __name__ == "__main__":

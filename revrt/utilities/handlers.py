@@ -584,7 +584,7 @@ class LayeredFile:
 
 
 class LayeredTransmissionFile(LayeredFile):
-    """Handle reading and writing H5 files and GeoTiffs"""
+    """Handle reading and writing ``LayeredFile``s and GeoTIFFs"""
 
     def __init__(self, fp, layer_dir="."):
         """
@@ -592,13 +592,10 @@ class LayeredTransmissionFile(LayeredFile):
         Parameters
         ----------
         fp : path-like
-            Path to layered transmission file. If this file is to
-            be created, a `template_file` must be provided (and must
-            exist on disk). Otherwise, the `template_file` input can be
-            ignored and this input will be used as the template file.
-            This input can be set to `None` if only the tiff conversion
-            utilities are required, but the `template_file` input must
-            be provided in this case. By default, ``None``.
+            Path to layered file on disk. If this file is to be created,
+            a `template_file` must be provided (and must exist on disk).
+            Otherwise, the `template_file` input can be ignored and this
+            input will be used as the template file.
         layer_dir : path-like, optional
             Directory to search for layers in, if not found in current
             directory. By default, ``'.'``.
@@ -606,8 +603,8 @@ class LayeredTransmissionFile(LayeredFile):
         super().__init__(fp=fp)
         self._layer_dir = Path(layer_dir)
 
-    def load_data_using_h5_profile(self, geotiff):
-        """Load GeoTIFF data, converting to H5 profile if necessary
+    def load_data_using_layer_file_profile(self, geotiff):
+        """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
 
         Parameters
         ----------
@@ -628,7 +625,7 @@ class LayeredTransmissionFile(LayeredFile):
                 msg = f"Unable to find file {geotiff}"
                 raise revrtFileNotFoundError(msg)
 
-        return super().load_data_using_h5_profile(geotiff=full_fname)
+        return super().load_data_using_layer_file_profile(geotiff=full_fname)
 
 
 def delete_data_file(fp):
