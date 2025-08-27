@@ -28,6 +28,12 @@ def test_data_dir(test_dir):
     return test_dir / "data"
 
 
+@pytest.fixture(scope="module")
+def test_utility_data_dir(test_data_dir):
+    """Return Path to test data directory."""
+    return test_data_dir / "utilities"
+
+
 @pytest.fixture
 def assert_message_was_logged(caplog):
     """Assert that a particular (partial) message was logged."""
