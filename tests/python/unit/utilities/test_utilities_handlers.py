@@ -329,6 +329,38 @@ def test_create_new_file(tmp_path, sample_tiff_fp):
         assert ds.attrs["chunks"] == {"x": 100, "y": 50}
 
 
+def test_create_new_file_from_zarr(tmp_path, sample_tiff_fp):
+    """Test creating a new file form a zarr template"""
+
+    test_fp = tmp_path / "test.zarr"
+    assert not test_fp.exists()
+
+    lf = LayeredFile(test_fp)
+    lf.create_new(sample_tiff_fp, overwrite=True, chunk_x=100, chunk_y=50)
+
+    assert test_fp.exists()
+
+    test_fp_2 = tmp_path / "test_2.zarr"
+    assert not test_fp_2.exists()
+
+    lf2 = LayeredFile(test_fp_2)
+    lf2.create_new(test_fp, chunk_x=50, chunk_y=100)
+
+    assert test_fp_2.exists()
+
+    with (
+        xr.open_dataset(test_fp, consolidated=False) as ds_truth,
+        xr.open_dataset(test_fp_2, consolidated=False) as ds_test,
+    ):
+        assert np.allclose(ds_truth["longitude"], ds_test["longitude"])
+        assert np.allclose(ds_truth["latitude"], ds_test["latitude"])
+        assert ds_truth.dims == ds_test.dims
+        assert set(ds_truth.coords) == set(ds_test.coords)
+
+        _validate_top_level_ds_props(ds_test)
+        assert ds_test.attrs["chunks"] == {"x": 50, "y": 100}
+
+
 def test_cleanup_on_file_create_error(tmp_path, monkeypatch):
     """Test cleanup on file create error"""
 

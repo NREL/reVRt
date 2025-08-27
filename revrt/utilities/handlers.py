@@ -154,7 +154,6 @@ class LayeredFile:
         with xr.open_dataset(self.fp, consolidated=False) as ds:
             return _layer_profile_from_open_ds(layer, ds)
 
-    # TODO: allow template_file to be another zarr file
     def create_new(
         self, template_file, overwrite=False, chunk_x=2048, chunk_y=2048
     ):
@@ -182,7 +181,7 @@ class LayeredFile:
         logger.debug("\t- Initializing %s from %s", self.fp, template_file)
 
         try:
-            _init_zarr_file_from_tiff_template(
+            _init_zarr_file_from_template(
                 template_file, self.fp, chunk_x=chunk_x, chunk_y=chunk_y
             )
             logger.info(
@@ -192,6 +191,7 @@ class LayeredFile:
             logger.exception("Error initializing %s", self.fp)
             if self.fp.exists():
                 delete_data_file(self.fp)
+            raise
 
     def write_layer(
         self,
@@ -802,6 +802,42 @@ def _validate_template(template_file):
     if not template_file.exists():
         msg = f"Template file {template_file!r} not found on disk!"
         raise revrtFileNotFoundError(msg)
+
+
+def _init_zarr_file_from_template(template_file, out_fp, chunk_x, chunk_y):
+    """Initialize Zarr file from GeoTIFF template"""
+    template_file = Path(template_file)
+    if template_file.suffix == ".zarr":
+        return _init_zarr_file_from_zarr_template(
+            template_file, out_fp, chunk_x, chunk_y
+        )
+
+    return _init_zarr_file_from_tiff_template(
+        template_file, out_fp, chunk_x, chunk_y
+    )
+
+
+def _init_zarr_file_from_zarr_template(
+    template_file, out_fp, chunk_x, chunk_y
+):
+    """Initialize Zarr file from a Zarr template"""
+    with xr.open_dataset(template_file, consolidated=False) as ds:
+        transform = ds.rio.transform()
+        src_crs = ds.rio.crs
+
+        out_ds = _compile_ds(
+            ds["x"].data,
+            ds["y"].data,
+            ds[LayeredFile.LATITUDE].data,
+            ds[LayeredFile.LONGITUDE].data,
+            transform,
+            src_crs,
+            chunk_x,
+            chunk_y,
+        )
+        _save_ds_as_zarr_with_encodings(
+            out_ds, chunk_x=chunk_x, chunk_y=chunk_y, out_fp=out_fp
+        )
 
 
 def _init_zarr_file_from_tiff_template(
