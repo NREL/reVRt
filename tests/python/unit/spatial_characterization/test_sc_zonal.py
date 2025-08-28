@@ -250,13 +250,14 @@ def test_bad_callable(sample_raster, five_sample_zones):
     stats = zs.from_array(
         five_sample_zones, sample_raster, sample_raster.attrs["transform"]
     )
-    with pytest.raises(revrtTypeError) as exc_info:
+    with pytest.raises(
+        revrtTypeError,
+        match=(
+            "zone_func must be a callable function which accepts a "
+            "single `raster` arg"
+        ),
+    ):
         stats = list(stats)
-
-    assert (
-        str(exc_info.value) == "zone_func must be a callable function "
-        "which accepts a single `raster` arg."
-    )
 
 
 def test_parallel_zonal_stats_no_client(sample_raster, five_sample_zones):

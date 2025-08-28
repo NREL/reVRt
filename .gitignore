@@ -2,6 +2,10 @@
 .pixi
 *.egg-info
 
+# Zarr files have lots of small files are really heavy on git
+# Disable dy default - users can still force add them
+*.zarr/
+
 # VSCode
 .vscode
 

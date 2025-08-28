@@ -1,3 +1,4 @@
+# ruff: noqa: N801
 """Custom Exceptions and Errors for revrt"""
 
 import logging
@@ -6,7 +7,7 @@ import logging
 logger = logging.getLogger("revrt")
 
 
-class revrtError(Exception):  # noqa: N801
+class revrtError(Exception):
     """Generic revrt Error"""
 
     def __init__(self, *args, **kwargs):
@@ -16,21 +17,33 @@ class revrtError(Exception):  # noqa: N801
             logger.error(str(args[0]), stacklevel=2)
 
 
-class revrtKeyError(revrtError, KeyError):  # noqa: N801
+class revrtFileExistsError(revrtError, FileExistsError):
+    """revrt FileExistsError"""
+
+
+class revrtFileNotFoundError(revrtError, FileNotFoundError):
+    """revrt FileNotFoundError"""
+
+
+class revrtKeyError(revrtError, KeyError):
     """revrt KeyError"""
 
 
-class revrtNotImplementedError(revrtError, NotImplementedError):  # noqa: N801
+class revrtNotImplementedError(revrtError, NotImplementedError):
     """revrt NotImplementedError"""
 
 
-class revrtRuntimeError(revrtError, RuntimeError):  # noqa: N801
+class revrtProfileCheckError(revrtError, ValueError):
+    """revrt Geotiff Profile Check Error"""
+
+
+class revrtRuntimeError(revrtError, RuntimeError):
     """revrt RuntimeError"""
 
 
-class revrtTypeError(revrtError, TypeError):  # noqa: N801
+class revrtTypeError(revrtError, TypeError):
     """revrt TypeError"""
 
 
-class revrtValueError(revrtError, ValueError):  # noqa: N801
+class revrtValueError(revrtError, ValueError):
     """revrt ValueError"""

@@ -6,8 +6,11 @@ import pytest
 
 from revrt.exceptions import (
     revrtError,
+    revrtFileExistsError,
+    revrtFileNotFoundError,
     revrtKeyError,
     revrtNotImplementedError,
+    revrtProfileCheckError,
     revrtRuntimeError,
     revrtTypeError,
     revrtValueError,
@@ -48,8 +51,20 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
     "raise_type, catch_types",
     [
         (
+            revrtFileExistsError,
+            [revrtError, revrtFileExistsError, FileExistsError],
+        ),
+        (
+            revrtFileNotFoundError,
+            [revrtError, revrtFileNotFoundError, FileNotFoundError],
+        ),
+        (
             revrtNotImplementedError,
             [revrtError, revrtNotImplementedError, NotImplementedError],
+        ),
+        (
+            revrtProfileCheckError,
+            [revrtError, revrtProfileCheckError, ValueError],
         ),
         (revrtKeyError, [revrtError, revrtKeyError, KeyError]),
         (revrtRuntimeError, [revrtError, revrtRuntimeError, RuntimeError]),
