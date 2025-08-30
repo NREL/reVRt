@@ -15,68 +15,34 @@ from rasterio.warp import Resampling
 from rasterio.transform import from_origin
 
 import revrt
-from revrt.utilities import (
-    LayeredFile,
-    LayeredTransmissionFile,
-    check_geotiff,
-    delete_data_file,
-)
+from revrt.utilities import LayeredFile, LayeredTransmissionFile
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
-    revrtProfileCheckError,
     revrtKeyError,
     revrtValueError,
 )
 from revrt.warn import revrtWarning
 
-_TEST_WIDTH = 6
-_TEST_HEIGHT = 10
-_CELL_SIZE = 0.5
-_X0, _Y0 = 0, 40
-_EXPECTED_TRANSFORM = from_origin(_X0, _Y0, _CELL_SIZE, _CELL_SIZE)
-
 
 @pytest.fixture(scope="module")
-def sample_tiff_fp(tmp_path_factory):
+def sample_tiff_fp_2x(sample_tiff_props, tmp_path_factory):
     """Return path to TIFF file used for tests"""
 
-    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32)
+    x0, y0, width, height, cell_size, transform = sample_tiff_props
+    data = np.arange(width * height, dtype=np.float32) * 2
     da = xr.DataArray(
-        data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
+        data.reshape((height, width)),
         dims=("y", "x"),
         coords={
-            "x": _X0 + np.arange(_TEST_WIDTH) * _CELL_SIZE + _CELL_SIZE / 2,
-            "y": _Y0 - np.arange(_TEST_HEIGHT) * _CELL_SIZE - _CELL_SIZE / 2,
+            "x": x0 + np.arange(width) * cell_size + cell_size / 2,
+            "y": y0 - np.arange(height) * cell_size - cell_size / 2,
         },
         name="test_band",
     )
 
     da = da.rio.write_crs("EPSG:4326")
-    da.rio.write_transform(_EXPECTED_TRANSFORM)
-
-    out_fp = tmp_path_factory.mktemp("data") / "sample.tif"
-    da.rio.to_raster(out_fp, driver="GTiff")
-    return out_fp
-
-
-@pytest.fixture(scope="module")
-def sample_tiff_fp_2x(tmp_path_factory):
-    """Return path to TIFF file used for tests"""
-
-    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32) * 2
-    da = xr.DataArray(
-        data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
-        dims=("y", "x"),
-        coords={
-            "x": _X0 + np.arange(_TEST_WIDTH) * _CELL_SIZE + _CELL_SIZE / 2,
-            "y": _Y0 - np.arange(_TEST_HEIGHT) * _CELL_SIZE - _CELL_SIZE / 2,
-        },
-        name="test_band",
-    )
-
-    da = da.rio.write_crs("EPSG:4326")
-    da.rio.write_transform(_EXPECTED_TRANSFORM)
+    da.rio.write_transform(transform)
 
     out_fp = tmp_path_factory.mktemp("data") / "sample_2x.tif"
     da.rio.to_raster(out_fp, driver="GTiff")
@@ -95,10 +61,11 @@ def test_tiff_fp(test_utility_data_dir):
     return test_utility_data_dir / "ri_transmission_barriers.tif"
 
 
-def _validate_top_level_ds_props(ds):
+def _validate_top_level_ds_props(ds, transform):
     """Validate top level dataset properties"""
+
     assert ds.rio.crs == CRS("EPSG:4326")
-    assert ds.rio.transform() == _EXPECTED_TRANSFORM
+    assert ds.rio.transform() == transform
     assert set(ds.coords) == {
         "band",
         "latitude",
@@ -112,38 +79,15 @@ def _validate_top_level_ds_props(ds):
     assert "count" not in ds.attrs
 
 
-def _validate_random_data_layer(layer):
+def _validate_random_data_layer(width, height, transform, layer):
     """Validate data layer made of random numbers"""
-    assert layer.shape == (1, _TEST_HEIGHT, _TEST_WIDTH)
+    assert layer.shape == (1, height, width)
     assert layer.dtype == np.dtype("float32")
     assert layer.min() >= 0
     assert layer.max() <= 1
     assert layer.rio.crs == CRS("EPSG:4326")
-    assert layer.rio.transform() == _EXPECTED_TRANSFORM
+    assert layer.rio.transform() == transform
     assert layer.rio.grid_mapping == "spatial_ref"
-
-
-@pytest.mark.parametrize("test_as_dir", [True, False])
-def test_delete_data_file(tmp_path, test_as_dir):
-    """Test not overwriting when creating a new file"""
-
-    test_fp = tmp_path / "test.zarr"
-    assert not test_fp.exists()
-
-    delete_data_file(test_fp)
-    assert not test_fp.exists()
-
-    if test_as_dir:
-        test_fp.mkdir()
-    else:
-        test_fp.touch()
-    assert test_fp.exists()
-
-    delete_data_file(test_fp)
-    assert not test_fp.exists()
-
-    delete_data_file(test_fp)
-    assert not test_fp.exists()
 
 
 def test_methods_without_file():
@@ -294,8 +238,9 @@ def test_layered_file_handler_get_dne_layer(test_tl_fp):
         lf["non_existent_layer"]
 
 
-def test_create_new_file(tmp_path, sample_tiff_fp):
+def test_create_new_file(tmp_path, sample_tiff_fp, sample_tiff_props):
     """Test creating a new file"""
+    *__, transform = sample_tiff_props
 
     test_fp = tmp_path / "test.zarr"
     assert not test_fp.exists()
@@ -318,12 +263,15 @@ def test_create_new_file(tmp_path, sample_tiff_fp):
         assert ds["latitude"].shape == xds.shape[1:]
         assert ds["longitude"].shape == xds.shape[1:]
 
-        _validate_top_level_ds_props(ds)
+        _validate_top_level_ds_props(ds, transform)
         assert ds.attrs["chunks"] == {"x": 100, "y": 50}
 
 
-def test_create_new_file_from_zarr(tmp_path, sample_tiff_fp):
+def test_create_new_file_from_zarr(
+    tmp_path, sample_tiff_fp, sample_tiff_props
+):
     """Test creating a new file form a zarr template"""
+    *__, transform = sample_tiff_props
 
     test_fp = tmp_path / "test.zarr"
     assert not test_fp.exists()
@@ -354,7 +302,7 @@ def test_create_new_file_from_zarr(tmp_path, sample_tiff_fp):
         assert ds_truth.dims == ds_test.dims
         assert set(ds_truth.coords) == set(ds_test.coords)
 
-        _validate_top_level_ds_props(ds_test)
+        _validate_top_level_ds_props(ds_test, transform)
         assert ds_test.attrs["chunks"] == {"x": 50, "y": 100}
 
 
@@ -386,8 +334,9 @@ def test_cleanup_on_file_create_error(tmp_path, monkeypatch):
     assert not test_fp.exists()
 
 
-def test_write_layer(sample_tiff_fp, tmp_path):
+def test_write_layer(sample_tiff_fp, sample_tiff_props, tmp_path):
     """Test writing a layer to file"""
+    __, __, width, height, __, transform = sample_tiff_props
 
     test_fp = tmp_path / "test.zarr"
     assert not test_fp.exists()
@@ -398,20 +347,20 @@ def test_write_layer(sample_tiff_fp, tmp_path):
     assert test_fp.exists()
 
     with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
-        _validate_top_level_ds_props(ds)
+        _validate_top_level_ds_props(ds, transform)
         assert "test_layer" not in ds
 
     new_data = (
         np.random.default_rng()
-        .random(_TEST_WIDTH * _TEST_HEIGHT)
-        .reshape((_TEST_HEIGHT, _TEST_WIDTH))
+        .random(width * height)
+        .reshape((height, width))
         .astype(np.float32)
     )
     lf.write_layer(new_data, "test_layer")
     with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
-        _validate_top_level_ds_props(ds)
+        _validate_top_level_ds_props(ds, transform)
         assert "test_layer" in ds
-        _validate_random_data_layer(ds["test_layer"])
+        _validate_random_data_layer(width, height, transform, ds["test_layer"])
         assert np.allclose(ds["test_layer"], new_data)
         assert "nodata" not in ds["test_layer"].attrs
         assert np.isnan(ds["test_layer"].rio.nodata)
@@ -424,8 +373,8 @@ def test_write_layer(sample_tiff_fp, tmp_path):
 
     new_data_2 = (
         np.random.default_rng()
-        .random(_TEST_WIDTH * _TEST_HEIGHT)
-        .reshape((1, _TEST_HEIGHT, _TEST_WIDTH))
+        .random(width * height)
+        .reshape((1, height, width))
         .astype(np.float32)
     )
     new_data_2 -= new_data
@@ -434,9 +383,9 @@ def test_write_layer(sample_tiff_fp, tmp_path):
 
     lf.write_layer(new_data_2, "test_layer", overwrite=True)
     with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
-        _validate_top_level_ds_props(ds)
+        _validate_top_level_ds_props(ds, transform)
         assert "test_layer" in ds
-        _validate_random_data_layer(ds["test_layer"])
+        _validate_random_data_layer(width, height, transform, ds["test_layer"])
         assert not np.allclose(ds["test_layer"], new_data)
         assert np.allclose(ds["test_layer"], new_data_2)
         assert "nodata" not in ds["test_layer"].attrs
@@ -447,9 +396,11 @@ def test_write_layer(sample_tiff_fp, tmp_path):
         new_data, "original_layer", description="My desc", nodata=255
     )
     with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
-        _validate_top_level_ds_props(ds)
+        _validate_top_level_ds_props(ds, transform)
         assert "original_layer" in ds
-        _validate_random_data_layer(ds["original_layer"])
+        _validate_random_data_layer(
+            width, height, transform, ds["original_layer"]
+        )
         assert np.allclose(ds["original_layer"], new_data)
         assert not np.allclose(ds["original_layer"], new_data_2)
         assert ds["original_layer"].attrs["description"] == "My desc"
@@ -463,8 +414,11 @@ def test_write_layer(sample_tiff_fp, tmp_path):
         lf.write_layer(new_data_2[:, :1, :1], "test_layer_2")
 
 
-def test_write_tiff_to_layer_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
+def test_write_tiff_to_layer_file(
+    sample_tiff_fp, sample_tiff_fp_2x, sample_tiff_props, tmp_path
+):
     """Test writing GeoTIFFs to a layered file"""
+    *__, transform = sample_tiff_props
 
     test_fp = tmp_path / "test.zarr"
     lf = LayeredFile(test_fp)
@@ -474,7 +428,7 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
         xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds,
         rioxarray.open_rasterio(sample_tiff_fp) as tif,
     ):
-        _validate_top_level_ds_props(ds)
+        _validate_top_level_ds_props(ds, transform)
         assert "test_layer" in ds
         assert "test_layer_2" not in ds
         assert np.allclose(ds["test_layer"], tif)
@@ -486,7 +440,7 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
         xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds,
         rioxarray.open_rasterio(sample_tiff_fp_2x) as tif,
     ):
-        _validate_top_level_ds_props(ds)
+        _validate_top_level_ds_props(ds, transform)
         assert "test_layer" in ds
         assert "test_layer_2" in ds
         assert np.allclose(ds["test_layer_2"], tif)
@@ -505,7 +459,7 @@ def test_write_tiff_to_layer_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path):
         )
 
     with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
-        _validate_top_level_ds_props(ds)
+        _validate_top_level_ds_props(ds, transform)
         assert "test_layer" in ds
         assert "test_layer_2" in ds
         assert np.allclose(ds["test_layer_2"], ds["test_layer"])
@@ -596,18 +550,20 @@ def test_extract_all_layers(
 @pytest.mark.parametrize("use_full_shape", [True, False])
 @pytest.mark.parametrize("nodata", [None, 1024])
 def test_write_tiff_using_layer_profile(
-    sample_tiff_fp, tmp_path, use_full_shape, nodata
+    sample_tiff_fp, sample_tiff_props, tmp_path, use_full_shape, nodata
 ):
     """Test writing data to GeoTIFF file using layer profile"""
+    __, __, width, height, __, __ = sample_tiff_props
+
     test_fp = tmp_path / "test.zarr"
     lf = LayeredFile(test_fp)
     lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
 
-    new_data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32)
+    new_data = np.arange(width * height, dtype=np.float32)
     if use_full_shape:
-        new_data = new_data.reshape((1, _TEST_HEIGHT, _TEST_WIDTH)) * 3
+        new_data = new_data.reshape((1, height, width)) * 3
     else:
-        new_data = new_data.reshape((_TEST_HEIGHT, _TEST_WIDTH)) * 3
+        new_data = new_data.reshape((height, width)) * 3
 
     out_tiff_fp = tmp_path / "test.tif"
     assert not out_tiff_fp.exists()
@@ -620,14 +576,18 @@ def test_write_tiff_using_layer_profile(
             assert np.isclose(tif.rio.nodata, nodata)
 
 
-def test_write_tiff_using_layer_profile_bad_shape(sample_tiff_fp, tmp_path):
+def test_write_tiff_using_layer_profile_bad_shape(
+    sample_tiff_fp, sample_tiff_props, tmp_path
+):
     """Test writing data to file using layer profile with bad shape"""
+    __, __, width, height, __, __ = sample_tiff_props
+
     test_fp = tmp_path / "test.zarr"
     lf = LayeredFile(test_fp)
     lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
 
-    new_data = np.arange(_TEST_WIDTH * _TEST_HEIGHT * 4, dtype=np.float32)
-    new_data = new_data.reshape((_TEST_HEIGHT * 2, _TEST_WIDTH * 2))
+    new_data = np.arange(width * height * 4, dtype=np.float32)
+    new_data = new_data.reshape((height * 2, width * 2))
 
     out_tiff_fp = tmp_path / "test.tif"
 
@@ -638,14 +598,18 @@ def test_write_tiff_using_layer_profile_bad_shape(sample_tiff_fp, tmp_path):
         lf.save_data_using_layer_file_profile(new_data, out_tiff_fp)
 
 
-def test_write_tiff_using_layer_profile_bool(sample_tiff_fp, tmp_path):
+def test_write_tiff_using_layer_profile_bool(
+    sample_tiff_fp, sample_tiff_props, tmp_path
+):
     """Test writing bool data to GeoTIFF file using layer profile"""
+    __, __, width, height, __, __ = sample_tiff_props
+
     test_fp = tmp_path / "test.zarr"
     lf = LayeredFile(test_fp)
     lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
 
-    new_data = np.full(_TEST_WIDTH * _TEST_HEIGHT, True, dtype="bool")
-    new_data = new_data.reshape((1, _TEST_HEIGHT, _TEST_WIDTH))
+    new_data = np.full(width * height, True, dtype="bool")
+    new_data = new_data.reshape((1, height, width))
 
     out_tiff_fp = tmp_path / "test.tif"
     assert not out_tiff_fp.exists()
@@ -657,15 +621,19 @@ def test_write_tiff_using_layer_profile_bool(sample_tiff_fp, tmp_path):
         assert tif.dtype == np.dtype("uint8")
 
 
-def test_load_data_using_layer_file_profile(sample_tiff_fp, tmp_path):
+def test_load_data_using_layer_file_profile(
+    sample_tiff_fp, sample_tiff_props, tmp_path
+):
     """Test loading data from GeoTIFF file using layer profile"""
+    x0, y0, width, height, __, __ = sample_tiff_props
+
     proj = pyproj.Transformer.from_crs(
         "EPSG:4326", "EPSG:3857", always_xy=True
     )
-    x0, y0 = proj.transform(_X0, _Y0)
+    x0, y0 = proj.transform(x0, y0)
 
     target_crs = "EPSG:3857"
-    target_shape = (_TEST_HEIGHT, _TEST_WIDTH)
+    target_shape = (height, width)
     target_transform = from_origin(x0, y0, 111320, 111320)
 
     out_fp = tmp_path / "test.tif"
@@ -766,99 +734,6 @@ def test_layers_to_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path, as_list):
         assert ds[tl2_name].rio.transform() == truth_tif_2.rio.transform()
         assert np.allclose(ds[tl1_name], truth_tif)
         assert np.allclose(ds[tl2_name], truth_tif_2)
-
-
-def test_check_geotiff_bad_bands(sample_tiff_fp, tmp_path):
-    """Test check_geotiff with bad number of bands"""
-    test_fp = tmp_path / "test.zarr"
-    lf = LayeredFile(test_fp)
-    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
-
-    test_tiff_fp = tmp_path / "test.tif"
-    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT * 2, dtype=np.float32)
-    da = xr.DataArray(
-        data.reshape((2, _TEST_HEIGHT, _TEST_WIDTH)),
-        dims=("band", "y", "x"),
-        coords={
-            "x": _X0 + np.arange(_TEST_WIDTH) * _CELL_SIZE + _CELL_SIZE / 2,
-            "y": _Y0 - np.arange(_TEST_HEIGHT) * _CELL_SIZE - _CELL_SIZE / 2,
-        },
-        name="test_band",
-    )
-
-    da = da.rio.write_crs("EPSG:4326")
-    da.rio.write_transform(_EXPECTED_TRANSFORM)
-    da.rio.to_raster(test_tiff_fp, driver="GTiff")
-
-    with pytest.raises(
-        revrtProfileCheckError, match="contains more than one band"
-    ):
-        check_geotiff(test_fp, test_tiff_fp)
-
-
-def test_check_geotiff_bad_shape(sample_tiff_fp, tmp_path):
-    """Test check_geotiff with bad number of bands"""
-    test_fp = tmp_path / "test.zarr"
-    lf = LayeredFile(test_fp)
-    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
-
-    test_tiff_fp = tmp_path / "test.tif"
-    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT * 4, dtype=np.float32)
-    da = xr.DataArray(
-        data.reshape((_TEST_WIDTH * 2, _TEST_HEIGHT * 2)),
-        dims=("y", "x"),
-        coords={
-            "x": _X0
-            + np.arange(_TEST_HEIGHT * 2) * _CELL_SIZE
-            + _CELL_SIZE / 2,
-            "y": _Y0
-            - np.arange(_TEST_WIDTH * 2) * _CELL_SIZE
-            - _CELL_SIZE / 2,
-        },
-        name="test_band",
-    )
-
-    da = da.rio.write_crs("EPSG:4326")
-    da.rio.write_transform(_EXPECTED_TRANSFORM)
-    da.rio.to_raster(test_tiff_fp, driver="GTiff")
-
-    with pytest.raises(
-        revrtProfileCheckError, match=r"Shape of layer data .* do not match.*"
-    ):
-        check_geotiff(test_fp, test_tiff_fp)
-
-
-def test_check_geotiff_bad_transform(sample_tiff_fp, tmp_path):
-    """Test check_geotiff with bad number of bands"""
-    test_fp = tmp_path / "test.zarr"
-    lf = LayeredFile(test_fp)
-    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
-
-    test_tiff_fp = tmp_path / "test.tif"
-    data = np.arange(_TEST_WIDTH * _TEST_HEIGHT, dtype=np.float32)
-    da = xr.DataArray(
-        data.reshape((_TEST_HEIGHT, _TEST_WIDTH)),
-        dims=("y", "x"),
-        coords={
-            "x": 2 * _X0
-            + np.arange(_TEST_WIDTH) * _CELL_SIZE
-            + _CELL_SIZE / 2,
-            "y": 2 * _Y0
-            - np.arange(_TEST_HEIGHT) * _CELL_SIZE
-            - _CELL_SIZE / 2,
-        },
-        name="test_band",
-    )
-
-    da = da.rio.write_crs("EPSG:4326")
-    da.rio.write_transform()
-    da.rio.to_raster(test_tiff_fp, driver="GTiff")
-
-    with pytest.raises(
-        revrtProfileCheckError,
-        match=r'Geospatial "transform" .* do not match.*',
-    ):
-        check_geotiff(test_fp, test_tiff_fp)
 
 
 if __name__ == "__main__":
