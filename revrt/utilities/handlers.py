@@ -54,10 +54,7 @@ class LayeredFile:
         Parameters
         ----------
         fp : path-like
-            Path to layered file on disk. If this file is to be created,
-            a `template_file` must be provided (and must exist on disk).
-            Otherwise, the `template_file` input can be ignored and this
-            input will be used as the template file.
+            Path to layered file on disk.
         """
         self.fp = Path(fp)
 
@@ -604,6 +601,10 @@ class LayeredFile:
                nodata value so that ``da.rio.nodata`` gives the right
                value.
 
+        Returns
+        -------
+        str
+            String representation of path to output layered file.
         """
         if isinstance(layers, list):
             layers = {Path(fp).stem: fp for fp in layers}
@@ -624,6 +625,8 @@ class LayeredFile:
                 overwrite=overwrite,
                 nodata=nodata,
             )
+
+        return str(self.fp)
 
     def extract_layers(self, layers, **profile_kwargs):
         """Extract layers from file and save to disk as GeoTIFFs
