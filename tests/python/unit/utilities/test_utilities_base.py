@@ -15,6 +15,7 @@ from revrt.utilities import (
     LayeredFile,
 )
 from revrt.exceptions import revrtProfileCheckError, revrtValueError
+from revrt.warn import revrtWarning
 
 
 @pytest.fixture
@@ -90,6 +91,83 @@ def test_buffer_routes_value_takes_precedence_over_range(sample_paths):
     # account for rounded corners
     assert 19**2 < routes.iloc[0].geometry.area < 20**2
     assert routes.iloc[1].geometry.area == 20 * 16
+
+
+def test_buffer_routes_dne_voltage():
+    """Test buffering routes by row width with exact integer value"""
+
+    sample_paths = gpd.GeoDataFrame(
+        {
+            "id": [1, 2, 3, 4],
+            "A": ["a", "b", "c", "d"],
+            "voltage": [12.0, 20, 24, 30],
+        },
+        geometry=[
+            box(-5, -5, 5, 5),
+            LineString([(10, -7), (10, 13)]),
+            LineString([(9, -8), (9, 13)]),
+            LineString([(11, -9), (12, 13)]),
+        ],
+        crs="ESRI:102008",
+    )
+
+    row_widths = {"12": 10, "24": 20, "36": 30}
+
+    with pytest.warns(
+        revrtWarning, match="2 route\\(s\\) will be dropped due to missing"
+    ):
+        routes = buffer_routes(sample_paths, row_widths)
+
+    assert "geometry" in routes
+    assert routes.geometry.is_valid.all()
+    assert all(routes.geometry.type == "Polygon")
+
+    assert len(routes) == 2
+    assert set(routes.id) == {1, 3}
+
+    # account for rounded corners
+    assert 19**2 < routes.iloc[0].geometry.area < 20**2
+    assert routes.iloc[1].geometry.area == 21 * 20
+
+
+def test_buffer_routes_range_dne_voltage(sample_paths):
+    """Test buffering routes by row width with range of voltages"""
+
+    sample_paths = gpd.GeoDataFrame(
+        {
+            "id": [1, 2, 3, 4],
+            "A": ["a", "b", "c", "d"],
+            "voltage": [12.0, 20, 24, 30],
+        },
+        geometry=[
+            box(-5, -5, 5, 5),
+            LineString([(10, -7), (10, 13)]),
+            LineString([(9, -8), (9, 13)]),
+            LineString([(11, -9), (12, 13)]),
+        ],
+        crs="ESRI:102008",
+    )
+
+    row_width_ranges = [
+        {"min": 0, "max": 18, "width": 10},
+        {"min": 18, "max": 30, "width": 20},
+    ]
+    with pytest.warns(
+        revrtWarning, match="1 route\\(s\\) will be dropped due to missing"
+    ):
+        routes = buffer_routes(sample_paths, row_width_ranges=row_width_ranges)
+
+    assert "geometry" in routes
+    assert routes.geometry.is_valid.all()
+    assert all(routes.geometry.type == "Polygon")
+
+    assert len(routes) == 3
+    assert set(routes.id) == {1, 2, 3}
+
+    # account for rounded corners
+    assert 19**2 < routes.iloc[0].geometry.area < 20**2
+    assert routes.iloc[1].geometry.area == 20 * 20
+    assert routes.iloc[2].geometry.area == 21 * 20
 
 
 def test_check_geotiff_bad_bands(sample_tiff_fp, sample_tiff_props, tmp_path):
