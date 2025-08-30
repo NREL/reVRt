@@ -792,5 +792,88 @@ def test_cli_layers_to_file(
         ).get(tl2_name)
 
 
+def test_cli_layers_from_file_single(
+    cli_runner, tmp_path, sample_tiff_fp, sample_tiff_fp_2x
+):
+    """Test layers-to-file CLI"""
+
+    out_file_fp = tmp_path / "test-cli.zarr"
+    lf = LayeredFile(out_file_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+    lf.write_geotiff_to_file(sample_tiff_fp_2x, "test_layer_2")
+
+    config = {
+        "fp": str(out_file_fp),
+        "out_layer_dir": str(tmp_path / "test"),
+        "layers": ["test_layer_2"],
+    }
+
+    config_path = tmp_path / "config.json"
+    with config_path.open("w", encoding="utf-8") as f:
+        json.dump(config, f)
+
+    result = cli_runner.invoke(main, ["layers-from-file", "-c", config_path])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    out_tiff_fp_1 = tmp_path / "test" / "test_layer.tif"
+    out_tiff_fp_2 = tmp_path / "test" / "test_layer_2.tif"
+
+    assert not out_tiff_fp_1.exists()
+    assert out_tiff_fp_2.exists()
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp_2x) as truth_tif,
+        rioxarray.open_rasterio(out_tiff_fp_2) as test_tif,
+    ):
+        assert np.allclose(truth_tif, test_tif)
+        assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
+        assert truth_tif.rio.crs == test_tif.rio.crs
+
+
+def test_cli_layers_from_file_all(
+    cli_runner, tmp_path, sample_tiff_fp, sample_tiff_fp_2x
+):
+    """Test layers-from-file CLI"""
+
+    out_file_fp = tmp_path / "test-cli.zarr"
+    lf = LayeredFile(out_file_fp)
+    lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
+    lf.write_geotiff_to_file(sample_tiff_fp_2x, "test_layer_2")
+
+    config = {"fp": str(out_file_fp)}
+
+    config_path = tmp_path / "config.json"
+    with config_path.open("w", encoding="utf-8") as f:
+        json.dump(config, f)
+
+    result = cli_runner.invoke(main, ["layers-from-file", "-c", config_path])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    out_tiff_fp_1 = tmp_path / "test_layer.tif"
+    out_tiff_fp_2 = tmp_path / "test_layer_2.tif"
+
+    assert len(list(tmp_path.glob("*.tif"))) == 2
+    assert out_tiff_fp_1.exists()
+    assert out_tiff_fp_2.exists()
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp) as truth_tif,
+        rioxarray.open_rasterio(out_tiff_fp_1) as test_tif,
+    ):
+        assert np.allclose(truth_tif, test_tif)
+        assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
+        assert truth_tif.rio.crs == test_tif.rio.crs
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp_2x) as truth_tif,
+        rioxarray.open_rasterio(out_tiff_fp_2) as test_tif,
+    ):
+        assert np.allclose(truth_tif, test_tif)
+        assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
+        assert truth_tif.rio.crs == test_tif.rio.crs
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
