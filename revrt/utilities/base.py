@@ -1,8 +1,13 @@
 """Base reVRt utilities"""
 
-import numpy as np
+import shutil
+from pathlib import Path
 
-from revrt.exceptions import revrtValueError
+import rioxarray
+import numpy as np
+import xarray as xr
+
+from revrt.exceptions import revrtProfileCheckError, revrtValueError
 
 
 def buffer_routes(
@@ -83,6 +88,83 @@ def buffer_routes(
     routes["geometry"] = routes.buffer(half_width, cap_style="flat")
 
     return routes
+
+
+def delete_data_file(fp):
+    """Delete data file (can be Zarr, which is a directory)
+
+    Parameters
+    ----------
+    fp : path-like
+        Path to data file (or directory in case of Zarr).
+    """
+    fp = Path(fp)
+    if not fp.exists():
+        return
+
+    if fp.is_dir():
+        shutil.rmtree(fp)
+    else:
+        fp.unlink()
+
+
+def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
+    """Compare GeoTIFF with exclusion layer and raise errors if mismatch
+
+    Parameters
+    ----------
+    layer_file_fp : path-like
+        Path to data representing a :class:`LayeredFile` instance.
+    geotiff : path-like
+        Path to GeoTIFF file.
+    transform_atol : float, default=0.01
+        Absolute tolerance parameter when comparing GeoTIFF transform
+        data.
+
+    Raises
+    ------
+    revrtProfileCheckError
+        If shape, profile, or transform don't match between layered file
+        and GeoTIFF file.
+    """
+    with (
+        xr.open_dataset(
+            layer_file_fp, consolidated=False, engine="zarr"
+        ) as ds,
+        rioxarray.open_rasterio(geotiff) as tif,
+    ):
+        if len(tif.band) > 1:
+            msg = f"{geotiff} contains more than one band!"
+            raise revrtProfileCheckError(msg)
+
+        layered_file_shape = ds.sizes["band"], ds.sizes["y"], ds.sizes["x"]
+        if layered_file_shape != tif.shape:
+            msg = (
+                f"Shape of layer data in {geotiff} and {layer_file_fp} "
+                f"do not match!\n {tif.shape} !=\n {layered_file_shape}"
+            )
+            raise revrtProfileCheckError(msg)
+
+        layered_file_crs = ds.rio.crs
+        tif_crs = tif.rio.crs
+        if layered_file_crs != tif_crs:
+            msg = (
+                f'Geospatial "CRS" in {geotiff} and {layer_file_fp} do not '
+                f"match!\n {tif_crs} !=\n {layered_file_crs}"
+            )
+            raise revrtProfileCheckError(msg)
+
+        layered_file_transform = ds.rio.transform()
+        tif_transform = tif.rio.transform()
+        if not np.allclose(
+            layered_file_transform, tif_transform, atol=transform_atol
+        ):
+            msg = (
+                f'Geospatial "transform" in {geotiff} and {layer_file_fp} '
+                f"do not match!\n {tif_transform} !=\n "
+                f"{layered_file_transform}"
+            )
+            raise revrtProfileCheckError(msg)
 
 
 def _compute_half_width_using_ranges(
