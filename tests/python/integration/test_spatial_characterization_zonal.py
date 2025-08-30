@@ -435,12 +435,12 @@ def test_cli_command_parallel(tmp_cwd, cli_runner):
         "layers": [
             {
                 "geotiff_fp": str(raster_fp),
-                "lcp_fp": str(zones_fp),
+                "route_fp": str(zones_fp),
                 "stats": "count min",
             },
             {
                 "geotiff_fp": str(raster_fp),
-                "lcp_fp": str(zones_fp),
+                "route_fp": str(zones_fp),
                 "prefix": "test_",
                 "stats": "max mean",
                 "copy_properties": ["A"],
@@ -454,7 +454,7 @@ def test_cli_command_parallel(tmp_cwd, cli_runner):
 
     assert not list(tmp_cwd.glob("*.csv"))
     cli_runner.invoke(
-        main, ["lcp-characterization", "-c", config_fp.as_posix()]
+        main, ["route-characterization", "-c", config_fp.as_posix()]
     )
 
     out_files = sorted(tmp_cwd.glob("*.csv"))
@@ -544,13 +544,13 @@ def test_cli_command_parallel_with_multiplier(tmp_cwd, cli_runner):
         "layers": [
             {
                 "geotiff_fp": str(raster_fp),
-                "lcp_fp": str(zones_fp),
+                "route_fp": str(zones_fp),
                 "stats": "count min",
                 "multiplier_scalar": 1000.0,
             },
             {
                 "geotiff_fp": str(raster_fp),
-                "lcp_fp": str(zones_fp),
+                "route_fp": str(zones_fp),
                 "prefix": "test_",
                 "stats": "max mean",
                 "copy_properties": ["A"],
@@ -565,7 +565,7 @@ def test_cli_command_parallel_with_multiplier(tmp_cwd, cli_runner):
 
     assert not list(tmp_cwd.glob("*.csv"))
     cli_runner.invoke(
-        main, ["lcp-characterization", "-c", config_fp.as_posix()]
+        main, ["route-characterization", "-c", config_fp.as_posix()]
     )
 
     out_files = sorted(tmp_cwd.glob("*.csv"))

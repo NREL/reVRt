@@ -5,17 +5,17 @@ import logging
 from gaps.cli import make_cli
 
 from revrt import __version__
-from revrt.spatial_characterization.cli import lcp_characterizations_command
+from revrt.spatial_characterization.cli import route_characterizations_command
 
 
 logger = logging.getLogger(__name__)
 
 
-commands = [lcp_characterizations_command]
+commands = [route_characterizations_command]
 main = make_cli(commands, info={"name": "reVRt", "version": __version__})
 
 # export GAPs commands to namespace for documentation
-lcp_characterization = main.commands["lcp-characterization"]
+route_characterization = main.commands["route-characterization"]
 
 
 if __name__ == "__main__":
