@@ -736,5 +736,8 @@ def test_layers_to_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path, as_list):
         assert np.allclose(ds[tl2_name], truth_tif_2)
 
 
+# TODO: Add cli tests
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
