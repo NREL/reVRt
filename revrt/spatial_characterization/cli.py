@@ -270,6 +270,10 @@ def _preprocess_stats_config(
             At least one of `row_widths` or `row_width_ranges` must be
             provided.
 
+        .. WARNING::
+           Routes without a valid voltage in the `row_widths` or
+           `row_width_ranges` input will not be characterized.
+
         If a path is provided, it should point to a JSON file containing
         the row width dictionary as specified above.
         By default, ``None``.
