@@ -1,5 +1,7 @@
 """Integration tests for reVRt handlers"""
 
+import json
+import traceback
 from pathlib import Path
 
 import pytest
@@ -9,6 +11,7 @@ import xarray as xr
 from pyproj.crs import CRS
 from rasterio.transform import Affine
 
+from revrt._cli import main
 from revrt.utilities import LayeredFile
 
 
@@ -304,6 +307,72 @@ def test_roundtrip(as_list, tmp_path, test_utility_data_dir):
             assert ds[layer].rio.crs == truth_tif.rio.crs
             assert test_tif.rio.crs == truth_tif.rio.crs
             assert ds[layer].attrs["description"] == descriptions[layer]
+
+
+@pytest.mark.parametrize("as_list", [True, False])
+def test_roundtrip_cli(cli_runner, tmp_path, test_utility_data_dir, as_list):
+    """Test CLI with round-trip data conversion"""
+
+    out_file_fp = tmp_path / "test-cli.zarr"
+    assert not out_file_fp.exists()
+    config = {"fp": str(out_file_fp)}
+
+    config["layers"] = [
+        test_utility_data_dir / "ri_padus.tif",
+        test_utility_data_dir / "ri_reeds_regions.tif",
+        test_utility_data_dir / "ri_smod.tif",  # cspell:disable-line
+        test_utility_data_dir / "ri_srtm_slope.tif",  # cspell:disable-line
+    ]
+    layer_names = {fp.stem: fp for fp in config["layers"]}
+    config["descriptions"] = {
+        fp.stem: f"desc_{i}" for i, fp in enumerate(config["layers"])
+    }
+
+    if not as_list:
+        config["layers"] = {k: str(v) for k, v in layer_names.items()}
+    else:
+        config["layers"] = list(map(str, config["layers"]))
+
+    config_path = tmp_path / "config.json"
+    with config_path.open("w", encoding="utf-8") as f:
+        json.dump(config, f)
+
+    result = cli_runner.invoke(main, ["layers-to-file", "-c", config_path])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    config_extract_path = tmp_path / "config_extract.json"
+    with config_extract_path.open("w", encoding="utf-8") as f:
+        json.dump({"fp": str(out_file_fp)}, f)
+
+    result = cli_runner.invoke(
+        main, ["layers-from-file", "-c", config_extract_path]
+    )
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    for layer, truth_fp in layer_names.items():
+        test_tiff_fp = tmp_path / f"{layer}.tif"
+        with (
+            rioxarray.open_rasterio(truth_fp) as truth_tif,
+            rioxarray.open_rasterio(test_tiff_fp) as test_tif,
+            xr.open_dataset(
+                out_file_fp, consolidated=False, engine="zarr"
+            ) as ds,
+        ):
+            assert np.allclose(ds[layer], truth_tif)
+            assert np.allclose(test_tif, truth_tif)
+            assert np.allclose(
+                ds[layer].rio.transform(), truth_tif.rio.transform()
+            )
+            assert np.allclose(
+                test_tif.rio.transform(), truth_tif.rio.transform()
+            )
+            assert ds[layer].rio.crs == truth_tif.rio.crs
+            assert test_tif.rio.crs == truth_tif.rio.crs
+            assert (
+                ds[layer].attrs["description"] == config["descriptions"][layer]
+            )
 
 
 if __name__ == "__main__":
