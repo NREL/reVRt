@@ -657,9 +657,10 @@ class LayeredFile:
 
         Parameters
         ----------
-        out_dir : str
+        out_dir : path-like
             Path to output directory into which layers should be saved
-            as GeoTIFFs.
+            as GeoTIFFs. This directory will be created if it does not
+            already exist.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
@@ -671,6 +672,11 @@ class LayeredFile:
                 - count
                 - width
                 - height
+
+        Returns
+        -------
+        dict
+            Dictionary mapping layer names to GeoTIFF files created.
         """
         out_dir = Path(out_dir)
         if not out_dir.exists():
@@ -681,6 +687,7 @@ class LayeredFile:
             for layer_name in self.data_layers
         }
         self.extract_layers(layers, **profile_kwargs)
+        return layers
 
 
 class LayeredTransmissionFile(LayeredFile):
