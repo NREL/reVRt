@@ -1,7 +1,9 @@
 """Tests for reVRt utilities"""
 
+import os
 import json
 import shutil
+import platform
 import traceback
 import contextlib
 from pathlib import Path
@@ -792,6 +794,11 @@ def test_cli_layers_to_file(
         ).get(tl2_name)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli_layers_from_file_single(
     cli_runner, tmp_path, sample_tiff_fp, sample_tiff_fp_2x
 ):
@@ -831,6 +838,11 @@ def test_cli_layers_from_file_single(
         assert truth_tif.rio.crs == test_tif.rio.crs
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli_layers_from_file_all(
     cli_runner, tmp_path, sample_tiff_fp, sample_tiff_fp_2x
 ):

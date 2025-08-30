@@ -1,6 +1,8 @@
 """Integration tests for reVRt handlers"""
 
+import os
 import json
+import platform
 import traceback
 from pathlib import Path
 
@@ -309,6 +311,11 @@ def test_roundtrip(as_list, tmp_path, test_utility_data_dir):
             assert ds[layer].attrs["description"] == descriptions[layer]
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 @pytest.mark.parametrize("as_list", [True, False])
 def test_roundtrip_cli(cli_runner, tmp_path, test_utility_data_dir, as_list):
     """Test CLI with round-trip data conversion"""
