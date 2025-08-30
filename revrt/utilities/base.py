@@ -2,12 +2,14 @@
 
 import shutil
 from pathlib import Path
+from warnings import warn
 
 import rioxarray
 import numpy as np
 import xarray as xr
 
 from revrt.exceptions import revrtProfileCheckError, revrtValueError
+from revrt.warn import revrtWarning
 
 
 def buffer_routes(
@@ -96,6 +98,16 @@ def buffer_routes(
             half_width = hw_from_volts
         else:
             half_width[hw_from_volts > 0] = hw_from_volts[hw_from_volts > 0]
+
+    mask = half_width < 0
+    if mask.any():
+        msg = (
+            f"{sum(mask):,d} route(s) will be dropped due to missing "
+            "voltage-to-ROW-width mapping"
+        )
+        warn(msg, revrtWarning)
+        routes = routes.loc[~mask].copy()
+        half_width = half_width.loc[~mask]
 
     routes["geometry"] = routes.buffer(half_width, cap_style="flat")
 
