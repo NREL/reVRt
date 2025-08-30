@@ -15,17 +15,27 @@ def buffer_routes(
 ):
     """Buffer routes by specified row widths or row width ranges
 
+    .. WARNING::
+        Paths without a valid voltage in the `row_widths` or
+        `row_width_ranges` input will be dropped from the output.
+
     Parameters
     ----------
     routes : geopandas.GeoDataFrame
         GeoDataFrame of routes to buffer. This dataframe must contain
         the route geometry as well as the `row_width_key` column.
-    row_widths : dict
+    row_widths : dict, optional
         A dictionary specifying the row widths in the following format:
         ``{"row_width_id": row_width_meters}``. The ``row_width_id`` is
         a value used to match each route with a particular ROW width
         (this is typically a voltage). The value should be found under
         the ``row_width_key`` entry of the ``routes``.
+
+        .. IMPORTANT::
+            At least one of `row_widths` or `row_width_ranges` must be
+            provided.
+
+        By default, ``None``.
     row_width_ranges : list, optional
         Optional list of dictionaries, where each dictionary contains
         the keys "min", "max", and "width". This can be used to specify
@@ -58,13 +68,15 @@ def buffer_routes(
 
     Returns
     -------
-    _type_
-        _description_
+    geopandas.GeoDataFrame
+        Route input with buffered paths (and without routes that are
+        missing a voltage specification in the `row_widths` or
+        `row_width_ranges` input).
 
     Raises
     ------
     revrtValueError
-        _description_
+        If neither `row_widths` nor `row_width_ranges` are provided.
     """
     if not (row_widths or row_width_ranges):
         msg = "Must provide either `row_widths` or `row_width_ranges` input!"
