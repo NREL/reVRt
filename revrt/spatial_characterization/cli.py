@@ -11,15 +11,17 @@ from gaps.config import load_config
 from gaps.cli import CLICommandFromFunction
 
 from revrt.spatial_characterization.zonal import ZonalStats
+from revrt.utilities import buffer_routes
 
 
 logger = logging.getLogger(__name__)
 
 
-def buffered_lcp_characterizations(
+def buffered_route_characterizations(
     geotiff_fp,
-    lcp_fp,
+    route_fp,
     row_widths,
+    row_width_ranges=None,
     multiplier_scalar=1.0,
     prefix=None,
     copy_properties=None,
@@ -28,24 +30,50 @@ def buffered_lcp_characterizations(
     chunks="auto",
     **kwargs,
 ):
-    """Compute LCP characterizations/statistics
+    """Compute route characterizations/statistics
 
-    Each LCP route is buffered before computing statistics.
+    Each route is buffered before computing statistics.
 
     Parameters
     ----------
     geotiff_fp : path-like
         Path to the raster file.
-    lcp_fp : path-like
-        Path to the vector file of LCP routes. Must contain a "geometry"
+    route_fp : path-like
+        Path to the vector file of routes. Must contain a "geometry"
         column and the `row_width_key` column (used to map to path ROW
         width).
     row_widths : dict
         A dictionary specifying the row widths in the following format:
         ``{"row_width_id": row_width_meters}``. The ``row_width_id`` is
-        a value used to match each LCP with a particular ROW width (this
-        is typically a voltage). The value should be found under the
-        ``row_width_key`` entry of the ``lcp_fp``.
+        a value used to match each route with a particular ROW width
+        (this is typically a voltage). The value should be found under
+        the ``row_width_key`` entry of the ``route_fp``.
+    row_width_ranges : list, optional
+        Optional list of dictionaries, where each dictionary contains
+        the keys "min", "max", and "width". This can be used to specify
+        row widths based on ranges of values (e.g. voltage). For
+        example, the following input::
+
+            [
+                {"min": 0, "max": 70, "width": 20},
+                {"min": 70, "max": 150, "width": 30},
+                {"min": 200, "max": 350, "width": 40},
+                {"min": 400, "max": 500, "width": 50},
+            ]
+
+        would map voltages in the range ``0 <= volt < 70`` to a row
+        width of 20 meters, ``70 <= volt < 150`` to a row width of 30
+        meters, ``200 <= volt < 350`` to a row width of 40 meters,
+        and so-on.
+
+        .. IMPORTANT::
+            Any values in the `row_widths` dict will take precedence
+            over these ranges. So if a voltage of 138 kV is mapped to a
+            row width of 25 meters in the `row_widths` dict, that value
+            will be used instead of the 30 meter width specified by the
+            ranges above.
+
+        By default, ``None``.
     multiplier_scalar : float, optional
         Optional multiplier value to apply to layer before computing
         statistics. This is useful if you want to scale the values in
@@ -62,7 +90,7 @@ def buffered_lcp_characterizations(
         Option to perform processing in parallel using dask.
         By default, ``False``.
     row_width_key : str, default="voltage"
-        Name of column in vector file of LCP routes used to map to the
+        Name of column in vector file of routes used to map to the
         ROW widths. By default, ``"voltage"``.
     chunks : tuple or str, default="auto"
         ``chunks`` keyword argument to pass down to
@@ -78,21 +106,23 @@ def buffered_lcp_characterizations(
         rioxarray.open_rasterio(geotiff_fp, chunks=chunks) * multiplier_scalar
     )
     logger.debug("Tiff properties:\n%r", rds)
-    # cspell:disable-next-line
-    logger.debug("Tiff chunksizes:\n%r", rds.chunksizes)
+    logger.debug("Tiff chunksizes:\n%r", rds.chunksizes)  # cspell:disable-line
 
-    lcp = gpd.read_file(lcp_fp)
-    lcp = lcp.to_crs(rds.rio.crs)
+    routes = gpd.read_file(route_fp)
+    routes = routes.to_crs(rds.rio.crs)
 
-    row_widths = {str(k): v for k, v in row_widths.items()}
-    half_row = lcp[row_width_key].astype("str").map(row_widths) / 2
-    lcp["geometry"] = lcp.buffer(half_row, cap_style="flat")
+    routes = buffer_routes(
+        routes,
+        row_widths=row_widths,
+        row_width_ranges=row_width_ranges,
+        row_width_key=row_width_key,
+    )
 
     logger.info("Initializing zonal stats with kwargs:\n%s", kwargs)
     zs = ZonalStats(**kwargs)
     logger.info("Computing stats...")
     stats = zs.from_array(
-        zones=lcp,
+        zones=routes,
         raster_array=rds,
         affine_transform=rds.rio.transform(),
         prefix=prefix,
@@ -102,15 +132,16 @@ def buffered_lcp_characterizations(
     return pd.json_normalize(list(stats), sep="_")
 
 
-def _lcp_characterizations_from_config(
+def _route_characterizations_from_config(
     out_dir,
     _row_widths,
     _stat_kwargs,
+    _row_width_ranges=None,
     max_workers=1,
     tag=None,
     memory_limit_per_worker="auto",
 ):
-    """Compute LCP characterizations/statistics
+    """Compute route characterizations/statistics
 
     Parameters
     ----------
@@ -131,9 +162,9 @@ def _lcp_characterizations_from_config(
     tag = tag or ""
     raster_name = _stat_kwargs.get("geotiff_fp")
     raster_name = f"_{Path(raster_name).stem}" if raster_name else ""
-    lcp_name = _stat_kwargs.get("lcp_fp")
-    lcp_name = f"_{Path(lcp_name).stem}" if lcp_name else ""
-    out_fp = Path(out_dir) / f"characterized{raster_name}{lcp_name}{tag}.csv"
+    route_name = _stat_kwargs.get("route_fp")
+    route_name = f"_{Path(route_name).stem}" if route_name else ""
+    out_fp = Path(out_dir) / f"characterized{raster_name}{route_name}{tag}.csv"
 
     logger.debug(
         "Running with max_workers=%r and memory_limit_per_worker=%r",
@@ -147,14 +178,19 @@ def _lcp_characterizations_from_config(
             n_workers=max_workers, memory_limit=memory_limit_per_worker
         )
 
-    out_data = buffered_lcp_characterizations(
-        row_widths=_row_widths, parallel=parallel, **_stat_kwargs
+    out_data = buffered_route_characterizations(
+        row_widths=_row_widths,
+        row_width_ranges=_row_width_ranges,
+        parallel=parallel,
+        **_stat_kwargs,
     )
     out_data.to_csv(out_fp, index=False)
     return str(out_fp)
 
 
-def _preprocess_stats_config(config, layers, row_widths):
+def _preprocess_stats_config(
+    config, layers, row_widths=None, row_width_ranges=None
+):
     """Preprocess user config
 
     Parameters
@@ -167,7 +203,7 @@ def _preprocess_stats_config(config, layers, row_widths):
         following keys:
 
             - geotiff_fp: (REQUIRED) Path to the raster file.
-            - lcp_fp: (REQUIRED) Path to the vector file of LCP routes.
+            - route_fp: (REQUIRED) Path to the vector file of routes.
               Must contain a "geometry" column and the `row_width_key`
               column (used to map to path ROW width).
             - stats: (OPTIONAL) Names of all statistics to compute.
@@ -195,7 +231,7 @@ def _preprocess_stats_config(config, layers, row_widths):
             - nodata : (OPTIONAL) Value in the raster that represents
               `nodata`. This value will not show up in any statistics
               except for the `nodata` statistic itself, which computes
-              the number of `nodata` values within the buffered LCP.
+              the number of `nodata` values within the buffered routes.
               Note that this value is used **in addition to** any
               `NODATA` value in the raster's metadata.
             - all_touched : (OPTIONAL) Boolean flag indicating whether
@@ -215,28 +251,64 @@ def _preprocess_stats_config(config, layers, row_widths):
               separated by a delimiter, you must include it in this
               string (e.g. ``prefix="test_"``).
             - copy_properties: (OPTIONAL) List of columns names to copy
-              over from the vector file of LCP routes.
+              over from the vector file of routes.
             - row_width_key: (OPTIONAL) Name of column in vector file of
-              LCP routes used to map to the ROW widths.
+              routes used to map to the ROW widths.
               By default, ``"voltage"``.
             - chunks : (OPTIONAL) ``chunks`` keyword argument to pass
               down to :func:`rioxarray.open_rasterio`. Use this to
               control the Dask chunk size.
 
-    row_widths : dict or path-like
+    row_widths : dict or path-like, optional
         A dictionary specifying the row widths in the following format:
         ``{"row_width_id": row_width_meters}``. The ``row_width_id`` is
-        a value used to match each LCP with a particular ROW width (this
-        is typically a voltage). The value should be found under the
-        ``row_width_key`` entry of the ``lcp_fp``. If a path-like
-        object, it should point to a JSON file containing the row width
-        dictionary as specified above.
+        a value used to match each route with a particular ROW width
+        (this is typically a voltage). The value should be found under
+        the ``row_width_key`` entry of the ``route_fp``.
+
+        .. IMPORTANT::
+            At least one of `row_widths` or `row_width_ranges` must be
+            provided.
+
+        If a path is provided, it should point to a JSON file containing
+        the row width dictionary as specified above.
+        By default, ``None``.
+    row_width_ranges : list, optional
+        Optional list of dictionaries, where each dictionary contains
+        the keys "min", "max", and "width". This can be used to specify
+        row widths based on ranges of values (e.g. voltage). For
+        example, the following input::
+
+            [
+                {"min": 0, "max": 70, "width": 20},
+                {"min": 70, "max": 150, "width": 30},
+                {"min": 200, "max": 350, "width": 40},
+                {"min": 400, "max": 500, "width": 50},
+            ]
+
+        would map voltages in the range ``0 <= volt < 70`` to a row
+        width of 20 meters, ``70 <= volt < 150`` to a row width of 30
+        meters, ``200 <= volt < 350`` to a row width of 40 meters,
+        and so-on.
+
+        .. IMPORTANT::
+            Any values in the `row_widths` dict will take precedence
+            over these ranges. So if a voltage of 138 kV is mapped to a
+            row width of 25 meters in the `row_widths` dict, that value
+            will be used instead of the 30 meter width specified by the
+            ranges above.
+
+        If a path is provided, it should point to a JSON file containing
+        the list of dictionaries. By default, ``None``.
     """
+    for key, user_input in (
+        ("_row_widths", row_widths),
+        ("_row_width_ranges", row_width_ranges),
+    ):
+        if isinstance(user_input, str):
+            user_input = load_config(user_input)  # noqa: PLW2901
 
-    if isinstance(row_widths, str):
-        row_widths = load_config(row_widths)
-
-    config["_row_widths"] = row_widths
+        config[key] = user_input
 
     if isinstance(layers, dict):
         layers = [layers]
@@ -245,9 +317,9 @@ def _preprocess_stats_config(config, layers, row_widths):
     return config
 
 
-lcp_characterizations_command = CLICommandFromFunction(
-    _lcp_characterizations_from_config,
-    name="lcp-characterization",
+route_characterizations_command = CLICommandFromFunction(
+    _route_characterizations_from_config,
+    name="route-characterization",
     add_collect=False,
     split_keys=["_stat_kwargs"],
     config_preprocessor=_preprocess_stats_config,
