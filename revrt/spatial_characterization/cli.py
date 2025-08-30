@@ -11,6 +11,7 @@ from gaps.config import load_config
 from gaps.cli import CLICommandFromFunction
 
 from revrt.spatial_characterization.zonal import ZonalStats
+from revrt.utilities import buffer_routes
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ def buffered_lcp_characterizations(
     geotiff_fp,
     lcp_fp,
     row_widths,
+    row_width_ranges=None,
     multiplier_scalar=1.0,
     prefix=None,
     copy_properties=None,
@@ -46,6 +48,32 @@ def buffered_lcp_characterizations(
         a value used to match each LCP with a particular ROW width (this
         is typically a voltage). The value should be found under the
         ``row_width_key`` entry of the ``lcp_fp``.
+    row_width_ranges : list, optional
+        Optional list of dictionaries, where each dictionary contains
+        the keys "min", "max", and "width". This can be used to specify
+        row widths based on ranges of values (e.g. voltage). For
+        example, the following input::
+
+            [
+                {"min": 0, "max": 70, "width": 20},
+                {"min": 70, "max": 150, "width": 30},
+                {"min": 200, "max": 350, "width": 40},
+                {"min": 400, "max": 500, "width": 50},
+            ]
+
+        would map voltages in the range ``0 <= volt < 70`` to a row
+        width of 20 meters, ``70 <= volt < 150`` to a row width of 30
+        meters, ``200 <= volt < 350`` to a row width of 40 meters,
+        and so-on.
+
+        .. IMPORTANT::
+            Any values in the `row_widths` dict will take precedence
+            over these ranges. So if a voltage of 138 kV is mapped to a
+            row width of 25 meters in the `row_widths` dict, that value
+            will be used instead of the 30 meter width specified by the
+            ranges above.
+
+        By default, ``None``.
     multiplier_scalar : float, optional
         Optional multiplier value to apply to layer before computing
         statistics. This is useful if you want to scale the values in
@@ -78,15 +106,17 @@ def buffered_lcp_characterizations(
         rioxarray.open_rasterio(geotiff_fp, chunks=chunks) * multiplier_scalar
     )
     logger.debug("Tiff properties:\n%r", rds)
-    # cspell:disable-next-line
-    logger.debug("Tiff chunksizes:\n%r", rds.chunksizes)
+    logger.debug("Tiff chunksizes:\n%r", rds.chunksizes)  # cspell:disable-line
 
     lcp = gpd.read_file(lcp_fp)
     lcp = lcp.to_crs(rds.rio.crs)
 
-    row_widths = {str(k): v for k, v in row_widths.items()}
-    half_row = lcp[row_width_key].astype("str").map(row_widths) / 2
-    lcp["geometry"] = lcp.buffer(half_row, cap_style="flat")
+    lcp = buffer_routes(
+        lcp,
+        row_widths=row_widths,
+        row_width_ranges=row_width_ranges,
+        row_width_key=row_width_key,
+    )
 
     logger.info("Initializing zonal stats with kwargs:\n%s", kwargs)
     zs = ZonalStats(**kwargs)
@@ -106,6 +136,7 @@ def _lcp_characterizations_from_config(
     out_dir,
     _row_widths,
     _stat_kwargs,
+    _row_width_ranges=None,
     max_workers=1,
     tag=None,
     memory_limit_per_worker="auto",
@@ -148,13 +179,18 @@ def _lcp_characterizations_from_config(
         )
 
     out_data = buffered_lcp_characterizations(
-        row_widths=_row_widths, parallel=parallel, **_stat_kwargs
+        row_widths=_row_widths,
+        row_width_ranges=_row_width_ranges,
+        parallel=parallel,
+        **_stat_kwargs,
     )
     out_data.to_csv(out_fp, index=False)
     return str(out_fp)
 
 
-def _preprocess_stats_config(config, layers, row_widths):
+def _preprocess_stats_config(
+    config, layers, row_widths=None, row_width_ranges=None
+):
     """Preprocess user config
 
     Parameters
@@ -223,20 +259,56 @@ def _preprocess_stats_config(config, layers, row_widths):
               down to :func:`rioxarray.open_rasterio`. Use this to
               control the Dask chunk size.
 
-    row_widths : dict or path-like
+    row_widths : dict or path-like, optional
         A dictionary specifying the row widths in the following format:
         ``{"row_width_id": row_width_meters}``. The ``row_width_id`` is
         a value used to match each LCP with a particular ROW width (this
         is typically a voltage). The value should be found under the
-        ``row_width_key`` entry of the ``lcp_fp``. If a path-like
-        object, it should point to a JSON file containing the row width
-        dictionary as specified above.
+        ``row_width_key`` entry of the ``lcp_fp``.
+
+        .. IMPORTANT::
+            At least one of `row_widths` or `row_width_ranges` must be
+            provided.
+
+        If a path is provided, it should point to a JSON file containing
+        the row width dictionary as specified above.
+        By default, ``None``.
+    row_width_ranges : list, optional
+        Optional list of dictionaries, where each dictionary contains
+        the keys "min", "max", and "width". This can be used to specify
+        row widths based on ranges of values (e.g. voltage). For
+        example, the following input::
+
+            [
+                {"min": 0, "max": 70, "width": 20},
+                {"min": 70, "max": 150, "width": 30},
+                {"min": 200, "max": 350, "width": 40},
+                {"min": 400, "max": 500, "width": 50},
+            ]
+
+        would map voltages in the range ``0 <= volt < 70`` to a row
+        width of 20 meters, ``70 <= volt < 150`` to a row width of 30
+        meters, ``200 <= volt < 350`` to a row width of 40 meters,
+        and so-on.
+
+        .. IMPORTANT::
+            Any values in the `row_widths` dict will take precedence
+            over these ranges. So if a voltage of 138 kV is mapped to a
+            row width of 25 meters in the `row_widths` dict, that value
+            will be used instead of the 30 meter width specified by the
+            ranges above.
+
+        If a path is provided, it should point to a JSON file containing
+        the list of dictionaries. By default, ``None``.
     """
+    for key, user_input in (
+        ("_row_widths", row_widths),
+        ("_row_width_ranges", row_width_ranges),
+    ):
+        if isinstance(user_input, str):
+            user_input = load_config(user_input)  # noqa: PLW2901
 
-    if isinstance(row_widths, str):
-        row_widths = load_config(row_widths)
-
-    config["_row_widths"] = row_widths
+        config[key] = user_input
 
     if isinstance(layers, dict):
         layers = [layers]
