@@ -1,6 +1,8 @@
 """Tests for reVRt utilities"""
 
+import json
 import shutil
+import traceback
 import contextlib
 from pathlib import Path
 
@@ -15,6 +17,7 @@ from rasterio.warp import Resampling
 from rasterio.transform import from_origin
 
 import revrt
+from revrt._cli import main
 from revrt.utilities import LayeredFile, LayeredTransmissionFile
 from revrt.exceptions import (
     revrtFileExistsError,
@@ -736,7 +739,57 @@ def test_layers_to_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path, as_list):
         assert np.allclose(ds[tl2_name], truth_tif_2)
 
 
-# TODO: Add cli tests
+@pytest.mark.parametrize("as_list", [True, False])
+def test_cli_layers_to_file(
+    cli_runner, tmp_path, sample_tiff_fp, sample_tiff_fp_2x, as_list
+):
+    """Test layers-to-file CLI"""
+
+    out_file_fp = tmp_path / "test-cli.zarr"
+    assert not out_file_fp.exists()
+    config = {"fp": str(out_file_fp)}
+
+    if as_list:
+        config["layers"] = [str(sample_tiff_fp), str(sample_tiff_fp_2x)]
+        tl1_name = sample_tiff_fp.stem
+        tl2_name = sample_tiff_fp_2x.stem
+    else:
+        tl1_name = "test_layer"
+        tl2_name = "test_layer_2"
+        config["layers"] = {
+            tl1_name: str(sample_tiff_fp),
+            tl2_name: str(sample_tiff_fp_2x),
+        }
+        config["descriptions"] = {tl1_name: "desc_1", tl2_name: "desc_2"}
+
+    config_path = tmp_path / "config.json"
+    with config_path.open("w", encoding="utf-8") as f:
+        json.dump(config, f)
+
+    result = cli_runner.invoke(main, ["layers-to-file", "-c", config_path])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    with (
+        xr.open_dataset(out_file_fp, consolidated=False, engine="zarr") as ds,
+        rioxarray.open_rasterio(sample_tiff_fp) as truth_tif,
+        rioxarray.open_rasterio(sample_tiff_fp_2x) as truth_tif_2,
+    ):
+        assert tl1_name in set(ds.variables)
+        assert tl2_name in set(ds.variables)
+        assert ds[tl1_name].rio.crs == truth_tif.rio.crs
+        assert ds[tl2_name].rio.crs == truth_tif_2.rio.crs
+        assert ds[tl1_name].rio.transform() == truth_tif.rio.transform()
+        assert ds[tl2_name].rio.transform() == truth_tif_2.rio.transform()
+        assert np.allclose(ds[tl1_name], truth_tif)
+        assert np.allclose(ds[tl2_name], truth_tif_2)
+
+        assert ds[tl1_name].attrs["description"] == config.get(
+            "descriptions", {}
+        ).get(tl1_name)
+        assert ds[tl2_name].attrs["description"] == config.get(
+            "descriptions", {}
+        ).get(tl2_name)
 
 
 if __name__ == "__main__":
