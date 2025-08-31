@@ -24,6 +24,7 @@ from revrt.utilities import (
     LayeredFile,
     file_full_path,
     load_data_using_layer_file_profile,
+    save_data_using_layer_file_profile,
 )
 from revrt.exceptions import (
     revrtFileExistsError,
@@ -576,7 +577,9 @@ def test_write_tiff_using_layer_profile(
 
     out_tiff_fp = tmp_path / "test.tif"
     assert not out_tiff_fp.exists()
-    lf.save_data_using_layer_file_profile(new_data, out_tiff_fp, nodata=nodata)
+    save_data_using_layer_file_profile(
+        test_fp, new_data, out_tiff_fp, nodata=nodata
+    )
 
     assert out_tiff_fp.exists()
     with rioxarray.open_rasterio(out_tiff_fp) as tif:
@@ -604,7 +607,7 @@ def test_write_tiff_using_layer_profile_bad_shape(
         revrtValueError,
         match=r"Shape of provided data .* does not match shape of LayeredFile",
     ):
-        lf.save_data_using_layer_file_profile(new_data, out_tiff_fp)
+        save_data_using_layer_file_profile(test_fp, new_data, out_tiff_fp)
 
 
 def test_write_tiff_using_layer_profile_bool(
@@ -622,7 +625,7 @@ def test_write_tiff_using_layer_profile_bool(
 
     out_tiff_fp = tmp_path / "test.tif"
     assert not out_tiff_fp.exists()
-    lf.save_data_using_layer_file_profile(new_data, out_tiff_fp)
+    save_data_using_layer_file_profile(test_fp, new_data, out_tiff_fp)
 
     assert out_tiff_fp.exists()
     with rioxarray.open_rasterio(out_tiff_fp) as tif:

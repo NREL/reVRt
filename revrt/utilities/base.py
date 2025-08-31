@@ -19,6 +19,7 @@ from revrt.warn import revrtWarning
 
 
 logger = logging.getLogger(__name__)
+_NUM_GEOTIFF_DIMS = 3  # (band, y, x)
 TRANSFORM_ATOL = 0.01
 """Tolerance in transform comparison when checking GeoTIFFs"""
 
@@ -277,6 +278,69 @@ def load_data_using_layer_file_profile(layer_fp, geotiff, tiff_chunks="auto"):
         )
 
     return tif
+
+
+def save_data_using_layer_file_profile(
+    layer_fp, data, geotiff, nodata=None, **profile_kwargs
+):
+    """Write to GeoTIFF file
+
+    Parameters
+    ----------
+    layer_fp : path-like
+        Path to layered file on disk. This file must already exist.
+    data : array-like
+        Data to write to GeoTIFF using ``LayeredFile`` profile.
+    geotiff : path-like
+        Path to output GeoTIFF file.
+    nodata : int | float, optional
+        Optional nodata value for the raster layer. By default,
+        ``None``, which does not add a "nodata" value.
+    **profile_kwargs
+        Additional keyword arguments to pass into writing the
+        raster. The following attributes ar ignored (they are set
+        using properties of the source :class:`LayeredFile`):
+
+            - nodata
+            - transform
+            - crs
+            - count
+            - width
+            - height
+
+    Raises
+    ------
+    revrtValueError
+        If shape of provided data does not match shape of
+        :class:`LayeredFile`.
+    """
+    if data.ndim < _NUM_GEOTIFF_DIMS:
+        data = np.expand_dims(data, 0)
+
+    with xr.open_dataset(layer_fp, consolidated=False, engine="zarr") as ds:
+        crs = ds.rio.crs
+        width, height = ds.rio.width, ds.rio.height
+        transform = ds.rio.transform()
+
+    if data.shape[1:] != (height, width):
+        msg = (
+            f"Shape of provided data {data.shape[1:]} does "
+            f"not match shape of LayeredFile: {(height, width)}"
+        )
+        raise revrtValueError(msg)
+
+    if data.dtype.name == "bool":
+        data = data.astype("uint8")
+
+    da = xr.DataArray(data, dims=("band", "y", "x"))
+    da.attrs["count"] = 1
+    da = da.rio.write_crs(crs)
+    da = da.rio.write_transform(transform)
+    if nodata is not None:
+        nodata = da.dtype.type(nodata)
+        da = da.rio.write_nodata(nodata)
+
+    da.rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
 
 
 def _compute_half_width_using_ranges(

@@ -18,7 +18,12 @@ from revrt.exceptions import (
     revrtKeyError,
     revrtValueError,
 )
-from revrt.utilities.base import check_geotiff, delete_data_file
+from revrt.utilities.base import (
+    check_geotiff,
+    delete_data_file,
+    TRANSFORM_ATOL,
+    _NUM_GEOTIFF_DIMS,
+)
 from revrt.warn import revrtWarning
 
 
@@ -28,9 +33,6 @@ _ZARR_COMPRESSORS = zarr.codecs.BloscCodec(  # cspell:disable-line
     clevel=9,  # cspell:disable-line
     shuffle=zarr.codecs.BloscShuffle.shuffle,  # cspell:disable-line
 )
-_NUM_GEOTIFF_DIMS = 3  # (band, y, x)
-TRANSFORM_ATOL = 0.01
-"""Tolerance in transform comparison when checking GeoTIFFs"""
 
 
 class LayeredFile:
@@ -453,65 +455,6 @@ class LayeredFile:
             self.fp, chunks=ds_chunks, consolidated=False, engine="zarr"
         ) as ds:
             ds[layer].rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
-
-    def save_data_using_layer_file_profile(
-        self, data, geotiff, nodata=None, **profile_kwargs
-    ):
-        """Write to GeoTIFF file
-
-        Parameters
-        ----------
-        data : array-like
-            Data to write to GeoTIFF using ``LayeredFile`` profile.
-        geotiff : path-like
-            Path to output GeoTIFF file.
-        nodata : int | float, optional
-            Optional nodata value for the raster layer. By default,
-            ``None``, which does not add a "nodata" value.
-        **profile_kwargs
-            Additional keyword arguments to pass into writing the
-            raster. The following attributes ar ignored (they are set
-            using properties of the source :class:`LayeredFile`):
-
-                - nodata
-                - transform
-                - crs
-                - count
-                - width
-                - height
-
-        Raises
-        ------
-        revrtValueError
-            If shape of provided data does not match shape of
-            :class:`LayeredFile`.
-        """
-        if data.ndim < _NUM_GEOTIFF_DIMS:
-            data = np.expand_dims(data, 0)
-
-        if data.shape[1:] != self.shape:
-            msg = (
-                f"Shape of provided data {data.shape[1:]} does "
-                f"not match shape of LayeredFile: {self.shape}"
-            )
-            raise revrtValueError(msg)
-
-        if data.dtype.name == "bool":
-            data = data.astype("uint8")
-
-        with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
-            crs = ds.rio.crs
-            transform = ds.rio.transform()
-
-        da = xr.DataArray(data, dims=("band", "y", "x"))
-        da.attrs["count"] = 1
-        da = da.rio.write_crs(crs)
-        da = da.rio.write_transform(transform)
-        if nodata is not None:
-            nodata = da.dtype.type(nodata)
-            da = da.rio.write_nodata(nodata)
-
-        da.rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
 
     def layers_to_file(
         self,
