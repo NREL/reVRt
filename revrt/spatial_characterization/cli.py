@@ -289,20 +289,21 @@ def _preprocess_stats_config(
 
     default_route_fp : path-like, optional
         Default path to the vector file of routes. This will be used
-        if no `route_fp` is provided in a layer's stats dictionary.
-        Must contain a "geometry" column and the `row_width_key` column
-        (used to map to path ROW width). By default, ``None``.
+        *only if* no `route_fp` is provided in a layer's stats
+        dictionary. Must contain a "geometry" column and the
+        `row_width_key` column (used to map to path ROW width).
+        By default, ``None``.
     default_copy_properties : iterable of str, optional
         Default iterable of columns names to copy over from the zone
-        feature. This will be used if no `copy_properties` is provided
-        in a layer's stats dictionary. By default, ``None``.
+        feature. This will be used *only if* no `copy_properties` is
+        provided in a layer's stats dictionary. By default, ``None``.
     default_row_width_key : str, optional
         Default name of column in vector file of routes used to map to
-        the ROW widths. This will be used if no `row_width_key` is
-        provided in a layer's stats dictionary. By default, ``None``.
+        the ROW widths. This will be used *only if* no `row_width_key`
+        is provided in a layer's stats dictionary. By default, ``None``.
     default_chunks : tuple or str, optional
         Default ``chunks`` keyword argument to pass down to
-        :func:`rioxarray.open_rasterio`. This will be used if no
+        :func:`rioxarray.open_rasterio`. This will be used *only if* no
         `chunks` is provided in a layer's stats dictionary. Use this to
         control the Dask chunk size. By default, ``None``, which uses
         ``"auto"`` as the final chunk input.
