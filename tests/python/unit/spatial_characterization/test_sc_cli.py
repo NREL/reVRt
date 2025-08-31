@@ -469,6 +469,11 @@ def test_cli_command_multiple_rasters(
     )
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli_local_overrides_top_level(tmp_cwd, sample_raster, cli_runner):
     """Test that local route_fp overrides top-level default_route_fp"""
     raster_fp = tmp_cwd / "test_raster.tif"
