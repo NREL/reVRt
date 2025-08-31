@@ -46,10 +46,13 @@ class ZonalStats:
             Otherwise, provide a list of statistic names or a string
             with the names separated by a space. You can also provide
             the string ``"ALL"`` or ``"*"`` to specify that all
-            statistics should be computed. If no input, empty input, or
-            ``None`` is provided, then only the base stats ("count",
-            "min", "max", "mean") are configured. To summarize, all of
-            the following are valid inputs:
+            statistics should be computed (i.e. all options from *both*
+            :class:`~revrt.spatial_characterization.stats.Stat` and
+            :class:`~revrt.spatial_characterization.stats.FractionalStat`).
+            If no input, empty input, or ``None`` is provided, then only
+            the base stats ("count", "min", "max", "mean") are
+            configured. To summarize, all of the following are valid
+            inputs:
 
                 - ``stats="*"`` or ``stats="ALL"`` or ``stats="All"``
                 - ``stats="min"``
