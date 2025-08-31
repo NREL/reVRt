@@ -314,18 +314,67 @@ def save_data_using_layer_file_profile(
         If shape of provided data does not match shape of
         :class:`LayeredFile`.
     """
-    if data.ndim < _NUM_GEOTIFF_DIMS:
-        data = np.expand_dims(data, 0)
-
     with xr.open_dataset(layer_fp, consolidated=False, engine="zarr") as ds:
         crs = ds.rio.crs
         width, height = ds.rio.width, ds.rio.height
         transform = ds.rio.transform()
 
-    if data.shape[1:] != (height, width):
+    return save_data_using_custom_props(
+        data=data,
+        geotiff=geotiff,
+        shape=(height, width),
+        crs=crs,
+        transform=transform,
+        nodata=nodata,
+        **profile_kwargs,
+    )
+
+
+def save_data_using_custom_props(
+    data, geotiff, shape, crs, transform, nodata=None, **profile_kwargs
+):
+    """Write to GeoTIFF file
+
+    Parameters
+    ----------
+    data : array-like
+        Data to write to GeoTIFF using ``LayeredFile`` profile.
+    geotiff : path-like
+        Path to output GeoTIFF file.
+    shape : tuple
+        Shape of output raster (height, width).
+    crs : str | dict
+        Coordinate reference system of output raster.
+    transform : affine.Affine
+        Affine transform of output raster.
+    nodata : int | float, optional
+        Optional nodata value for the raster layer. By default,
+        ``None``, which does not add a "nodata" value.
+    **profile_kwargs
+        Additional keyword arguments to pass into writing the
+        raster. The following attributes ar ignored (they are set
+        using properties of the source :class:`LayeredFile`):
+
+            - nodata
+            - transform
+            - crs
+            - count
+            - width
+            - height
+
+    Raises
+    ------
+    revrtValueError
+        If shape of provided data does not match shape of
+        :class:`LayeredFile`.
+    """
+    if data.ndim < _NUM_GEOTIFF_DIMS:
+        data = np.expand_dims(data, 0)
+
+    if data.shape[1:] != shape:
         msg = (
             f"Shape of provided data {data.shape[1:]} does "
-            f"not match shape of LayeredFile: {(height, width)}"
+            f"not match destination shape: {shape}"
         )
         raise revrtValueError(msg)
 

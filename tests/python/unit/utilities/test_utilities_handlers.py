@@ -605,7 +605,7 @@ def test_write_tiff_using_layer_profile_bad_shape(
 
     with pytest.raises(
         revrtValueError,
-        match=r"Shape of provided data .* does not match shape of LayeredFile",
+        match=r"Shape of provided data .* does not match destination shape:",
     ):
         save_data_using_layer_file_profile(test_fp, new_data, out_tiff_fp)
 
