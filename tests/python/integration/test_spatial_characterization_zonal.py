@@ -396,7 +396,8 @@ def test_parallel_zonal_stats_with_client(sc_dir, zonal_polygon_fp):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_command_parallel(tmp_cwd, cli_runner):
+@pytest.mark.parametrize("use_top_level_default", [True, False])
+def test_cli_command_parallel(tmp_cwd, cli_runner, use_top_level_default):
     """Test running from config with multiple workers"""
     sample_raster = xr.DataArray(
         np.array(
@@ -430,24 +431,43 @@ def test_cli_command_parallel(tmp_cwd, cli_runner):
     with row_widths_fp.open("w", encoding="utf-8") as f:
         json.dump(row_widths, f)
 
-    config = {
-        "execution_control": {"option": "local", "max_workers": 2},
-        "layers": [
-            {
-                "geotiff_fp": str(raster_fp),
-                "route_fp": str(zones_fp),
-                "stats": "count min",
-            },
-            {
-                "geotiff_fp": str(raster_fp),
-                "route_fp": str(zones_fp),
-                "prefix": "test_",
-                "stats": "max mean",
-                "copy_properties": ["A"],
-            },
-        ],
-        "row_widths": str(row_widths_fp),
-    }
+    if use_top_level_default:
+        config = {
+            "execution_control": {"option": "local", "max_workers": 2},
+            "default_route_fp": str(zones_fp),
+            "layers": [
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "stats": "count min",
+                },
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "prefix": "test_",
+                    "stats": "max mean",
+                    "copy_properties": ["A"],
+                },
+            ],
+            "row_widths": str(row_widths_fp),
+        }
+    else:
+        config = {
+            "execution_control": {"option": "local", "max_workers": 2},
+            "layers": [
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "route_fp": str(zones_fp),
+                    "stats": "count min",
+                },
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "route_fp": str(zones_fp),
+                    "prefix": "test_",
+                    "stats": "max mean",
+                    "copy_properties": ["A"],
+                },
+            ],
+            "row_widths": str(row_widths_fp),
+        }
     config_fp = tmp_cwd / "config.json"
     with config_fp.open("w", encoding="utf-8") as f:
         json.dump(config, f)
@@ -505,7 +525,10 @@ def test_cli_command_parallel(tmp_cwd, cli_runner):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_command_parallel_with_multiplier(tmp_cwd, cli_runner):
+@pytest.mark.parametrize("use_top_level_default", [True, False])
+def test_cli_command_parallel_with_multiplier(
+    tmp_cwd, cli_runner, use_top_level_default
+):
     """Test running from config with multiple workers"""
     sample_raster = xr.DataArray(
         np.array(
@@ -539,26 +562,47 @@ def test_cli_command_parallel_with_multiplier(tmp_cwd, cli_runner):
     with row_widths_fp.open("w", encoding="utf-8") as f:
         json.dump(row_widths, f)
 
-    config = {
-        "execution_control": {"option": "local", "max_workers": 2},
-        "layers": [
-            {
-                "geotiff_fp": str(raster_fp),
-                "route_fp": str(zones_fp),
-                "stats": "count min",
-                "multiplier_scalar": 1000.0,
-            },
-            {
-                "geotiff_fp": str(raster_fp),
-                "route_fp": str(zones_fp),
-                "prefix": "test_",
-                "stats": "max mean",
-                "copy_properties": ["A"],
-                "multiplier_scalar": 2,
-            },
-        ],
-        "row_widths": str(row_widths_fp),
-    }
+    if use_top_level_default:
+        config = {
+            "execution_control": {"option": "local", "max_workers": 2},
+            "default_route_fp": str(zones_fp),
+            "layers": [
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "stats": "count min",
+                    "multiplier_scalar": 1000.0,
+                },
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "prefix": "test_",
+                    "stats": "max mean",
+                    "copy_properties": ["A"],
+                    "multiplier_scalar": 2,
+                },
+            ],
+            "row_widths": str(row_widths_fp),
+        }
+    else:
+        config = {
+            "execution_control": {"option": "local", "max_workers": 2},
+            "layers": [
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "route_fp": str(zones_fp),
+                    "stats": "count min",
+                    "multiplier_scalar": 1000.0,
+                },
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "route_fp": str(zones_fp),
+                    "prefix": "test_",
+                    "stats": "max mean",
+                    "copy_properties": ["A"],
+                    "multiplier_scalar": 2,
+                },
+            ],
+            "row_widths": str(row_widths_fp),
+        }
     config_fp = tmp_cwd / "config.json"
     with config_fp.open("w", encoding="utf-8") as f:
         json.dump(config, f)

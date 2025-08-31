@@ -286,7 +286,10 @@ def test_buffered_route_characterizations_percentile(tmp_path, sample_raster):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_command_minimal(tmp_cwd, sample_raster, cli_runner):
+@pytest.mark.parametrize("use_top_level_default", [True, False])
+def test_cli_command_minimal(
+    tmp_cwd, sample_raster, cli_runner, use_top_level_default
+):
     """Test running from config with minimal user inputs"""
     raster_fp = tmp_cwd / "test_raster.tif"
     zones_fp = tmp_cwd / "test_zones.gpkg"
@@ -300,14 +303,22 @@ def test_cli_command_minimal(tmp_cwd, sample_raster, cli_runner):
     sample_raster.rio.to_raster(raster_fp)
     zones.to_file(zones_fp, driver="GPKG")
 
-    config = {
-        "execution_control": {"option": "local"},
-        "layers": {
-            "geotiff_fp": str(raster_fp),
-            "route_fp": str(zones_fp),
-        },
-        "row_widths": {"1": 200, "2": 8},
-    }
+    if use_top_level_default:
+        config = {
+            "execution_control": {"option": "local"},
+            "default_route_fp": str(zones_fp),
+            "layers": {"geotiff_fp": str(raster_fp)},
+            "row_widths": {"1": 200, "2": 8},
+        }
+    else:
+        config = {
+            "execution_control": {"option": "local"},
+            "layers": {
+                "geotiff_fp": str(raster_fp),
+                "route_fp": str(zones_fp),
+            },
+            "row_widths": {"1": 200, "2": 8},
+        }
     config_fp = tmp_cwd / "config.json"
     with config_fp.open("w", encoding="utf-8") as f:
         json.dump(config, f)
@@ -347,7 +358,10 @@ def test_cli_command_minimal(tmp_cwd, sample_raster, cli_runner):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_command_multiple_rasters(tmp_cwd, sample_raster, cli_runner):
+@pytest.mark.parametrize("use_top_level_default", [True, False])
+def test_cli_command_multiple_rasters(
+    tmp_cwd, sample_raster, cli_runner, use_top_level_default
+):
     """Test running from config with multiple raster inputs"""
     raster_fp = tmp_cwd / "raster.tif"
     zones_fp = tmp_cwd / "lcp.gpkg"
@@ -366,24 +380,43 @@ def test_cli_command_multiple_rasters(tmp_cwd, sample_raster, cli_runner):
     with row_widths_fp.open("w", encoding="utf-8") as f:
         json.dump(row_widths, f)
 
-    config = {
-        "execution_control": {"option": "local"},
-        "layers": [
-            {
-                "geotiff_fp": str(raster_fp),
-                "route_fp": str(zones_fp),
-                "stats": "count min",
-            },
-            {
-                "geotiff_fp": str(raster_fp),
-                "route_fp": str(zones_fp),
-                "prefix": "test_",
-                "stats": "max mean",
-                "copy_properties": ["A"],
-            },
-        ],
-        "row_widths": str(row_widths_fp),
-    }
+    if use_top_level_default:
+        config = {
+            "execution_control": {"option": "local"},
+            "default_route_fp": str(zones_fp),
+            "layers": [
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "stats": "count min",
+                },
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "prefix": "test_",
+                    "stats": "max mean",
+                    "copy_properties": ["A"],
+                },
+            ],
+            "row_widths": str(row_widths_fp),
+        }
+    else:
+        config = {
+            "execution_control": {"option": "local"},
+            "layers": [
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "route_fp": str(zones_fp),
+                    "stats": "count min",
+                },
+                {
+                    "geotiff_fp": str(raster_fp),
+                    "route_fp": str(zones_fp),
+                    "prefix": "test_",
+                    "stats": "max mean",
+                    "copy_properties": ["A"],
+                },
+            ],
+            "row_widths": str(row_widths_fp),
+        }
     config_fp = tmp_cwd / "config.json"
     with config_fp.open("w", encoding="utf-8") as f:
         json.dump(config, f)
@@ -435,6 +468,67 @@ def test_cli_command_multiple_rasters(tmp_cwd, sample_raster, cli_runner):
         ]
     )
 
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_local_overrides_top_level(tmp_cwd, sample_raster, cli_runner):
+    """Test that local route_fp overrides top-level default_route_fp"""
+    raster_fp = tmp_cwd / "test_raster.tif"
+    zones_fp = tmp_cwd / "test_zones.gpkg"
+
+    zones = gpd.GeoDataFrame(
+        {"voltage": [1, 2], "A": ["a", "b"]},
+        geometry=[box(-5, -5, 5, 5), LineString([(10, -7), (10, 13)])],
+    )
+    zones = zones.set_crs(sample_raster.attrs["crs"])
+
+    sample_raster.rio.to_raster(raster_fp)
+    zones.to_file(zones_fp, driver="GPKG")
+
+    config = {
+        "execution_control": {"option": "local"},
+        "default_route_fp": "./does_not_exist.gpkg",
+        "layers": {
+            "geotiff_fp": str(raster_fp),
+            "route_fp": str(zones_fp),
+        },
+        "row_widths": {"1": 200, "2": 8},
+    }
+    config_fp = tmp_cwd / "config.json"
+    with config_fp.open("w", encoding="utf-8") as f:
+        json.dump(config, f)
+
+    assert not list(tmp_cwd.glob("*.csv"))
+    cli_runner.invoke(
+        main, ["route-characterization", "-c", config_fp.as_posix()]
+    )
+
+    out_files = list(tmp_cwd.glob("*.csv"))
+    assert len(out_files) == 1
+
+    out_fp = Path(out_files[0])
+    assert out_fp.name == "characterized_test_raster_test_zones.csv"
+
+    out_stats = pd.read_csv(out_fp)
+
+    sub_arr = sample_raster.isel(x=2)
+    assert np.allclose(
+        out_stats[Stat.COUNT], [sample_raster.count(), sub_arr.count()]
+    )
+    assert np.allclose(
+        out_stats[Stat.MIN], [sample_raster.min(), sub_arr.min()]
+    )
+    assert np.allclose(
+        out_stats[Stat.MAX], [sample_raster.max(), sub_arr.max()]
+    )
+    assert np.allclose(
+        out_stats[Stat.MEAN], [sample_raster.mean(), sub_arr.mean()]
+    )
+    assert np.allclose(out_stats["voltage"], [1, 2])
+    assert out_stats["A"].to_list() == ["a", "b"]
 
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])

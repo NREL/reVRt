@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def buffered_route_characterizations(
     geotiff_fp,
     route_fp,
-    row_widths,
+    row_widths=None,
     row_width_ranges=None,
     multiplier_scalar=1.0,
     prefix=None,
@@ -42,12 +42,18 @@ def buffered_route_characterizations(
         Path to the vector file of routes. Must contain a "geometry"
         column and the `row_width_key` column (used to map to path ROW
         width).
-    row_widths : dict
+    row_widths : dict, optional
         A dictionary specifying the row widths in the following format:
         ``{"row_width_id": row_width_meters}``. The ``row_width_id`` is
         a value used to match each route with a particular ROW width
         (this is typically a voltage). The value should be found under
         the ``row_width_key`` entry of the ``route_fp``.
+
+        .. IMPORTANT::
+            At least one of `row_widths` or `row_width_ranges` must be
+            provided.
+
+        By default, ``None``.
     row_width_ranges : list, optional
         Optional list of dictionaries, where each dictionary contains
         the keys "min", "max", and "width". This can be used to specify
@@ -134,9 +140,13 @@ def buffered_route_characterizations(
 
 def _route_characterizations_from_config(
     out_dir,
-    _row_widths,
     _stat_kwargs,
+    _row_widths=None,
     _row_width_ranges=None,
+    _default_route_fp=None,
+    _default_copy_properties=None,
+    _default_row_width_key=None,
+    _default_chunks=None,
     max_workers=1,
     tag=None,
     memory_limit_per_worker="auto",
@@ -160,6 +170,13 @@ def _route_characterizations_from_config(
         number of bytes is used *per worker*. By default, ``"auto"``
     """
     tag = tag or ""
+    _stat_kwargs.setdefault("route_fp", _default_route_fp)
+    _stat_kwargs.setdefault("copy_properties", _default_copy_properties)
+    _stat_kwargs.setdefault(
+        "row_width_key", _default_row_width_key or "voltage"
+    )
+    _stat_kwargs.setdefault("chunks", _default_chunks or "auto")
+
     raster_name = _stat_kwargs.get("geotiff_fp")
     raster_name = f"_{Path(raster_name).stem}" if raster_name else ""
     route_name = _stat_kwargs.get("route_fp")
@@ -189,7 +206,14 @@ def _route_characterizations_from_config(
 
 
 def _preprocess_stats_config(
-    config, layers, row_widths=None, row_width_ranges=None
+    config,
+    layers,
+    default_route_fp=None,
+    default_copy_properties=None,
+    default_row_width_key=None,
+    default_chunks=None,
+    row_widths=None,
+    row_width_ranges=None,
 ):
     """Preprocess user config
 
@@ -217,10 +241,14 @@ def _preprocess_stats_config(
               Otherwise, provide a list of statistic names or a string
               with the names separated by a space. You can also provide
               the string ``"ALL"`` or ``"*"`` to specify that all
-              statistics should be computed. If no input, empty input,
-              or ``None`` is provided, then only the base stats
-              ("count", "min", "max", "mean") are computed. To
-              summarize, all of the following are valid inputs:
+              statistics should be computed (i.e. all options from
+              *both*
+              :class:`~revrt.spatial_characterization.stats.Stat` and
+              :class:`~revrt.spatial_characterization.stats.FractionalStat`).
+              If no input, empty input, or ``None`` is provided, then
+              only the base stats ("count", "min", "max", "mean") are
+              configured. To summarize, all of the following are valid
+              inputs:
 
                 - ``stats: "*"`` or ``stats="ALL"`` or ``stats="All"``
                 - ``stats: "min"``
@@ -257,8 +285,28 @@ def _preprocess_stats_config(
               By default, ``"voltage"``.
             - chunks : (OPTIONAL) ``chunks`` keyword argument to pass
               down to :func:`rioxarray.open_rasterio`. Use this to
-              control the Dask chunk size.
+              control the Dask chunk size. By default, ``"auto"``.
 
+    default_route_fp : path-like, optional
+        Default path to the vector file of routes. This will be used
+        *only if* no `route_fp` is provided in a layer's stats
+        dictionary. Must contain a "geometry" column and the
+        `row_width_key` column (used to map to path ROW width).
+        By default, ``None``.
+    default_copy_properties : iterable of str, optional
+        Default iterable of columns names to copy over from the zone
+        feature. This will be used *only if* no `copy_properties` is
+        provided in a layer's stats dictionary. By default, ``None``.
+    default_row_width_key : str, optional
+        Default name of column in vector file of routes used to map to
+        the ROW widths. This will be used *only if* no `row_width_key`
+        is provided in a layer's stats dictionary. By default, ``None``.
+    default_chunks : tuple or str, optional
+        Default ``chunks`` keyword argument to pass down to
+        :func:`rioxarray.open_rasterio`. This will be used *only if* no
+        `chunks` is provided in a layer's stats dictionary. Use this to
+        control the Dask chunk size. By default, ``None``, which uses
+        ``"auto"`` as the final chunk input.
     row_widths : dict or path-like, optional
         A dictionary specifying the row widths in the following format:
         ``{"row_width_id": row_width_meters}``. The ``row_width_id`` is
@@ -318,6 +366,10 @@ def _preprocess_stats_config(
         layers = [layers]
 
     config["_stat_kwargs"] = layers
+    config["_default_route_fp"] = default_route_fp
+    config["_default_copy_properties"] = default_copy_properties
+    config["_default_row_width_key"] = default_row_width_key
+    config["_default_chunks"] = default_chunks
     return config
 
 

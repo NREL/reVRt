@@ -741,6 +741,11 @@ def test_layers_to_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path, as_list):
         assert np.allclose(ds[tl2_name], truth_tif_2)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 @pytest.mark.parametrize("as_list", [True, False])
 def test_cli_layers_to_file(
     cli_runner, tmp_path, sample_tiff_fp, sample_tiff_fp_2x, as_list
