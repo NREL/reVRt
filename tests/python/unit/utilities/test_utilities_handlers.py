@@ -20,7 +20,11 @@ from rasterio.transform import from_origin
 
 import revrt
 from revrt._cli import main
-from revrt.utilities import LayeredFile, LayeredTransmissionFile
+from revrt.utilities import (
+    LayeredFile,
+    file_full_path,
+    load_data_using_layer_file_profile,
+)
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
@@ -656,8 +660,8 @@ def test_load_data_using_layer_file_profile(
     lf = LayeredFile(test_fp)
     lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
 
-    test_tif = lf.load_data_using_layer_file_profile(sample_tiff_fp)
-    test_tif_2 = lf.load_data_using_layer_file_profile(out_fp)
+    test_tif = load_data_using_layer_file_profile(test_fp, sample_tiff_fp)
+    test_tif_2 = load_data_using_layer_file_profile(test_fp, out_fp)
 
     with rioxarray.open_rasterio(sample_tiff_fp) as tif:
         assert test_tif.rio.crs == tif.rio.crs
@@ -674,7 +678,7 @@ def test_load_data_using_layer_file_profile(
 
 
 @pytest.mark.parametrize("in_layer_dir", [True, False])
-def test_load_data_using_layered_transmission_file_profile(
+def test_load_data_using_file_full_path(
     sample_tiff_fp, tmp_path, in_layer_dir
 ):
     """Test loading data using layered transmission file profile"""
@@ -683,7 +687,7 @@ def test_load_data_using_layered_transmission_file_profile(
     layer_dir.mkdir()
 
     test_fp = tmp_path / "test.zarr"
-    lf = LayeredTransmissionFile(test_fp, layer_dir=layer_dir)
+    lf = LayeredFile(test_fp)
     lf.write_geotiff_to_file(sample_tiff_fp, "test_layer")
 
     if in_layer_dir:
@@ -692,7 +696,8 @@ def test_load_data_using_layered_transmission_file_profile(
     else:
         in_fp = sample_tiff_fp
 
-    test_tif = lf.load_data_using_layer_file_profile(in_fp)
+    read_fp = file_full_path(in_fp, layer_dir=layer_dir)
+    test_tif = load_data_using_layer_file_profile(test_fp, read_fp)
     with rioxarray.open_rasterio(sample_tiff_fp) as tif:
         assert test_tif.rio.crs == tif.rio.crs
         assert np.allclose(test_tif, tif)
@@ -701,7 +706,7 @@ def test_load_data_using_layered_transmission_file_profile(
     test_tif.close()
 
     with pytest.raises(revrtFileNotFoundError, match="Unable to find file"):
-        lf.load_data_using_layer_file_profile("DNE")
+        file_full_path("DNE", layer_dir=layer_dir)
 
 
 @pytest.mark.parametrize("as_list", [True, False])

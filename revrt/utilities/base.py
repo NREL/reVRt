@@ -1,15 +1,26 @@
 """Base reVRt utilities"""
 
 import shutil
+import logging
 from pathlib import Path
 from warnings import warn
 
 import rioxarray
 import numpy as np
 import xarray as xr
+from rasterio.warp import Resampling
 
-from revrt.exceptions import revrtProfileCheckError, revrtValueError
+from revrt.exceptions import (
+    revrtFileNotFoundError,
+    revrtProfileCheckError,
+    revrtValueError,
+)
 from revrt.warn import revrtWarning
+
+
+logger = logging.getLogger(__name__)
+TRANSFORM_ATOL = 0.01
+"""Tolerance in transform comparison when checking GeoTIFFs"""
 
 
 def buffer_routes(
@@ -189,6 +200,83 @@ def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
                 f"{layered_file_transform}"
             )
             raise revrtProfileCheckError(msg)
+
+
+def file_full_path(file_name, layer_dir):
+    """Get full path to file, searching `layer_dir` if needed
+
+    Parameters
+    ----------
+    file_name : str
+        File name to get full path for. If just the file name is
+        provided, the class `layer_dir` attribute value is prepended
+        to get the full path.
+    layer_dir : path-like
+        Directory to search for file if not found in current
+        directory.
+
+    Returns
+    -------
+    path-like
+        Full path to file.
+    """
+    full_fname = Path(file_name)
+    if full_fname.exists():
+        return full_fname
+
+    full_fname = Path(layer_dir) / file_name
+    if full_fname.exists():
+        return full_fname
+
+    msg = f"Unable to find file {file_name}"
+    raise revrtFileNotFoundError(msg)
+
+
+def load_data_using_layer_file_profile(layer_fp, geotiff, tiff_chunks="auto"):
+    """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
+
+    Parameters
+    ----------
+    layer_fp : path-like
+        Path to layered file on disk. This file must already exist.
+    geotiff : path-like
+        Path to GeoTIFF from which data should be read.
+    tiff_chunks : int | str, default="auto"
+        Chunk size to use when reading the GeoTIFF file. This will be
+        passed down as the ``chunks`` argument to
+        :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+
+    Returns
+    -------
+    array-like
+        Raster data.
+    """
+    tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
+
+    try:
+        check_geotiff(layer_fp, geotiff, transform_atol=TRANSFORM_ATOL)
+    except revrtProfileCheckError:
+        logger.debug(
+            "Profile of %s does not match template, reprojecting...",
+            geotiff,
+        )
+        with xr.open_dataset(
+            layer_fp, consolidated=False, engine="zarr"
+        ) as ds:
+            crs = ds.rio.crs
+            width, height = ds.rio.width, ds.rio.height
+            transform = ds.rio.transform()
+
+        return tif.rio.reproject(
+            dst_crs=crs,
+            shape=(height, width),
+            transform=transform,
+            num_threads=4,
+            resampling=Resampling.nearest,
+            INIT_DEST=0,
+        )
+
+    return tif
 
 
 def _compute_half_width_using_ranges(

@@ -11,13 +11,11 @@ from pyproj import Transformer
 import rioxarray
 import numpy as np
 import xarray as xr
-from rasterio.warp import Resampling
 
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
     revrtKeyError,
-    revrtProfileCheckError,
     revrtValueError,
 )
 from revrt.utilities.base import check_geotiff, delete_data_file
@@ -31,6 +29,8 @@ _ZARR_COMPRESSORS = zarr.codecs.BloscCodec(  # cspell:disable-line
     shuffle=zarr.codecs.BloscShuffle.shuffle,  # cspell:disable-line
 )
 _NUM_GEOTIFF_DIMS = 3  # (band, y, x)
+TRANSFORM_ATOL = 0.01
+"""Tolerance in transform comparison when checking GeoTIFFs"""
 
 
 class LayeredFile:
@@ -44,9 +44,6 @@ class LayeredFile:
 
     LONGITUDE = "longitude"
     """Name of longitude values layer in :class:`LayeredFile`"""
-
-    TRANSFORM_ATOL = 0.01
-    """Tolerance in transform comparison when checking GeoTIFFs"""
 
     def __init__(self, fp):
         """
@@ -411,7 +408,7 @@ class LayeredFile:
 
         if check_tiff:
             logger.debug("\t- Checking %s against %s", geotiff, self.fp)
-            check_geotiff(self.fp, geotiff, transform_atol=self.TRANSFORM_ATOL)
+            check_geotiff(self.fp, geotiff, transform_atol=TRANSFORM_ATOL)
 
         with rioxarray.open_rasterio(geotiff, chunks=tiff_chunks) as tif:
             logger.debug("\t- Writing data from %s to %s", geotiff, self.fp)
@@ -515,39 +512,6 @@ class LayeredFile:
             da = da.rio.write_nodata(nodata)
 
         da.rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
-
-    def load_data_using_layer_file_profile(self, geotiff, tiff_chunks="auto"):
-        """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
-
-        Parameters
-        ----------
-        geotiff : path-like
-            Path to GeoTIFF from which data should be read.
-
-        Returns
-        -------
-        array-like
-            Raster data.
-        """
-        tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
-
-        try:
-            check_geotiff(self.fp, geotiff, transform_atol=self.TRANSFORM_ATOL)
-        except revrtProfileCheckError:
-            logger.debug(
-                "Profile of %s does not match template, reprojecting...",
-                geotiff,
-            )
-            return tif.rio.reproject(
-                dst_crs=self.profile["crs"],
-                shape=self.shape,
-                transform=self.profile["transform"],
-                num_threads=4,
-                resampling=Resampling.nearest,
-                INIT_DEST=0,
-            )
-
-        return tif
 
     def layers_to_file(
         self,
@@ -688,51 +652,6 @@ class LayeredFile:
         }
         self.extract_layers(layers, **profile_kwargs)
         return layers
-
-
-class LayeredTransmissionFile(LayeredFile):
-    """Handle reading and writing ``LayeredFile``s and GeoTIFFs"""
-
-    def __init__(self, fp, layer_dir="."):
-        """
-
-        Parameters
-        ----------
-        fp : path-like
-            Path to layered file on disk. If this file is to be created,
-            a `template_file` must be provided (and must exist on disk).
-            Otherwise, the `template_file` input can be ignored and this
-            input will be used as the template file.
-        layer_dir : path-like, optional
-            Directory to search for layers in, if not found in current
-            directory. By default, ``'.'``.
-        """
-        super().__init__(fp=fp)
-        self._layer_dir = Path(layer_dir)
-
-    def load_data_using_layer_file_profile(self, geotiff):
-        """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
-
-        Parameters
-        ----------
-        geotiff : str
-            Path to GeoTIFF from which data should be read. If just the
-            file name is provided, the class `layer_dir` attribute value
-            is prepended to get the full path.
-
-        Returns
-        -------
-        array-like
-            Raster data.
-        """
-        full_fname = Path(geotiff)
-        if not full_fname.exists():
-            full_fname = self._layer_dir / geotiff
-            if not full_fname.exists():
-                msg = f"Unable to find file {geotiff}"
-                raise revrtFileNotFoundError(msg)
-
-        return super().load_data_using_layer_file_profile(geotiff=full_fname)
 
 
 def _layer_profile_from_open_ds(layer, ds):
