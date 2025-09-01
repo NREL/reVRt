@@ -326,6 +326,8 @@ omit = [
     "tests/*",
     # omit setup file
     "setup.py",
+    # omit pydantic model definitions files
+    "revrt/models/*",
     # omit plotting utilities
     "plotting.py",
     # omit init files
