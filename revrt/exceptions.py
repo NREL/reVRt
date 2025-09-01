@@ -17,6 +17,10 @@ class revrtError(Exception):
             logger.error(str(args[0]), stacklevel=2)
 
 
+class revrtAttributeError(revrtError, AttributeError):
+    """revrt AttributeError"""
+
+
 class revrtFileExistsError(revrtError, FileExistsError):
     """revrt FileExistsError"""
 

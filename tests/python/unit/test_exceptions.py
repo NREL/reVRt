@@ -6,6 +6,7 @@ import pytest
 
 from revrt.exceptions import (
     revrtError,
+    revrtAttributeError,
     revrtFileExistsError,
     revrtFileNotFoundError,
     revrtKeyError,
@@ -50,6 +51,10 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
 @pytest.mark.parametrize(
     "raise_type, catch_types",
     [
+        (
+            revrtAttributeError,
+            [revrtError, revrtAttributeError, AttributeError],
+        ),
         (
             revrtFileExistsError,
             [revrtError, revrtFileExistsError, FileExistsError],
