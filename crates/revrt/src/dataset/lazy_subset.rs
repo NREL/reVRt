@@ -13,6 +13,14 @@
 //! `LazySubset`, which is tied to an `ArraySubset`, thus it has no assumtions
 //! on the source's chunk. Therefore, the source can have variable chunk shapes,
 //! one for each variable, and don't need to match the desired cost chunk shape.
+//!
+//! Note that we could have used Zarrs' intrinsic cache here, but a common
+//! use for LazySubset is to load the features to compute cost for a chunk.
+//! Therefore, those chunks of features are loaded only once and we don't
+//! expect to use that anymore since we save the resulted cost. Using Zarrs'
+//! cache would lead to unnecessary memory usage. Another problem is how
+//! large should be that cache? It gets more difficult to estimate once we
+//! consider the possibility of multiple threads working on different chunks.
 
 use std::collections::HashMap;
 use std::fmt;
