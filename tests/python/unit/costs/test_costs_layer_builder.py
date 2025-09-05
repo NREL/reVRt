@@ -144,6 +144,20 @@ def test_forced_inclusion(lf_instance, builder_instance):
         )
 
 
+def test_global_value(builder_instance):
+    """Test global_value key in LayerBuildConfig"""
+    data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    config = LayerBuildConfig(extent="dry", global_value=-1)
+    result = builder_instance._process_raster_data(data, config)
+    assert (result == np.array([[0, 0, -1], [0, 0, -1], [0, 0, -1]])).all()
+
+    config = LayerBuildConfig(extent="all", global_value=25)
+    result = builder_instance._process_raster_data(data, config)
+    assert (
+        result == np.array([[25, 25, 25], [25, 25, 25], [25, 25, 25]])
+    ).all()
+
+
 def test_bins(builder_instance):
     """Test bins key in LayerBuildConfig"""
     data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
