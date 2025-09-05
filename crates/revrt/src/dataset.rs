@@ -14,7 +14,7 @@ use zarrs::storage::{
 use crate::ArrayIndex;
 use crate::cost::CostFunction;
 use crate::error::Result;
-use lazy_subset::LazySubset;
+pub(crate) use lazy_subset::LazySubset;
 
 /// Manages the features datasets and calculated total cost
 pub(super) struct Dataset {
@@ -122,13 +122,12 @@ impl Dataset {
 
     fn calculate_chunk_cost(&self, ci: u64, cj: u64) {
         trace!("Creating a LazyChunk for ({}, {})", ci, cj);
-        let chunk = LazyChunk {
-            source: self.source.clone(),
-            ci,
-            cj,
-            data: std::collections::HashMap::new(),
-        };
-        let output = self.cost_function.calculate(chunk);
+
+        let variable = zarrs::array::Array::open(self.source.clone(), "/cost").unwrap();
+        let subset = variable.chunk_subset(&[ci, cj]).unwrap();
+        let data = LazySubset::<f32>::new(self.source.clone(), subset);
+        let output = self.cost_function.compute(data);
+
         trace!("Cost function: {:?}", self.cost_function);
 
         /*
