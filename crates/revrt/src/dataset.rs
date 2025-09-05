@@ -140,7 +140,7 @@ impl Dataset {
         let output = value * 10.0;
         */
 
-        let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
+        let cost = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
         let chunk_indices: Vec<u64> = vec![ci, cj];
         trace!("Storing chunk at {:?}", chunk_indices);
@@ -155,11 +155,11 @@ impl Dataset {
 
         trace!("Getting 3x3 neighborhood for (i={}, j={})", i, j);
 
-        trace!("Cost dataset contents: {:?}", self.cost.list().unwrap());
-        trace!("Cost dataset size: {:?}", self.cost.size().unwrap());
+        trace!("Cost dataset contents: {:?}", self.swap.list().unwrap());
+        trace!("Cost dataset size: {:?}", self.swap.size().unwrap());
 
         trace!("Opening cost dataset");
-        let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
+        let cost = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
         trace!("Cost dataset with shape: {:?}", cost.shape());
 
         // Cutting off the edges for now.
