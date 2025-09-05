@@ -76,7 +76,7 @@ impl<T: ElementOwned> LazySubset<T> {
     pub(crate) fn get(
         &mut self,
         varname: &str,
-    ) -> Option<ndarray::ArrayBase<ndarray::OwnedRepr<T>, ndarray::Dim<ndarray::IxDynImpl>>> {
+    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<T>, ndarray::Dim<ndarray::IxDynImpl>>> {
         trace!("Getting data subset for variable: {}", varname);
 
         let data = match self.data.get(varname) {
@@ -103,7 +103,7 @@ impl<T: ElementOwned> LazySubset<T> {
             }
         };
 
-        Some(data)
+        Ok(data)
     }
 }
 
