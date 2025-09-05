@@ -113,7 +113,7 @@ class LayerCreator(BaseLayerCreator):
                 temp = self._process_vector_layer(fname, config)
                 result += temp
             else:
-                msg = f"Unsupported file extension on {fname}"
+                msg = f"Unsupported file extension on {fname!r}"
                 raise revrtValueError(msg)
 
         result = self._process_forced_inclusions(
@@ -313,7 +313,7 @@ class LayerCreator(BaseLayerCreator):
         for fname, config in fi_layers.items():
             if Path(fname).suffix.lower() not in TIFF_EXTENSIONS:
                 msg = (
-                    f"Forced inclusion file {fname} does not end with .tif."
+                    f"Forced inclusion file {fname!r} does not end with .tif."
                     " GeoTIFFs are the only format allowed for forced "
                     "inclusions."
                 )
@@ -333,7 +333,7 @@ class LayerCreator(BaseLayerCreator):
                 msg = (
                     "`global_value`, `map`, `bins`, and `rasterize` are "
                     "not allowed if `forced_inclusion` is True, but one "
-                    f"was found in config: {fname}: {config}"
+                    f"was found in config: {fname!r}: {config}"
                 )
                 raise revrtValueError(msg)
 

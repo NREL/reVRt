@@ -22,6 +22,7 @@ _MUTEX_CONFIG_PARAMS = [
     {"bins": [RangeConfig(min=0, max=10, value=5)]},
     {"pass_through": True},
 ]
+_NO_FI_PARAMS = [*_MUTEX_CONFIG_PARAMS[:-1], {"rasterize": Rasterize(value=1)}]
 
 
 @pytest.fixture(scope="module")
@@ -313,6 +314,44 @@ def test_tiff_config_missing_entries(
         ),
     ):
         builder_instance._process_raster_layer(layer_fn, config)
+
+
+def test_bad_filetype_input(builder_instance):
+    """Test a bad file type input in the config"""
+    config = {
+        "fi_1.txt": LayerBuildConfig(extent="wet+", forced_inclusion=False)
+    }
+    with pytest.raises(
+        revrtValueError,
+        match=r"Unsupported file extension on 'fi_1.txt'",
+    ):
+        builder_instance.build("friction", config, write_to_file=True)
+
+
+def test_bad_filetype_input_forced_inclusion(builder_instance):
+    """Test a bad file type input in the config"""
+    config = {
+        "fi_1.txt": LayerBuildConfig(extent="wet+", forced_inclusion=True)
+    }
+    with pytest.raises(
+        revrtValueError,
+        match=r"Forced inclusion file 'fi_1.txt' does not end with .tif",
+    ):
+        builder_instance.build("friction", config, write_to_file=True)
+
+
+@pytest.mark.parametrize("bad_input", _NO_FI_PARAMS)
+def test_bad_config_input_forced_inclusion(builder_instance, bad_input):
+    """Test a bad file type input in the config"""
+    config = {
+        "fi_1.tif": LayerBuildConfig(
+            extent="wet+", forced_inclusion=True, **bad_input
+        )
+    }
+    with pytest.raises(
+        revrtValueError, match=r".* are not allowed .* 'fi_1.tif'"
+    ):
+        builder_instance.build("friction", config, write_to_file=True)
 
 
 def test_cost_binning_results(builder_instance):
