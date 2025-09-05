@@ -88,6 +88,11 @@ class LayerCreator(BaseLayerCreator):
             By default, ``False``, which writes raw values to TIFF/H5.
         write_to_file : bool, default=True
             Option to write the layer to file after creation.
+
+            ..IMPORTANT::
+                This will overwrite existing layers with the same name
+                already in the file.
+
             By default, ``True``.
         description : str, optional
             Optional description to store with this layer in the H5
@@ -143,7 +148,7 @@ class LayerCreator(BaseLayerCreator):
             )
             logger.debug("Writing %s to H5", layer_name)
             self._io_handler.write_layer(
-                out, layer_name, description=description
+                out, layer_name, description=description, overwrite=True
             )
 
     def _process_raster_layer(self, fname, config, tiff_chunks="auto"):

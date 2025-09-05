@@ -4,6 +4,7 @@ from pathlib import Path
 from itertools import chain, combinations
 
 import pytest
+import rioxarray
 import numpy as np
 import xarray as xr
 from rasterio.transform import Affine, from_origin
@@ -119,6 +120,53 @@ def builder_instance(
     )
 
 
+def test_no_write(tmp_path, mask_instance, tiff_layers_for_testing):
+    """Test build layer but don't writer to file"""
+    layer_dir, layers = tiff_layers_for_testing
+
+    config = {
+        "fi_1.tif": LayerBuildConfig(
+            extent="wet+",
+            forced_inclusion=True,
+        ),
+        "friction_1.tif": LayerBuildConfig(
+            extent="all", map={1: 1, 2: 2, 3: 3}
+        ),
+        "fi_2.tif": LayerBuildConfig(
+            extent="dry+",
+            forced_inclusion=True,
+        ),
+    }
+
+    out_dir = tmp_path / "out_data"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    test_fp = tmp_path / "zarr_data" / "test.zarr"
+    test_fp.parent.mkdir(parents=True, exist_ok=True)
+
+    lf = LayeredFile(test_fp)
+    layer_fn = next(iter(layers))
+    lf.create_new(layer_dir / layer_fn)
+
+    tiff_fp = out_dir / "friction.tif"
+    assert not tiff_fp.exists()
+
+    builder = LayerCreator(
+        lf,
+        mask_instance,
+        input_layer_dir=layer_dir,
+        output_tiff_dir=out_dir,
+    )
+    builder.build("friction", config, write_to_file=False)
+    assert tiff_fp.exists()
+
+    with rioxarray.open_rasterio(tiff_fp, chunks="auto") as ds:
+        assert np.allclose(np.array([[[1, 1, 1], [0, 0, 2], [3, 0, 0]]]), ds)
+
+    with xr.open_dataset(lf.fp, consolidated=False, engine="zarr") as ds:
+        assert "friction" not in ds
+
+
 def test_forced_inclusion(lf_instance, builder_instance):
     """Test forced inclusions"""
     config = {
@@ -141,6 +189,25 @@ def test_forced_inclusion(lf_instance, builder_instance):
     ) as ds:
         assert np.allclose(
             np.array([[[1, 1, 1], [0, 0, 2], [3, 0, 0]]]), ds["friction"]
+        )
+
+
+def test_forced_inclusion_all(lf_instance, builder_instance):
+    """Test forced inclusions for 'all' extent"""
+
+    config = {
+        "friction_1.tif": LayerBuildConfig(
+            extent="all", map={1: 1, 2: 2, 3: 3}
+        ),
+        "fi_1.tif": LayerBuildConfig(extent="all", forced_inclusion=True),
+    }
+    builder_instance.build("friction_all", config, write_to_file=True)
+
+    with xr.open_dataset(
+        lf_instance.fp, consolidated=False, engine="zarr"
+    ) as ds:
+        assert np.allclose(
+            np.array([[1, 1, 1], [0, 0, 0], [3, 3, 3]]), ds["friction_all"]
         )
 
 
