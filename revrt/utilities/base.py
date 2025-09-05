@@ -239,7 +239,9 @@ def file_full_path(file_name, layer_dir):
     raise revrtFileNotFoundError(msg)
 
 
-def load_data_using_layer_file_profile(layer_fp, geotiff, tiff_chunks="auto"):
+def load_data_using_layer_file_profile(
+    layer_fp, geotiff, tiff_chunks="auto", layer_dir=None
+):
     """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
 
     Parameters
@@ -257,7 +259,16 @@ def load_data_using_layer_file_profile(layer_fp, geotiff, tiff_chunks="auto"):
     -------
     array-like
         Raster data.
+
+    Raises
+    ------
+    revrtFileNotFoundError
+        If `geotiff` cannot be found in either the current directory or
+        the `layer_dir` directory.
     """
+    if layer_dir:
+        geotiff = file_full_path(geotiff, layer_dir)
+
     tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
 
     try:

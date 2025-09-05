@@ -699,8 +699,9 @@ def test_load_data_using_file_full_path(
     else:
         in_fp = sample_tiff_fp
 
-    read_fp = file_full_path(in_fp, layer_dir=layer_dir)
-    test_tif = load_data_using_layer_file_profile(test_fp, read_fp)
+    test_tif = load_data_using_layer_file_profile(
+        test_fp, in_fp, layer_dir=layer_dir
+    )
     with rioxarray.open_rasterio(sample_tiff_fp) as tif:
         assert test_tif.rio.crs == tif.rio.crs
         assert np.allclose(test_tif, tif)
