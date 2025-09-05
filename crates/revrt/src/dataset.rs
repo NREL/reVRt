@@ -1,3 +1,4 @@
+mod lazy_subset;
 #[cfg(test)]
 pub(crate) mod samples;
 
@@ -13,6 +14,7 @@ use zarrs::storage::{
 use crate::ArrayIndex;
 use crate::cost::CostFunction;
 use crate::error::Result;
+use lazy_subset::LazySubset;
 
 /// Manages the features datasets and calculated total cost
 pub(super) struct Dataset {
