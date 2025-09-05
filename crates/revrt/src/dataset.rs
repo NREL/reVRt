@@ -31,7 +31,7 @@ pub(super) struct Dataset {
     /// cost is calculated from multiple variables.
     // cost_variables: Vec<String>,
     /// Storage for the calculated cost
-    cost: ReadableWritableListableStorage,
+    swap: ReadableWritableListableStorage,
     /// Index of cost chunks already calculated
     cost_chunk_idx: RwLock<ndarray::Array2<bool>>,
     /// Custom cost function definition
@@ -51,20 +51,20 @@ impl Dataset {
             zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
         let source = std::sync::Arc::new(filesystem);
 
-        // ==== Create the cost dataset ====
+        // ==== Create the swap dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
         debug!(
-            "Initializing a temporary cost dataset at {:?}",
+            "Initializing a temporary swap dataset at {:?}",
             tmp_path.path()
         );
-        let cost: ReadableWritableListableStorage = std::sync::Arc::new(
+        let swap: ReadableWritableListableStorage = std::sync::Arc::new(
             zarrs::filesystem::FilesystemStore::new(tmp_path.path())
                 .expect("could not open filesystem store"),
         );
 
         trace!("Creating a new group for the cost dataset");
         zarrs::group::GroupBuilder::new()
-            .build(cost.clone(), "/")
+            .build(swap.clone(), "/")
             .unwrap()
             .store_metadata()
             .unwrap();
@@ -86,13 +86,13 @@ impl Dataset {
             chunk_shape,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
-        .build(cost.clone(), "/cost")
+        .build(swap.clone(), "/cost")
         .unwrap();
         trace!("Cost shape: {:?}", array.shape().to_vec());
         trace!("Cost chunk shape: {:?}", array.chunk_grid());
         array.store_metadata().unwrap();
 
-        trace!("Cost dataset contents: {:?}", cost.list().unwrap());
+        trace!("Cost dataset contents: {:?}", swap.list().unwrap());
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
@@ -113,7 +113,7 @@ impl Dataset {
         Ok(Self {
             source,
             cost_path: tmp_path,
-            cost,
+            swap,
             cost_chunk_idx,
             cost_function,
             cache,
