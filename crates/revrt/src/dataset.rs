@@ -123,7 +123,9 @@ impl Dataset {
     fn calculate_chunk_cost(&self, ci: u64, cj: u64) {
         trace!("Creating a LazyChunk for ({}, {})", ci, cj);
 
-        let variable = zarrs::array::Array::open(self.source.clone(), "/cost").unwrap();
+        // cost variable is stored in the swap dataset
+        let variable = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
+        // Get the subset according to cost's chunk
         let subset = variable.chunk_subset(&[ci, cj]).unwrap();
         let data = LazySubset::<f32>::new(self.source.clone(), subset);
         let output = self.cost_function.compute(data);
