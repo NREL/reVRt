@@ -220,6 +220,12 @@ def file_full_path(file_name, layer_dir):
     -------
     path-like
         Full path to file.
+
+    Raises
+    ------
+    revrtFileNotFoundError
+        If file cannot be found in either the current directory or the
+        `layer_dir` directory.
     """
     full_fname = Path(file_name)
     if full_fname.exists():
