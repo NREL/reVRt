@@ -157,6 +157,10 @@ def test_global_value(builder_instance):
         result == np.array([[25, 25, 25], [25, 25, 25], [25, 25, 25]])
     ).all()
 
+    config = LayerBuildConfig(extent="landfall", global_value=100)
+    result = builder_instance._process_raster_data(data, config)
+    assert (result == np.array([[0, 100, 0], [0, 100, 0], [0, 100, 0]])).all()
+
 
 def test_bins(builder_instance):
     """Test bins key in LayerBuildConfig"""
