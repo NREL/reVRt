@@ -372,6 +372,18 @@ def test_bad_config_input_forced_inclusion(builder_instance, bad_input):
         builder_instance.build("friction", config, write_to_file=True)
 
 
+def test_getting_bad_mask(builder_instance):
+    """Test getting bad mask"""
+
+    with pytest.raises(
+        revrtAttributeError, match="Mask for extent of 'all' is unnecessary"
+    ):
+        builder_instance._get_mask("all")
+
+    with pytest.raises(revrtAttributeError, match="Unknown mask type: 'DNE'"):
+        builder_instance._get_mask("DNE")
+
+
 def test_cost_binning_results(builder_instance):
     """Test results of creating cost raster using bins"""
     data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])

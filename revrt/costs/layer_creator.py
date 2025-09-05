@@ -360,7 +360,7 @@ class LayerCreator(BaseLayerCreator):
     def _get_mask(self, extent):
         """Get mask by requested extent"""
         if extent == ALL:
-            msg = f"Mask for extent of {extent} is unnecessary"
+            msg = f"Mask for extent of {extent!r} is unnecessary"
             raise revrtAttributeError(msg)
 
         if extent == "wet":
@@ -374,7 +374,7 @@ class LayerCreator(BaseLayerCreator):
         elif extent == "landfall":
             mask = self._masks.landfall_mask
         else:
-            msg = f"Unknown mask type: {extent}"
+            msg = f"Unknown mask type: {extent!r}"
             raise revrtAttributeError(msg)
 
         return mask
