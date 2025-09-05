@@ -240,7 +240,7 @@ def file_full_path(file_name, layer_dir):
 
 
 def load_data_using_layer_file_profile(
-    layer_fp, geotiff, tiff_chunks="auto", layer_dir=None
+    layer_fp, geotiff, tiff_chunks="auto", layer_dir=None, band_index=None
 ):
     """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
 
@@ -254,6 +254,14 @@ def load_data_using_layer_file_profile(
         Chunk size to use when reading the GeoTIFF file. This will be
         passed down as the ``chunks`` argument to
         :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+    layer_dir : path-like, optional
+        Directory to search for `geotiff` in, if not found in current
+        directory. By default, ``None``, which means only the current
+        directory is searched.
+    band_index : int, optional
+        Optional index of band to load from the GeoTIFF. If provided,
+        only that band will be returned. By default, ``None``, which
+        means all bands will be returned.
 
     Returns
     -------
@@ -285,7 +293,7 @@ def load_data_using_layer_file_profile(
             width, height = ds.rio.width, ds.rio.height
             transform = ds.rio.transform()
 
-        return tif.rio.reproject(
+        tif = tif.rio.reproject(
             dst_crs=crs,
             shape=(height, width),
             transform=transform,
@@ -293,6 +301,9 @@ def load_data_using_layer_file_profile(
             resampling=Resampling.nearest,
             INIT_DEST=0,
         )
+
+    if band_index is not None:
+        tif = tif.isel(band=band_index)
 
     return tif
 

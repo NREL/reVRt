@@ -681,8 +681,9 @@ def test_load_data_using_layer_file_profile(
 
 
 @pytest.mark.parametrize("in_layer_dir", [True, False])
+@pytest.mark.parametrize("band", [None, 0])
 def test_load_data_using_file_full_path(
-    sample_tiff_fp, tmp_path, in_layer_dir
+    sample_tiff_fp, tmp_path, in_layer_dir, band
 ):
     """Test loading data using layered transmission file profile"""
 
@@ -700,11 +701,16 @@ def test_load_data_using_file_full_path(
         in_fp = sample_tiff_fp
 
     test_tif = load_data_using_layer_file_profile(
-        test_fp, in_fp, layer_dir=layer_dir
+        test_fp, in_fp, layer_dir=layer_dir, band_index=band
     )
     with rioxarray.open_rasterio(sample_tiff_fp) as tif:
         assert test_tif.rio.crs == tif.rio.crs
-        assert np.allclose(test_tif, tif)
+        if band is not None:
+            assert test_tif.shape == tif.shape[1:]
+            assert np.allclose(test_tif, tif[0])
+        else:
+            assert test_tif.shape == tif.shape
+            assert np.allclose(test_tif, tif)
         assert np.allclose(tif.rio.transform(), test_tif.rio.transform())
 
     test_tif.close()
