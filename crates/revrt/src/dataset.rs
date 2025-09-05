@@ -486,6 +486,7 @@ pub(crate) struct LazyChunk {
     >,
 }
 
+#[allow(dead_code)]
 impl LazyChunk {
     pub(super) fn ci(&self) -> u64 {
         self.ci
