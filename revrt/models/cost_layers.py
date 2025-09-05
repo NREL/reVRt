@@ -294,7 +294,7 @@ class TransmissionLayerCreationConfig(BaseModel):
     h5_fpath: FilePath
     """H5 to store results in"""
 
-    layer_dir: DirectoryPath = Path()
+    input_layer_dir: DirectoryPath = Path()
     """Directory to look for GeoTIFFs in, in addition to '.'"""
 
     masks_dir: DirectoryPath = Path()
