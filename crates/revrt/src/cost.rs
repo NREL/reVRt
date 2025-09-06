@@ -2,9 +2,9 @@
 
 use derive_builder::Builder;
 use ndarray::{Axis, stack};
-use tracing::{info, trace};
+use tracing::{debug, trace};
 
-use crate::dataset::LazyChunk;
+use crate::dataset::LazySubset;
 use crate::error::Result;
 
 #[derive(Debug, serde::Deserialize)]
@@ -70,15 +70,11 @@ impl CostFunction {
     /// # Returns
     /// A 2D array containing the cost for the subset covered by the input
     /// features.
-    pub(crate) fn calculate(
+    pub(crate) fn compute(
         &self,
-        mut features: LazyChunk,
+        mut features: LazySubset<f32>,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        info!(
-            "Calculating cost for chunk ({}, {})",
-            features.ci(),
-            features.cj()
-        );
+        debug!("Calculating cost for ({})", features.subset());
 
         let cost = self
             .cost_layers

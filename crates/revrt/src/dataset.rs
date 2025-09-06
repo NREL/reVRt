@@ -1,3 +1,4 @@
+mod lazy_subset;
 #[cfg(test)]
 pub(crate) mod samples;
 
@@ -13,6 +14,7 @@ use zarrs::storage::{
 use crate::ArrayIndex;
 use crate::cost::CostFunction;
 use crate::error::Result;
+pub(crate) use lazy_subset::LazySubset;
 
 /// Manages the features datasets and calculated total cost
 pub(super) struct Dataset {
@@ -29,7 +31,7 @@ pub(super) struct Dataset {
     /// cost is calculated from multiple variables.
     // cost_variables: Vec<String>,
     /// Storage for the calculated cost
-    cost: ReadableWritableListableStorage,
+    swap: ReadableWritableListableStorage,
     /// Index of cost chunks already calculated
     cost_chunk_idx: RwLock<ndarray::Array2<bool>>,
     /// Custom cost function definition
@@ -49,20 +51,20 @@ impl Dataset {
             zarrs::filesystem::FilesystemStore::new(path).expect("could not open filesystem store");
         let source = std::sync::Arc::new(filesystem);
 
-        // ==== Create the cost dataset ====
+        // ==== Create the swap dataset ====
         let tmp_path = tempfile::TempDir::new().unwrap();
         debug!(
-            "Initializing a temporary cost dataset at {:?}",
+            "Initializing a temporary swap dataset at {:?}",
             tmp_path.path()
         );
-        let cost: ReadableWritableListableStorage = std::sync::Arc::new(
+        let swap: ReadableWritableListableStorage = std::sync::Arc::new(
             zarrs::filesystem::FilesystemStore::new(tmp_path.path())
                 .expect("could not open filesystem store"),
         );
 
         trace!("Creating a new group for the cost dataset");
         zarrs::group::GroupBuilder::new()
-            .build(cost.clone(), "/")
+            .build(swap.clone(), "/")
             .unwrap()
             .store_metadata()
             .unwrap();
@@ -84,13 +86,13 @@ impl Dataset {
             chunk_shape,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
-        .build(cost.clone(), "/cost")
+        .build(swap.clone(), "/cost")
         .unwrap();
         trace!("Cost shape: {:?}", array.shape().to_vec());
         trace!("Cost chunk shape: {:?}", array.chunk_grid());
         array.store_metadata().unwrap();
 
-        trace!("Cost dataset contents: {:?}", cost.list().unwrap());
+        trace!("Cost dataset contents: {:?}", swap.list().unwrap());
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
@@ -111,7 +113,7 @@ impl Dataset {
         Ok(Self {
             source,
             cost_path: tmp_path,
-            cost,
+            swap,
             cost_chunk_idx,
             cost_function,
             cache,
@@ -120,13 +122,14 @@ impl Dataset {
 
     fn calculate_chunk_cost(&self, ci: u64, cj: u64) {
         trace!("Creating a LazyChunk for ({}, {})", ci, cj);
-        let chunk = LazyChunk {
-            source: self.source.clone(),
-            ci,
-            cj,
-            data: std::collections::HashMap::new(),
-        };
-        let output = self.cost_function.calculate(chunk);
+
+        // cost variable is stored in the swap dataset
+        let variable = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
+        // Get the subset according to cost's chunk
+        let subset = variable.chunk_subset(&[ci, cj]).unwrap();
+        let data = LazySubset::<f32>::new(self.source.clone(), subset);
+        let output = self.cost_function.compute(data);
+
         trace!("Cost function: {:?}", self.cost_function);
 
         /*
@@ -138,7 +141,7 @@ impl Dataset {
         let output = value * 10.0;
         */
 
-        let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
+        let cost = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
         let chunk_indices: Vec<u64> = vec![ci, cj];
         trace!("Storing chunk at {:?}", chunk_indices);
@@ -153,11 +156,11 @@ impl Dataset {
 
         trace!("Getting 3x3 neighborhood for (i={}, j={})", i, j);
 
-        trace!("Cost dataset contents: {:?}", self.cost.list().unwrap());
-        trace!("Cost dataset size: {:?}", self.cost.size().unwrap());
+        trace!("Cost dataset contents: {:?}", self.swap.list().unwrap());
+        trace!("Cost dataset size: {:?}", self.swap.size().unwrap());
 
         trace!("Opening cost dataset");
-        let cost = zarrs::array::Array::open(self.cost.clone(), "/cost").unwrap();
+        let cost = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
         trace!("Cost dataset with shape: {:?}", cost.shape());
 
         // Cutting off the edges for now.
@@ -485,6 +488,7 @@ pub(crate) struct LazyChunk {
     >,
 }
 
+#[allow(dead_code)]
 impl LazyChunk {
     pub(super) fn ci(&self) -> u64 {
         self.ci
