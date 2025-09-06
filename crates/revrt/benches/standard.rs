@@ -136,7 +136,7 @@ fn range_distance(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("distance");
     // Create an alternative benchmark definition to run locally only
-    for distance in [0, 1, 2, 5, 10, 15].iter() {
+    for distance in [0, 1, 2, 5, 10].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(distance),
             distance,
@@ -156,7 +156,7 @@ fn range_distance(c: &mut Criterion) {
 
 criterion_group!(
     name = benches;
-    config = Criterion::default().measurement_time(Duration::from_secs(12));
+    config = Criterion::default().measurement_time(Duration::from_secs(25));
     targets = standard_ones, standard_random, single_chunk, range_distance
 );
 criterion_main!(benches);
