@@ -156,7 +156,7 @@ fn range_distance(c: &mut Criterion) {
 
 criterion_group!(
     name = benches;
-    config = Criterion::default().measurement_time(Duration::from_secs(12));
+    config = Criterion::default().measurement_time(Duration::from_secs(20));
     targets = standard_ones, standard_random, single_chunk, range_distance
 );
 criterion_main!(benches);
