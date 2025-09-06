@@ -90,7 +90,7 @@ fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::pat
 fn standard_ones(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
 
-    c.bench_function("bench_minimalist", |b| {
+    c.bench_function("constant_cost", |b| {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
@@ -104,7 +104,7 @@ fn standard_ones(c: &mut Criterion) {
 fn standard_random(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::Random);
 
-    c.bench_function("bench_minimalist", |b| {
+    c.bench_function("random_cost", |b| {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
@@ -118,7 +118,7 @@ fn standard_random(c: &mut Criterion) {
 fn single_chunk(c: &mut Criterion) {
     let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
 
-    c.bench_function("bench_minimalist", |b| {
+    c.bench_function("single_chunk", |b| {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
