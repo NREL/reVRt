@@ -236,8 +236,7 @@ impl Dataset {
             for cj in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
                 trace!(
                     "Checking if cost for chunk ({}, {}) has been calculated",
-                    ci,
-                    cj
+                    ci, cj
                 );
                 if self.cost_chunk_idx.read().unwrap()[[ci as usize, cj as usize]] {
                     trace!("Cost for chunk ({}, {}) already calculated", ci, cj);
@@ -251,8 +250,7 @@ impl Dataset {
                     if chunk_idx[[ci as usize, cj as usize]] {
                         trace!(
                             "Cost for chunk ({}, {}) already calculated while waiting for the lock",
-                            ci,
-                            cj
+                            ci, cj
                         );
                     } else {
                         self.calculate_chunk_cost(ci, cj);

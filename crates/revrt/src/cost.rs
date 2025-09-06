@@ -1,7 +1,7 @@
 //! Cost fuction
 
 use derive_builder::Builder;
-use ndarray::{stack, Axis};
+use ndarray::{Axis, stack};
 use tracing::{debug, trace};
 
 use crate::dataset::LazySubset;
@@ -91,8 +91,7 @@ impl CostFunction {
                 if let Some(multiplier_scalar) = layer.multiplier_scalar {
                     trace!(
                         "Layer {} has multiplier scalar {}",
-                        layer_name,
-                        multiplier_scalar
+                        layer_name, multiplier_scalar
                     );
                     // Apply the multiplier scalar to the value
                     cost *= multiplier_scalar;
@@ -102,8 +101,7 @@ impl CostFunction {
                 if let Some(multiplier_layer) = &layer.multiplier_layer {
                     trace!(
                         "Layer {} has multiplier layer {}",
-                        layer_name,
-                        multiplier_layer
+                        layer_name, multiplier_layer
                     );
                     let multiplier_value = features
                         .get(multiplier_layer)
