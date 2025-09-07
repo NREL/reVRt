@@ -37,8 +37,8 @@ class LayerCreator(BaseLayerCreator):
 
         Parameters
         ----------
-        io_handler : :class:`LayeredTransmissionH5`
-            Transmission layer IO handler
+        io_handler : :class:`LayeredFile`
+            Layered file IO handler.
         masks : Masks
             Masks instance that can be used to retrieve multiple types
             of masks.
