@@ -1,7 +1,8 @@
 """Definition of friction, barrier, and costs processing config files"""
 
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal
+from typing_extensions import TypedDict
 
 from pydantic import BaseModel, DirectoryPath, FilePath
 
