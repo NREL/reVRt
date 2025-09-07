@@ -100,7 +100,7 @@ class LayerCreator(BaseLayerCreator):
         """
         layer_name = layer_name.replace(".tif", "").replace(".tiff", "")
         logger.debug("Combining %s layers", layer_name)
-        result = np.zeros(self._io_handler.shape, dtype=self._dtype)
+        result = np.zeros(self.shape, dtype=self._dtype)
         fi_layers = {}
 
         for fname, config in build_config.items():
@@ -199,7 +199,7 @@ class LayerCreator(BaseLayerCreator):
         """
         if config.global_value is not None:
             temp = np.full(
-                self._io_handler.shape,
+                self.shape,
                 fill_value=config.global_value,
                 dtype=self._dtype,
             )
@@ -208,7 +208,7 @@ class LayerCreator(BaseLayerCreator):
                 return temp
 
             mask = self._get_mask(config.extent)
-            processed = np.zeros(self._io_handler.shape, dtype=self._dtype)
+            processed = np.zeros(self.shape, dtype=self._dtype)
             processed[mask] = temp[mask]
             return processed
 
@@ -217,7 +217,7 @@ class LayerCreator(BaseLayerCreator):
             _validate_bin_range(config.bins)
             _validate_bin_continuity(config.bins)
 
-            processed = np.zeros(self._io_handler.shape, dtype=self._dtype)
+            processed = np.zeros(self.shape, dtype=self._dtype)
             if config.extent != ALL:
                 mask = self._get_mask(config.extent)
 
@@ -247,13 +247,13 @@ class LayerCreator(BaseLayerCreator):
                 return data
 
             mask = self._get_mask(config.extent)
-            processed = np.zeros(self._io_handler.shape, dtype=self._dtype)
+            processed = np.zeros(self.shape, dtype=self._dtype)
             processed[mask] = data[mask]
             return processed
 
         # No bins specified, has to be map
         # Assign cells values based on map
-        temp = np.zeros(self._io_handler.shape, dtype=self._dtype)
+        temp = np.zeros(self.shape, dtype=self._dtype)
         for key, val in config.map.items():  # type: ignore[union-attr]
             temp[data == key] = val
 
@@ -261,7 +261,7 @@ class LayerCreator(BaseLayerCreator):
             return temp
 
         mask = self._get_mask(config.extent)
-        processed = np.zeros(self._io_handler.shape, dtype=self._dtype)
+        processed = np.zeros(self.shape, dtype=self._dtype)
         processed[mask] = temp[mask]
         return processed
 
@@ -303,7 +303,7 @@ class LayerCreator(BaseLayerCreator):
             return temp
 
         mask = self._get_mask(config.extent)
-        processed = np.zeros(self._io_handler.shape, dtype=self._dtype)
+        processed = np.zeros(self.shape, dtype=self._dtype)
         processed[mask] = temp[mask]
         return processed
 
@@ -313,7 +313,7 @@ class LayerCreator(BaseLayerCreator):
         Any value > 0 in the FI layers will result in a 0 in the
         corresponding cell in the returned raster.
         """
-        fi = np.zeros(self._io_handler.shape)
+        fi = np.zeros(self.shape)
 
         for fname, config in fi_layers.items():
             if Path(fname).suffix.lower() not in TIFF_EXTENSIONS:
