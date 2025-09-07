@@ -93,6 +93,26 @@ class LayerCreator(BaseLayerCreator):
         description : str, optional
             Optional description to store with this layer in the H5
             file. By default, ``None``.
+        tiff_chunks : int | str, default="auto"
+            Chunk size to use when reading the GeoTIFF file. This will
+            be passed down as the ``chunks`` argument to
+            :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+        nodata : int | float, optional
+            Optional nodata value for the raster layer. This value will
+            be added to the layer's attributes meta dictionary under the
+            "nodata" key.
+        **profile_kwargs
+            Additional keyword arguments to pass into writing the
+            raster. The following attributes ar ignored (they are set
+            using properties of the :class:`LayeredFile`):
+
+                - nodata
+                - transform
+                - crs
+                - count
+                - width
+                - height
+
         """
         layer_name = layer_name.replace(".tif", "").replace(".tiff", "")
         logger.debug("Combining %s layers", layer_name)
@@ -148,23 +168,7 @@ class LayerCreator(BaseLayerCreator):
             )
 
     def _process_raster_layer(self, fname, config, tiff_chunks="auto"):
-        """Create the desired layer from the input file
-
-        Desired "range" or "map" operation is only applied to the area
-        indicated by the "extent".
-
-        Parameters
-        ----------
-        data : array-like
-            Array of data to process.
-        config : LayerBuildConfig
-            Definition of layer processing.
-
-        Returns
-        -------
-        array-like | None
-            Transformed data.
-        """
+        """Create the desired layer from the input file"""
         _check_tiff_layer_config(config, fname)
         data = load_data_using_layer_file_profile(
             layer_fp=self._io_handler.fp,
@@ -176,107 +180,69 @@ class LayerCreator(BaseLayerCreator):
         return self._process_raster_data(data, config)
 
     def _process_raster_data(self, data, config):
-        """Create the desired layer from the data array
-
-        Desired "range" or "map" operation is only applied to the area
-        indicated by the "extent".
-
-        Parameters
-        ----------
-        data : array-like
-            Array of data to process.
-        config : LayerBuildConfig
-            Definition of layer processing.
-
-        Returns
-        -------
-        array-like | None
-            Transformed data.
-        """
+        """Create the desired layer from the data array"""
         if config.global_value is not None:
-            temp = np.full(
-                self.shape,
-                fill_value=config.global_value,
-                dtype=self._dtype,
+            return self._process_global_raster_value(config)
+
+        if config.bins is not None:
+            return self._process_raster_bins(config, data)
+
+        if config.pass_through:
+            return self._pass_through_raster(config, data)
+
+        return self._process_raster_map(config, data)
+
+    def _process_global_raster_value(self, config):
+        """Create the desired layer from the global value"""
+        temp = np.full(
+            self.shape, fill_value=config.global_value, dtype=self._dtype
+        )
+        return self._apply_mask(config, temp)
+
+    def _process_raster_bins(self, config, data):
+        """Create the desired layer from the input file using bins"""
+        _validate_bin_range(config.bins)
+        _validate_bin_continuity(config.bins)
+
+        processed = np.zeros(self.shape, dtype=self._dtype)
+        if config.extent != ALL:
+            mask = self._get_mask(config.extent)
+
+        for i, interval in enumerate(config.bins):
+            logger.debug(
+                "Calculating layer values for bin %d/%d: %r",
+                i + 1,
+                len(config.bins),
+                interval,
+            )
+            temp = np.where(
+                np.logical_and(data >= interval.min, data < interval.max),
+                interval.value,
+                0,
             )
 
             if config.extent == ALL:
-                return temp
+                processed += temp
+                continue
 
-            mask = self._get_mask(config.extent)
-            processed = np.zeros(self.shape, dtype=self._dtype)
-            processed[mask] = temp[mask]
-            return processed
+            processed[mask] += temp[mask]
 
-        # Assign all cells one or more ranges to a value
-        if config.bins is not None:
-            _validate_bin_range(config.bins)
-            _validate_bin_continuity(config.bins)
-
-            processed = np.zeros(self.shape, dtype=self._dtype)
-            if config.extent != ALL:
-                mask = self._get_mask(config.extent)
-
-            for i, interval in enumerate(config.bins):
-                logger.debug(
-                    "Calculating layer values for bin %d/%d: %r",
-                    i + 1,
-                    len(config.bins),
-                    interval,
-                )
-                temp = np.where(
-                    np.logical_and(data >= interval.min, data < interval.max),
-                    interval.value,
-                    0,
-                )
-
-                if config.extent == ALL:
-                    processed += temp
-                    continue
-
-                processed[mask] += temp[mask]
-
-            return processed
-
-        if config.pass_through:
-            if config.extent == ALL:
-                return data
-
-            mask = self._get_mask(config.extent)
-            processed = np.zeros(self.shape, dtype=self._dtype)
-            processed[mask] = data[mask]
-            return processed
-
-        # No bins specified, has to be map
-        # Assign cells values based on map
-        temp = np.zeros(self.shape, dtype=self._dtype)
-        for key, val in config.map.items():  # type: ignore[union-attr]
-            temp[data == key] = val
-
-        if config.extent == ALL:
-            return temp
-
-        mask = self._get_mask(config.extent)
-        processed = np.zeros(self.shape, dtype=self._dtype)
-        processed[mask] = temp[mask]
         return processed
 
+    def _pass_through_raster(self, config, data):
+        """Process raster by passing it through without modification"""
+        return self._apply_mask(config, data)
+
+    def _process_raster_map(self, config, data):
+        """Create the desired layer from the input file using a map"""
+        temp = np.zeros(self.shape, dtype=self._dtype)
+        for key, val in config.map.items():
+            temp[data == key] = val
+
+        return self._apply_mask(config, temp)
+
     def _process_vector_layer(self, fname, config):
-        """
-        Rasterize a vector layer
-
-        Parameters
-        ----------
-        fname : str
-            Name of vector layer to rasterize
-        config : LayerBuildConfig
-            Config for layer
-
-        Returns
-        -------
-        array-like
-            Rasterized vector
-        """
+        """Rasterize a vector layer"""
         if config.rasterize is None:
             msg = (
                 f"{fname!r} is a vector but the config is missing "
@@ -300,12 +266,16 @@ class LayerCreator(BaseLayerCreator):
             **kwargs,
         )
 
+        return self._apply_mask(config, temp)
+
+    def _apply_mask(self, config, data):
+        """Apply the mask to the data based on the config extent"""
         if config.extent == ALL:
-            return temp
+            return data
 
         mask = self._get_mask(config.extent)
         processed = np.zeros(self.shape, dtype=self._dtype)
-        processed[mask] = temp[mask]
+        processed[mask] = data[mask]
         return processed
 
     def _process_forced_inclusions(self, data, fi_layers, tiff_chunks="auto"):
