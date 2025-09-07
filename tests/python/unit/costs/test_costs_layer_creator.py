@@ -1,4 +1,4 @@
-"""Test reVRt cost layer building"""
+"""Test reVRt cost layer creator"""
 
 from pathlib import Path
 from itertools import chain, combinations
@@ -7,8 +7,11 @@ import pytest
 import rioxarray
 import numpy as np
 import xarray as xr
+import geopandas as gpd
+from shapely.geometry import box
 from rasterio.transform import Affine, from_origin
 
+from revrt.constants import METERS_IN_MILE
 from revrt.models.cost_layers import LayerBuildConfig, RangeConfig, Rasterize
 from revrt.costs.layer_creator import LayerCreator
 from revrt.costs.masks import Masks
@@ -459,6 +462,86 @@ def test_bad_config_no_rasterize_vector(builder_instance):
         match=r'is a vector but the config is missing key "rasterize"',
     ):
         builder_instance.build("friction", config, write_to_file=False)
+
+
+@pytest.mark.parametrize("all_touched", [True, False])
+@pytest.mark.parametrize("extent", ["all", "dry"])
+@pytest.mark.parametrize("cpm", [True, False])
+@pytest.mark.parametrize("reproject", [True, False])
+@pytest.mark.parametrize("buffer", [None, 20])
+def test_rasterizing_shape_file(
+    tmp_path, mask_instance, all_touched, extent, cpm, reproject, buffer
+):
+    """Test rasterizing a basic shapefile"""
+    fn = "test_basic_shape.gpkg"
+    vector_file = tmp_path / fn
+    tiff_fp = tmp_path / "friction.tif"
+    assert not tiff_fp.exists()
+
+    template_tiff = tmp_path / "template.tif"
+    crs = "ESRI:102008"
+    transform = Affine(5.0, 0.0, -12.5, 0.0, -5.0, 12.5)
+
+    width = height = 3
+    cell_size = 5
+    x0, y0 = -12.5, 12.5
+
+    da = xr.DataArray(
+        np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]]),
+        dims=("y", "x"),
+        coords={
+            "x": x0 + np.arange(width) * cell_size + cell_size / 2,
+            "y": y0 - np.arange(height) * cell_size - cell_size / 2,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs(crs)
+    da.rio.write_transform(transform)
+    da.rio.to_raster(template_tiff, driver="GTiff")
+
+    basic_shape = gpd.GeoDataFrame(geometry=[box(-5, -20, 20, 20)], crs=crs)
+    basic_shape.to_file(vector_file, driver="GPKG")
+
+    test_fp = tmp_path / "test.zarr"
+    lf = LayeredFile(test_fp).create_new(template_tiff)
+
+    config = {
+        fn: LayerBuildConfig(
+            extent=extent,
+            rasterize=Rasterize(
+                value=1000,
+                buffer=buffer,
+                reproject=reproject,
+                all_touched=all_touched,
+            ),
+        )
+    }
+    builder = LayerCreator(
+        lf, mask_instance, input_layer_dir=tmp_path, output_tiff_dir=tmp_path
+    )
+    builder.build(
+        "friction", config, write_to_file=False, values_are_costs_per_mile=cpm
+    )
+
+    assert tiff_fp.exists()
+    value = 1000 / METERS_IN_MILE * cell_size if cpm else 1000
+    with rioxarray.open_rasterio(tiff_fp, chunks="auto") as ds:
+        if extent != "dry" and buffer:
+            assert np.allclose(np.full(fill_value=value, shape=(3, 3)), ds), (
+                f"{np.array(ds.values)}"
+            )
+        elif extent != "dry" and all_touched:
+            assert np.allclose(
+                np.array(
+                    [[[0, value, value], [0, value, value], [0, value, value]]]
+                ),
+                ds,
+            ), f"{np.array(ds.values)}"
+        else:
+            assert np.allclose(
+                np.array([[[0, 0, value], [0, 0, value], [0, 0, value]]]), ds
+            ), f"{np.array(ds.values)}"
 
 
 def test_cost_binning_results(builder_instance):

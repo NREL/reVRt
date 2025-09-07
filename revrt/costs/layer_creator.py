@@ -8,11 +8,12 @@ import numpy as np
 
 from revrt.costs.base import BaseLayerCreator
 from revrt.utilities import (
+    file_full_path,
     load_data_using_layer_file_profile,
     save_data_using_layer_file_profile,
 )
 from revrt.utilities.raster import rasterize_shape_file
-from revrt.constants import DEFAULT_DTYPE, ALL, METERS_IN_MILE, CELL_SIZE
+from revrt.constants import DEFAULT_DTYPE, ALL, METERS_IN_MILE
 from revrt.exceptions import revrtAttributeError, revrtValueError
 from revrt.warn import revrtWarning
 
@@ -31,7 +32,6 @@ class LayerCreator(BaseLayerCreator):
         input_layer_dir=".",
         output_tiff_dir=".",
         dtype=DEFAULT_DTYPE,
-        cell_size=CELL_SIZE,
     ):
         """
 
@@ -50,9 +50,6 @@ class LayerCreator(BaseLayerCreator):
             By default, ``"."``.
         dtype : np.dtype, optional
             Data type for final dataset. By default, ``float32``.
-        cell_size : int, optional
-            Side length of each cell, in meters. Cells are assumed to be
-            square. By default, :obj:`CELL_SIZE`.
         """
         self._masks = masks
         super().__init__(
@@ -60,7 +57,6 @@ class LayerCreator(BaseLayerCreator):
             input_layer_dir=input_layer_dir,
             output_tiff_dir=output_tiff_dir,
             dtype=dtype,
-            cell_size=cell_size,
         )
 
     def build(
@@ -125,7 +121,7 @@ class LayerCreator(BaseLayerCreator):
             result, fi_layers, tiff_chunks=tiff_chunks
         )
         if values_are_costs_per_mile:
-            result = result / METERS_IN_MILE * self._cell_size
+            result = result / METERS_IN_MILE * self.cell_size
 
         out_filename = self.output_tiff_dir / f"{layer_name}.tif"
         logger.debug(
@@ -288,15 +284,20 @@ class LayerCreator(BaseLayerCreator):
             )
             raise revrtValueError(msg)
 
-        r_config = config.rasterize
+        kwargs = {
+            k: v for k, v in self._io_handler.profile.items() if k != "crs"
+        }
+        if config.rasterize.reproject:
+            kwargs["dest_crs"] = self._io_handler.profile["crs"]
 
+        fname = file_full_path(fname, layer_dir=self.input_layer_dir)
         temp = rasterize_shape_file(
             fname,
-            self._io_handler.profile,
-            buffer_dist=r_config.buffer,
-            burn_value=r_config.value,
+            buffer_dist=config.rasterize.buffer,
+            burn_value=config.rasterize.value,
+            all_touched=config.rasterize.all_touched,
             dtype=self._dtype,
-            reproject_vector=r_config.reproject,
+            **kwargs,
         )
 
         if config.extent == ALL:

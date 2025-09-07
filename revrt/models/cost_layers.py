@@ -5,7 +5,7 @@ from typing import Literal, TypedDict
 
 from pydantic import BaseModel, DirectoryPath, FilePath
 
-from revrt.constants import ALL, CELL_SIZE, BARRIER_H5_LAYER_NAME
+from revrt.constants import ALL, BARRIER_H5_LAYER_NAME
 
 
 Extents = Literal["all", "wet", "wet+", "landfall", "dry+", "dry"]
@@ -104,6 +104,9 @@ class Rasterize(BaseModel, extra="forbid"):
 
     reproject: bool = True
     """Reproject vector to raster CRS if ``True``"""
+
+    all_touched: bool = False
+    """Rasterize all cells touched by vector if ``True``"""
 
 
 class LayerBuildConfig(BaseModel, extra="forbid"):
@@ -322,10 +325,4 @@ class TransmissionLayerCreationConfig(BaseModel):
 
     At least one of `layers`, `dry_costs`, or
     `merge_friction_and_barriers` must be defined.
-    """
-
-    cell_size: int = CELL_SIZE
-    """Side length of each cell, in meters
-
-    Cells are assumed to be square. By default, :obj:`CELL_SIZE`.
     """

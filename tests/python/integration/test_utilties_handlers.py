@@ -97,8 +97,7 @@ def test_write_layer(tmp_path, ri_regions_fp):
     test_fp = tmp_path / "test.zarr"
     assert not test_fp.exists()
 
-    lf = LayeredFile(test_fp)
-    lf.create_new(ri_regions_fp, overwrite=True)
+    lf = LayeredFile(test_fp).create_new(ri_regions_fp, overwrite=True)
 
     assert test_fp.exists()
 
