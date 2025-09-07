@@ -178,6 +178,11 @@ class LayeredFile:
             :meth:`rioxarray.open_rasterio` or
             :meth:`xarray.open_dataset`, depending on what template file
             is passed in. By default, ``"auto"``.
+
+        Returns
+        -------
+        LayeredFile
+            This `LayeredFile` object with a corresponding file on disk.
         """
         if self.fp.exists() and not overwrite:
             msg = f"File {self.fp!r} exits and overwrite=False"
@@ -203,6 +208,8 @@ class LayeredFile:
             if self.fp.exists():
                 delete_data_file(self.fp)
             raise
+
+        return self
 
     def write_layer(
         self,

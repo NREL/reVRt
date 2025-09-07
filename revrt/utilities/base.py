@@ -220,6 +220,12 @@ def file_full_path(file_name, layer_dir):
     -------
     path-like
         Full path to file.
+
+    Raises
+    ------
+    revrtFileNotFoundError
+        If file cannot be found in either the current directory or the
+        `layer_dir` directory.
     """
     full_fname = Path(file_name)
     if full_fname.exists():
@@ -233,7 +239,9 @@ def file_full_path(file_name, layer_dir):
     raise revrtFileNotFoundError(msg)
 
 
-def load_data_using_layer_file_profile(layer_fp, geotiff, tiff_chunks="auto"):
+def load_data_using_layer_file_profile(
+    layer_fp, geotiff, tiff_chunks="auto", layer_dir=None, band_index=None
+):
     """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
 
     Parameters
@@ -246,12 +254,29 @@ def load_data_using_layer_file_profile(layer_fp, geotiff, tiff_chunks="auto"):
         Chunk size to use when reading the GeoTIFF file. This will be
         passed down as the ``chunks`` argument to
         :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+    layer_dir : path-like, optional
+        Directory to search for `geotiff` in, if not found in current
+        directory. By default, ``None``, which means only the current
+        directory is searched.
+    band_index : int, optional
+        Optional index of band to load from the GeoTIFF. If provided,
+        only that band will be returned. By default, ``None``, which
+        means all bands will be returned.
 
     Returns
     -------
     array-like
         Raster data.
+
+    Raises
+    ------
+    revrtFileNotFoundError
+        If `geotiff` cannot be found in either the current directory or
+        the `layer_dir` directory.
     """
+    if layer_dir:
+        geotiff = file_full_path(geotiff, layer_dir)
+
     tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
 
     try:
@@ -268,7 +293,7 @@ def load_data_using_layer_file_profile(layer_fp, geotiff, tiff_chunks="auto"):
             width, height = ds.rio.width, ds.rio.height
             transform = ds.rio.transform()
 
-        return tif.rio.reproject(
+        tif = tif.rio.reproject(
             dst_crs=crs,
             shape=(height, width),
             transform=transform,
@@ -276,6 +301,9 @@ def load_data_using_layer_file_profile(layer_fp, geotiff, tiff_chunks="auto"):
             resampling=Resampling.nearest,
             INIT_DEST=0,
         )
+
+    if band_index is not None:
+        tif = tif.isel(band=band_index)
 
     return tif
 
