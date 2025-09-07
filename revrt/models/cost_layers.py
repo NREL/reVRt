@@ -204,9 +204,11 @@ class DryCosts(BaseModel, extra="forbid"):
         - "land_use": A dictionary where keys are the land use types
           (e.g. "cropland", "forest", "wetland", etc.) and values are
           the multipliers for those land uses.
-        - "slope": A dictionary where keys are the slope types/mults
-          (e.g. "hill_mult", "hill_slope", "mtn_mult", "mtn_slope",
-          etc.) and values are the slopes/multipliers.
+        - "slope": A dictionary where keys are the slope
+          types/multipliers (e.g. "hill_mult", "hill_slope",
+          "mtn_mult", "mtn_slope", etc.) and values are the
+          slopes/multipliers.
+
 
     """
 

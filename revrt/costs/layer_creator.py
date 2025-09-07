@@ -98,12 +98,12 @@ class LayerCreator(BaseLayerCreator):
             be passed down as the ``chunks`` argument to
             :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
         nodata : int | float, optional
-            Optional nodata value for the raster layer. This value will
+            Optional nodata value for output rasters. This value will
             be added to the layer's attributes meta dictionary under the
             "nodata" key.
         **profile_kwargs
-            Additional keyword arguments to pass into writing the
-            raster. The following attributes ar ignored (they are set
+            Additional keyword arguments to pass into writing output
+            rasters. The following attributes ar ignored (they are set
             using properties of the :class:`LayeredFile`):
 
                 - nodata
