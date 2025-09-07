@@ -90,7 +90,7 @@ fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::pat
 fn standard_ones(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
 
-    c.bench_function("bench_minimalist", |b| {
+    c.bench_function("constant_cost", |b| {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
@@ -104,7 +104,7 @@ fn standard_ones(c: &mut Criterion) {
 fn standard_random(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::Random);
 
-    c.bench_function("bench_minimalist", |b| {
+    c.bench_function("random_cost", |b| {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
@@ -118,7 +118,7 @@ fn standard_random(c: &mut Criterion) {
 fn single_chunk(c: &mut Criterion) {
     let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
 
-    c.bench_function("bench_minimalist", |b| {
+    c.bench_function("single_chunk", |b| {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
@@ -136,7 +136,7 @@ fn range_distance(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("distance");
     // Create an alternative benchmark definition to run locally only
-    for distance in [0, 1, 2, 5, 10, 15].iter() {
+    for distance in [0, 1, 2, 5, 10].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(distance),
             distance,
@@ -156,7 +156,7 @@ fn range_distance(c: &mut Criterion) {
 
 criterion_group!(
     name = benches;
-    config = Criterion::default().measurement_time(Duration::from_secs(12));
+    config = Criterion::default().measurement_time(Duration::from_secs(25));
     targets = standard_ones, standard_random, single_chunk, range_distance
 );
 criterion_main!(benches);
