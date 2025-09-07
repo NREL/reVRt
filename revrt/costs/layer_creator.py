@@ -283,7 +283,7 @@ class LayerCreator(BaseLayerCreator):
         """
         if config.rasterize is None:
             msg = (
-                f"{fname} is a vector but the config is missing "
+                f"{fname!r} is a vector but the config is missing "
                 f'key "rasterize": {config}'
             )
             raise revrtValueError(msg)

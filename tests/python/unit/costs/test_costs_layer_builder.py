@@ -451,6 +451,16 @@ def test_getting_bad_mask(builder_instance):
         builder_instance._get_mask("DNE")
 
 
+def test_bad_config_no_rasterize_vector(builder_instance):
+    """Test a bad file type input in the config"""
+    config = {"fi_1.gpkg": LayerBuildConfig(extent="wet+")}
+    with pytest.raises(
+        revrtValueError,
+        match=r'is a vector but the config is missing key "rasterize"',
+    ):
+        builder_instance.build("friction", config, write_to_file=False)
+
+
 def test_cost_binning_results(builder_instance):
     """Test results of creating cost raster using bins"""
     data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
