@@ -4,16 +4,121 @@ from pathlib import Path
 
 import pytest
 import numpy as np
+import xarray as xr
+import rioxarray
+from rasterio.transform import from_origin
 
 from revrt.costs.dry_costs_creator import (
     DEFAULT_HILL_MULTIPLIER,
     DEFAULT_MTN_MULTIPLIER,
     DEFAULT_HILL_SLOPE,
     DEFAULT_MTN_SLOPE,
+    DryCostCreator,
     compute_slope_multipliers,
     compute_land_use_multipliers,
 )
+from revrt.utilities import LayeredFile
 from revrt.exceptions import revrtValueError
+
+
+@pytest.fixture(scope="module")
+def sample_tiff_props():
+    """Return properties for sample TIFF file used for tests"""
+    width, height = 6, 5
+    cell_size = 5
+    x0, y0 = -10, 10
+    transform = from_origin(x0, y0, cell_size, cell_size)
+    return (x0, y0, width, height, cell_size, transform)
+
+
+@pytest.fixture(scope="module")
+def sample_iso_fp(sample_tiff_props, tmp_path_factory):
+    """Return path to TIFF file used for tests"""
+    x0, y0, width, height, cell_size, transform = sample_tiff_props
+    da = xr.DataArray(
+        np.array(
+            [
+                [0, 0, 0, 0, 0, 0],
+                [1, 1, 1, 1, 1, 1],
+                [2, 2, 2, 2, 2, 2],
+                [3, 3, 3, 3, 3, 3],
+                [4, 4, 4, 4, 4, 4],
+            ]
+        ),
+        dims=("y", "x"),
+        coords={
+            "x": x0 + np.arange(width) * cell_size + cell_size / 2,
+            "y": y0 - np.arange(height) * cell_size - cell_size / 2,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("ESRI:102008")
+    da.rio.write_transform(transform)
+
+    out_fp = tmp_path_factory.mktemp("data") / "sample_iso.tif"
+    da.rio.to_raster(out_fp, driver="GTiff")
+    return out_fp
+
+
+@pytest.fixture(scope="module")
+def sample_nlcd_fp(sample_tiff_props, tmp_path_factory):
+    """Return path to TIFF file used for tests"""
+    x0, y0, width, height, cell_size, transform = sample_tiff_props
+    da = xr.DataArray(
+        np.array(
+            [
+                [11, 11, 95, 95, 95, 90],
+                [11, 90, 90, 81, 81, 90],
+                [11, 90, 21, 80, 41, 90],
+                [95, 90, 22, 24, 42, 90],
+                [95, 90, 23, 81, 43, 90],
+            ]
+        ),
+        dims=("y", "x"),
+        coords={
+            "x": x0 + np.arange(width) * cell_size + cell_size / 2,
+            "y": y0 - np.arange(height) * cell_size - cell_size / 2,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("ESRI:102008")
+    da.rio.write_transform(transform)
+
+    out_fp = tmp_path_factory.mktemp("data") / "sample_nlcd.tif"
+    da.rio.to_raster(out_fp, driver="GTiff")
+    return out_fp
+
+
+@pytest.fixture(scope="module")
+def sample_slope_fp(sample_tiff_props, tmp_path_factory):
+    """Return path to TIFF file used for tests"""
+    x0, y0, width, height, cell_size, transform = sample_tiff_props
+    da = xr.DataArray(
+        np.array(
+            [
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0],
+                [0, 2, 3, 8, 9, 0],
+                [0, 0, 0, 0, 0, 0],
+            ]
+        ),
+        dims=("y", "x"),
+        coords={
+            "x": x0 + np.arange(width) * cell_size + cell_size / 2,
+            "y": y0 - np.arange(height) * cell_size - cell_size / 2,
+        },
+        name="test_band",
+    )
+
+    da = da.rio.write_crs("ESRI:102008")
+    da.rio.write_transform(transform)
+
+    out_fp = tmp_path_factory.mktemp("data") / "sample_slope.tif"
+    da.rio.to_raster(out_fp, driver="GTiff")
+    return out_fp
 
 
 def test_compute_slope_multipliers_defaults():
@@ -115,6 +220,115 @@ def test_compute_land_use_multipliers_bad_class_mapping():
         compute_land_use_multipliers(
             input_classes, multipliers, land_use_classes
         )
+
+
+def test_land_use_multiplier(
+    tmp_path, sample_iso_fp, sample_nlcd_fp, sample_slope_fp
+):
+    """Test land use multiplier creation"""
+
+    expected_datasets = [
+        "sample_iso",
+        "sample_nlcd",
+        "sample_slope",
+        "dry_multipliers",
+        "tie_line_costs_102MW",
+        "tie_line_costs_205MW",
+        "tie_line_costs_400MW",
+        "tie_line_costs_3000MW",
+        "tie_line_costs_1500MW",
+    ]
+
+    lf = LayeredFile(tmp_path / "test.zarr")
+    lf.create_new(sample_nlcd_fp)
+
+    with xr.open_dataset(lf.fp, consolidated=False, engine="zarr") as ds:
+        for ds_name in expected_datasets:
+            assert ds_name not in ds
+
+    dcc = DryCostCreator(
+        lf, input_layer_dir=tmp_path, output_tiff_dir=tmp_path
+    )
+    dcc.build(sample_iso_fp, sample_nlcd_fp, sample_slope_fp)
+
+    with xr.open_dataset(lf.fp, consolidated=False, engine="zarr") as ds:
+        for ds_name in expected_datasets:
+            assert ds_name in ds
+
+        expected_multipliers = np.array(
+            [
+                [10.0, 10.0, 1.0, 1.0, 1.0, 1.0],
+                [10.0, 1.2, 1.2, 1.0, 1.0, 1.2],
+                [10.0, 2.0, 2.0, 1.0, 3.0, 2.0],
+                [1.8, 1.98, 1.1880001, 1.4520001, 1.4520001, 1.8],
+                [1.33, 1.33, 1.75, 1.0, 1.47, 1.33],
+            ],
+        )
+        assert np.allclose(ds["dry_multipliers"], expected_multipliers)
+
+        expected_costs = np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [30562.17, 3667.46, 3667.46, 3056.22, 3056.22, 3667.46],
+                [47348.48, 9469.70, 9469.70, 4734.85, 14204.55, 9469.70],
+                [7017.95, 7719.74, 4631.85, 5661.14, 5661.14, 7017.95],
+                [3383.59, 3383.59, 4452.10, 2544.06, 3739.76, 3383.59],
+            ]
+        )
+        assert np.allclose(ds["tie_line_costs_102MW"], expected_costs)
+
+        expected_costs = np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [36663.5, 4399.62, 4399.62, 3666.35, 3666.35, 4399.62],
+                [64750.67, 12950.13, 12950.13, 6475.07, 19425.20, 12950.13],
+                [8089.147, 8898.0625, 5338.8374, 6525.246, 6525.246, 8089.147],
+                [4067.35, 4067.35, 5351.78, 3058.16, 4495.49, 4067.35],
+            ]
+        )
+        assert np.allclose(ds["tie_line_costs_205MW"], expected_costs)
+
+        expected_costs = np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [49075.02, 5889.00, 5889.00, 4907.50, 4907.50, 5889.00],
+                [94262.02, 18852.40, 18852.40, 9426.20, 28278.60, 18852.40],
+                [9477.603, 10425.363, 6255.2183, 7645.267, 7645.267, 9477.603],
+                [6477.737, 6477.737, 8523.338, 4870.4785, 7159.6035, 6477.737],
+            ]
+        )
+        assert np.allclose(ds["tie_line_costs_400MW"], expected_costs)
+
+        expected_costs = np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [78474.49, 9416.939, 9416.939, 7847.449, 7847.449, 9416.939],
+                [122794.05, 24558.81, 24558.81, 12279.40, 36838.21, 24558.81],
+                [12896.70, 14186.37, 8511.83, 10403.34, 10403.34, 12896.70],
+                [13868.06, 13868.06, 18247.44, 10427.11, 15327.85, 13868.06],
+            ]
+        )
+        assert np.allclose(ds["tie_line_costs_3000MW"], expected_costs)
+
+        expected_costs = np.array(
+            [
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [94847.88, 11381.75, 11381.75, 9484.79, 9484.79, 11381.75],
+                [148414.52, 29682.90, 29682.90, 14841.45, 44524.35, 29682.90],
+                [15587.55, 17146.30, 10287.78, 12573.96, 12573.96, 15587.55],
+                [16761.57, 16761.57, 22054.69, 12602.68, 18525.94, 16761.57],
+            ]
+        )
+        assert np.allclose(ds["tie_line_costs_1500MW"], expected_costs)
+
+        with rioxarray.open_rasterio(sample_iso_fp, chunks="auto") as da:
+            assert np.allclose(ds["sample_iso"], da.isel(band=0))
+
+        with rioxarray.open_rasterio(sample_nlcd_fp, chunks="auto") as da:
+            assert np.allclose(ds["sample_nlcd"], da.isel(band=0))
+
+        with rioxarray.open_rasterio(sample_slope_fp, chunks="auto") as da:
+            assert np.allclose(ds["sample_slope"], da.isel(band=0))
 
 
 if __name__ == "__main__":
