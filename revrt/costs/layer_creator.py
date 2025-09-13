@@ -5,6 +5,7 @@ from pathlib import Path
 from warnings import warn
 
 import numpy as np
+import dask.array as da
 
 from revrt.costs.base import BaseLayerCreator
 from revrt.utilities import (
@@ -116,7 +117,7 @@ class LayerCreator(BaseLayerCreator):
         """
         layer_name = layer_name.replace(".tif", "").replace(".tiff", "")
         logger.debug("Combining %s layers", layer_name)
-        result = np.zeros(self.shape, dtype=self._dtype)
+        result = da.zeros(self.shape, dtype=self._dtype)
         fi_layers = {}
 
         for fname, config in build_config.items():
@@ -194,7 +195,7 @@ class LayerCreator(BaseLayerCreator):
 
     def _process_global_raster_value(self, config):
         """Create the desired layer from the global value"""
-        temp = np.full(
+        temp = da.full(
             self.shape, fill_value=config.global_value, dtype=self._dtype
         )
         return self._apply_mask(config, temp)
@@ -204,7 +205,7 @@ class LayerCreator(BaseLayerCreator):
         _validate_bin_range(config.bins)
         _validate_bin_continuity(config.bins)
 
-        processed = np.zeros(self.shape, dtype=self._dtype)
+        processed = da.zeros(self.shape, dtype=self._dtype)
         if config.extent != ALL:
             mask = self._get_mask(config.extent)
 
@@ -215,7 +216,7 @@ class LayerCreator(BaseLayerCreator):
                 len(config.bins),
                 interval,
             )
-            temp = np.where(
+            temp = da.where(
                 np.logical_and(data >= interval.min, data < interval.max),
                 interval.value,
                 0,
@@ -225,7 +226,7 @@ class LayerCreator(BaseLayerCreator):
                 processed += temp
                 continue
 
-            processed[mask] += temp[mask]
+            processed = da.where(mask, processed + temp, processed)
 
         return processed
 
@@ -235,9 +236,9 @@ class LayerCreator(BaseLayerCreator):
 
     def _process_raster_map(self, config, data):
         """Create the desired layer from the input file using a map"""
-        temp = np.zeros(self.shape, dtype=self._dtype)
+        temp = da.zeros(self.shape, dtype=self._dtype)
         for key, val in config.map.items():
-            temp[data == key] = val
+            temp = da.where(data == key, val, temp)
 
         return self._apply_mask(config, temp)
 
@@ -274,9 +275,7 @@ class LayerCreator(BaseLayerCreator):
             return data
 
         mask = self._get_mask(config.extent)
-        processed = np.zeros(self.shape, dtype=self._dtype)
-        processed[mask] = data[mask]
-        return processed
+        return da.where(mask, data, 0)
 
     def _process_forced_inclusions(self, data, fi_layers, tiff_chunks="auto"):
         """Use forced inclusion (FI) layers to remove barriers/friction
@@ -284,7 +283,7 @@ class LayerCreator(BaseLayerCreator):
         Any value > 0 in the FI layers will result in a 0 in the
         corresponding cell in the returned raster.
         """
-        fi = np.zeros(self.shape)
+        fi = da.zeros(self.shape)
 
         for fname, config in fi_layers.items():
             if Path(fname).suffix.lower() not in TIFF_EXTENSIONS:
@@ -328,10 +327,9 @@ class LayerCreator(BaseLayerCreator):
             if config.extent == ALL:
                 fi += temp
             else:
-                fi[mask] += temp[mask]
+                fi = da.where(mask, fi + temp, fi)
 
-        data[fi > 0] = 0
-        return data
+        return da.where(fi > 0, 0, data)
 
     def _get_mask(self, extent):
         """Get mask by requested extent"""
