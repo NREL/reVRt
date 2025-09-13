@@ -11,7 +11,7 @@ from shapely.geometry import box
 from shapely.ops import unary_union
 
 from revrt.constants import BARRIER_H5_LAYER_NAME
-from revrt.costs.build import build_costs_file
+from revrt.costs.cli import build_costs_file
 from revrt.costs.masks import Masks
 from revrt.exceptions import revrtConfigurationError
 

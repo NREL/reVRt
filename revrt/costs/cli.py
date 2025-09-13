@@ -4,6 +4,7 @@ import logging
 from warnings import warn
 
 from dask.distributed import Client
+from gaps.cli import CLICommandFromFunction
 
 from revrt.models.cost_layers import ALL, TransmissionLayerCreationConfig
 from revrt.costs.layer_creator import LayerCreator
@@ -235,3 +236,11 @@ def _combine_friction_and_barriers(config, io_handler):
 
     logger.info("Writing combined barriers to H5")
     io_handler.write_layer(combined, merge_config.output_layer_name)
+
+
+cost_build_command = CLICommandFromFunction(
+    build_costs_file,
+    name="build-costs",
+    add_collect=False,
+    split_keys=None,
+)
