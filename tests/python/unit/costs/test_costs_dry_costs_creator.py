@@ -14,7 +14,7 @@ from revrt.costs.dry_costs_creator import (
     DEFAULT_MTN_MULTIPLIER,
     DEFAULT_HILL_SLOPE,
     DEFAULT_MTN_SLOPE,
-    DryCostCreator,
+    DryCostsCreator,
     compute_slope_multipliers,
     compute_land_use_multipliers,
 )
@@ -269,7 +269,7 @@ def test_dry_costs_build(
         for ds_name in expected_datasets:
             assert ds_name not in ds
 
-    dcc = DryCostCreator(
+    dcc = DryCostsCreator(
         lf, input_layer_dir=tmp_path, output_tiff_dir=tmp_path
     )
     dcc.build(sample_iso_fp, sample_nlcd_fp, sample_slope_fp)
@@ -435,7 +435,7 @@ def test_dry_costs_build_extra_inputs(
         for ds_name in expected_datasets:
             assert ds_name not in ds
 
-    dcc = DryCostCreator(
+    dcc = DryCostsCreator(
         lf, input_layer_dir=tmp_path, output_tiff_dir=tmp_path
     )
     dcc.build(

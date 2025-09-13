@@ -43,7 +43,7 @@ WATER_MULTIPLIER = 10.0
 """10: Multiplier value for water cells based on NLCD"""
 
 
-class DryCostCreator(BaseLayerCreator):
+class DryCostsCreator(BaseLayerCreator):
     """Class to create and save dry transmission cost layers"""
 
     def build(
