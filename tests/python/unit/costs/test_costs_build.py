@@ -81,6 +81,7 @@ def test_build_config_missing_action(tmp_path):
         build_costs_file(fp=tmp_path / "test.zarr", template_file=tiff_fp)
 
 
+@pytest.mark.parametrize("mw", [None, 1, 2])
 def test_build_basic_all(
     tmp_path,
     sample_iso_fp,
@@ -89,6 +90,7 @@ def test_build_basic_all(
     sample_extra_fp,
     tiff_layers_for_testing,
     masks_for_testing,
+    mw,
 ):
     """Test basic building of layers, dry costs, and merging"""
     test_fp = tmp_path / "test.zarr"
@@ -135,7 +137,7 @@ def test_build_basic_all(
         },
     }
 
-    build_costs_file(**config)
+    build_costs_file(**config, max_workers=mw)
 
     assert test_fp.exists()
     assert out_tiff_dir.exists()

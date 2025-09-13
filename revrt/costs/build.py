@@ -3,6 +3,8 @@
 import logging
 from warnings import warn
 
+from dask.distributed import Client
+
 from revrt.models.cost_layers import ALL, TransmissionLayerCreationConfig
 from revrt.costs.layer_creator import LayerCreator
 from revrt.costs.dry_costs_creator import DryCostsCreator
@@ -29,6 +31,8 @@ def build_costs_file(
     layers=None,
     dry_costs=None,
     merge_friction_and_barriers=None,
+    max_workers=1,
+    memory_limit_per_worker="auto",
 ):
     """Create costs, barriers, and frictions from a config file
 
@@ -71,6 +75,18 @@ def build_costs_file(
         the layered costs file. At least one of `layers`, `dry_costs`,
         or `merge_friction_and_barriers` must be defined.
         By default, ``None``
+    max_workers : int, optional
+        Number of parallel workers to use for file creation. If ``None``
+        or >1, processing is performed in parallel using Dask.
+        By default, ``1``.
+    memory_limit_per_worker : str, float, int, or None, default="auto"
+        Sets the memory limit *per worker*. This only applies if
+        ``max_workers != 1``. If ``None`` or ``0``, no limit is applied.
+        If ``"auto"``, the total system memory is split evenly between
+        the workers. If a float, that fraction of the system memory is
+        used *per worker*. If a string giving a number  of bytes (like
+        "1GiB"), that amount is used *per worker*. If an int, that
+        number of bytes is used *per worker*. By default, ``"auto"``
     """
     config = _validated_config(
         fp=fp,
@@ -82,6 +98,11 @@ def build_costs_file(
         dry_costs=dry_costs,
         merge_friction_and_barriers=merge_friction_and_barriers,
     )
+
+    if max_workers != 1:
+        __ = Client(
+            n_workers=max_workers, memory_limit=memory_limit_per_worker
+        )
 
     lf_handler = LayeredFile(fp=config.fp)
     if not lf_handler.fp.exists():
