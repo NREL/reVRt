@@ -159,7 +159,7 @@ class LayerCreator(BaseLayerCreator):
                 layer_fp=self._io_handler.fp,
                 geotiff=out_filename,
                 tiff_chunks=tiff_chunks,
-                layer_dir=self.input_layer_dir,
+                layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
                 band_index=0,
             )
             logger.debug("Writing %s to H5", layer_name)
@@ -174,7 +174,7 @@ class LayerCreator(BaseLayerCreator):
             layer_fp=self._io_handler.fp,
             geotiff=fname,
             tiff_chunks=tiff_chunks,
-            layer_dir=self.input_layer_dir,
+            layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
             band_index=0,
         )
         return self._process_raster_data(data, config)
@@ -256,7 +256,7 @@ class LayerCreator(BaseLayerCreator):
         if config.rasterize.reproject:
             kwargs["dest_crs"] = self._io_handler.profile["crs"]
 
-        fname = file_full_path(fname, layer_dir=self.input_layer_dir)
+        fname = file_full_path(fname, self.input_layer_dir)
         temp = rasterize_shape_file(
             fname,
             buffer_dist=config.rasterize.buffer,
@@ -321,7 +321,7 @@ class LayerCreator(BaseLayerCreator):
                 layer_fp=self._io_handler.fp,
                 geotiff=fname,
                 tiff_chunks=tiff_chunks,
-                layer_dir=self.input_layer_dir,
+                layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
                 band_index=0,
             ).values
 

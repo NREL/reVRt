@@ -701,7 +701,7 @@ def test_load_data_using_file_full_path(
         in_fp = sample_tiff_fp
 
     test_tif = load_data_using_layer_file_profile(
-        test_fp, in_fp, layer_dir=layer_dir, band_index=band
+        test_fp, in_fp, layer_dirs=[layer_dir], band_index=band
     )
     with rioxarray.open_rasterio(sample_tiff_fp) as tif:
         assert test_tif.rio.crs == tif.rio.crs
@@ -716,7 +716,7 @@ def test_load_data_using_file_full_path(
     test_tif.close()
 
     with pytest.raises(revrtFileNotFoundError, match="Unable to find file"):
-        file_full_path("DNE", layer_dir=layer_dir)
+        file_full_path("DNE", layer_dir)
 
 
 @pytest.mark.parametrize("as_list", [True, False])
