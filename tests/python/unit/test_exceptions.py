@@ -7,6 +7,7 @@ import pytest
 from revrt.exceptions import (
     revrtError,
     revrtAttributeError,
+    revrtConfigurationError,
     revrtFileExistsError,
     revrtFileNotFoundError,
     revrtKeyError,
@@ -54,6 +55,10 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
         (
             revrtAttributeError,
             [revrtError, revrtAttributeError, AttributeError],
+        ),
+        (
+            revrtConfigurationError,
+            [revrtError, revrtConfigurationError, ValueError],
         ),
         (
             revrtFileExistsError,
