@@ -3,9 +3,6 @@
 import logging
 from warnings import warn
 
-from pydantic import ValidationError
-from gaps.config import load_config
-
 from revrt.models.cost_layers import ALL, TransmissionLayerCreationConfig
 from revrt.costs.layer_creator import LayerCreator
 from revrt.costs.dry_costs_creator import DryCostsCreator
@@ -23,19 +20,75 @@ logger = logging.getLogger(__name__)
 CONFIG_ACTIONS = ["layers", "dry_costs", "merge_friction_and_barriers"]
 
 
-def build_from_config(config_fpath):
-    """Create costs, barriers, and frictions from a config file"""
-    config = _validated_config(config_fpath)
+def build_costs_file(
+    fp,
+    template_file=None,
+    input_layer_dir=".",
+    output_tiff_dir=".",
+    masks_dir=".",
+    layers=None,
+    dry_costs=None,
+    merge_friction_and_barriers=None,
+):
+    """Create costs, barriers, and frictions from a config file
 
-    output_tiff_dir = config.output_tiff_dir.expanduser().resolve()
-    output_tiff_dir.mkdir(exist_ok=True, parents=True)
+    You can re-run this function on an existing file to add new layers
+    without overwriting existing layers or needing to change your
+    original config.
+
+    Parameters
+    ----------
+    fp : path-like
+        Path to GeoTIFF/Zarr file to store cost layers in. If the file
+        does not exist, it will be created based on the `template_file`
+        input.
+    template_file : path-like, optional
+        Path to template GeoTIFF (``*.tif`` or ``*.tiff``) or Zarr
+        (``*.zarr``) file containing the profile and transform to be
+        used for the layered costs file. If ``None``, then the `fp`
+        is assumed to exist on disk already. By default, ``None``.
+    input_layer_dir : path-like, optional
+        Directory to search for input layers in, if not found in
+        current directory. By default, ``'.'``.
+    output_tiff_dir : path-like, optional
+        Directory where cost layers should be saved as GeoTIFF.
+        By default, ``"."``.
+    masks_dir : path-like, optional
+        Directory for storing/finding mask GeoTIFFs (wet, dry, landfall,
+        wet+, dry+). By default, ``"."``.
+    layers : list of LayerConfig dicts, optional
+        Configuration for layers to be built and added to the file.
+        At least one of `layers`, `dry_costs`, or
+        `merge_friction_and_barriers` must be defined.
+        By default, ``None``.
+    dry_costs : DryCosts dict, optional
+        Configuration for dry cost layers to be built and added to the
+        file. At least one of `layers`, `dry_costs`, or
+        `merge_friction_and_barriers` must be defined.
+        By default, ``None``.
+    merge_friction_and_barriers : MergeFrictionBarriers dict, optional
+        Configuration for merging friction and barriers and adding to
+        the layered costs file. At least one of `layers`, `dry_costs`,
+        or `merge_friction_and_barriers` must be defined.
+        By default, ``None``
+    """
+    config = _validated_config(
+        fp=fp,
+        template_file=template_file or fp,
+        input_layer_dir=input_layer_dir,
+        output_tiff_dir=output_tiff_dir,
+        masks_dir=masks_dir,
+        layers=layers,
+        dry_costs=dry_costs,
+        merge_friction_and_barriers=merge_friction_and_barriers,
+    )
 
     lf_handler = LayeredFile(fp=config.fp)
     if not lf_handler.fp.exists():
         logger.info(
             "%s not found. Creating new layered file...", lf_handler.fp
         )
-        lf_handler.create_new(template_file=config.template_raster_fpath)
+        lf_handler.create_new(template_file=config.template_file)
 
     masks = _load_masks(config, lf_handler)
 
@@ -54,15 +107,9 @@ def build_from_config(config_fpath):
         _combine_friction_and_barriers(config, lf_handler)
 
 
-def _validated_config(config_fpath):
+def _validated_config(**config_dict):
     """Validate use config inputs"""
-    config_dict = load_config(config_fpath)
-    try:
-        config = TransmissionLayerCreationConfig.model_validate(config_dict)
-    except ValidationError as exc:
-        msg = f"Error loading config file {config_fpath}"
-        raise revrtConfigurationError(msg) from exc
-
+    config = TransmissionLayerCreationConfig.model_validate(config_dict)
     if not any(config.model_dump()[key] is not None for key in CONFIG_ACTIONS):
         msg = f"At least one of {CONFIG_ACTIONS!r} must be in the config file"
         raise revrtConfigurationError(msg)

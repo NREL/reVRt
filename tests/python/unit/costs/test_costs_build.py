@@ -1,6 +1,5 @@
 """Test masks for cost layer creation"""
 
-import json
 from pathlib import Path
 
 import pytest
@@ -12,7 +11,7 @@ from shapely.geometry import box
 from shapely.ops import unary_union
 
 from revrt.constants import BARRIER_H5_LAYER_NAME
-from revrt.costs.build import build_from_config
+from revrt.costs.build import build_costs_file
 from revrt.costs.masks import Masks
 from revrt.exceptions import revrtConfigurationError
 
@@ -70,47 +69,16 @@ def masks_for_testing(sample_tiff_props, tmp_path_factory):
     return masks
 
 
-def test_build_failed_pydantic(tmp_path):
-    """Test correct error is raised for bad config"""
-    config = {
-        "fp": str(tmp_path / "test.zarr"),
-        "template_raster_fpath": str(tmp_path / "nonexistent.tif"),
-        "input_layer_dir": str(tmp_path),
-        "output_tiff_dir": str(tmp_path),
-        "masks_dir": str(tmp_path),
-    }
-
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    with pytest.raises(
-        revrtConfigurationError, match="Error loading config file"
-    ):
-        build_from_config(config_path)
-
-
 def test_build_config_missing_action(tmp_path):
     """Test correct error is raised for config with no actions"""
     tiff_fp = tmp_path / "nonexistent.tif"
     tiff_fp.touch()
-    config = {
-        "fp": str(tmp_path / "test.zarr"),
-        "template_raster_fpath": str(tiff_fp),
-        "input_layer_dir": str(tmp_path),
-        "output_tiff_dir": str(tmp_path),
-        "masks_dir": str(tmp_path),
-    }
-
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
 
     with pytest.raises(
         revrtConfigurationError,
         match=r"At least one of .* must be in the config file",
     ):
-        build_from_config(config_path)
+        build_costs_file(fp=tmp_path / "test.zarr", template_file=tiff_fp)
 
 
 def test_build_basic_all(
@@ -131,11 +99,11 @@ def test_build_basic_all(
     assert not out_tiff_dir.exists()
 
     config = {
-        "fp": str(test_fp),
-        "template_raster_fpath": str(sample_extra_fp),
-        "input_layer_dir": str(layer_dir),
-        "output_tiff_dir": str(out_tiff_dir),
-        "masks_dir": str(masks_for_testing._masks_dir),
+        "fp": test_fp,
+        "template_file": sample_extra_fp,
+        "input_layer_dir": layer_dir,
+        "output_tiff_dir": out_tiff_dir,
+        "masks_dir": masks_for_testing._masks_dir,
         "layers": [
             {
                 "layer_name": "fi_1",
@@ -155,10 +123,10 @@ def test_build_basic_all(
             },
         ],
         "dry_costs": {
-            "iso_region_tiff": str(sample_iso_fp),
-            "nlcd_tiff": str(sample_nlcd_fp),
-            "slope_tiff": str(sample_slope_fp),
-            "extra_tiffs": [str(sample_extra_fp)],
+            "iso_region_tiff": sample_iso_fp,
+            "nlcd_tiff": sample_nlcd_fp,
+            "slope_tiff": sample_slope_fp,
+            "extra_tiffs": [sample_extra_fp],
         },
         "merge_friction_and_barriers": {
             "friction_layer": "friction",
@@ -167,11 +135,7 @@ def test_build_basic_all(
         },
     }
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    build_from_config(config_path)
+    build_costs_file(**config)
 
     assert test_fp.exists()
     assert out_tiff_dir.exists()
@@ -230,7 +194,7 @@ def test_build_dry_only(
 
     config = {
         "fp": str(test_fp),
-        "template_raster_fpath": str(sample_extra_fp),
+        "template_file": str(sample_extra_fp),
         "output_tiff_dir": str(out_tiff_dir),
         "masks_dir": str(masks_for_testing._masks_dir),
         "dry_costs": {
@@ -241,11 +205,7 @@ def test_build_dry_only(
         },
     }
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    build_from_config(config_path)
+    build_costs_file(**config)
 
     assert test_fp.exists()
     assert out_tiff_dir.exists()
@@ -287,7 +247,7 @@ def test_build_layers_only(
 
     config = {
         "fp": str(test_fp),
-        "template_raster_fpath": str(sample_extra_fp),
+        "template_file": str(sample_extra_fp),
         "input_layer_dir": str(layer_dir),
         "output_tiff_dir": str(out_tiff_dir),
         "masks_dir": str(masks_for_testing._masks_dir),
@@ -311,11 +271,7 @@ def test_build_layers_only(
         ],
     }
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    build_from_config(config_path)
+    build_costs_file(**config)
 
     assert test_fp.exists()
     assert out_tiff_dir.exists()
@@ -350,7 +306,7 @@ def test_build_layers_only(
     # Test adding one more layer
     config = {
         "fp": str(test_fp),
-        "template_raster_fpath": str(sample_extra_fp),
+        "template_file": str(sample_extra_fp),
         "input_layer_dir": str(layer_dir),
         "output_tiff_dir": str(out_tiff_dir),
         "masks_dir": str(masks_for_testing._masks_dir),
@@ -379,11 +335,7 @@ def test_build_layers_only(
         ],
     }
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    build_from_config(config_path)
+    build_costs_file(**config)
 
     with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
         for ds_name in expected_missing_datasets:
