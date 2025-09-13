@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from abc import ABC, abstractmethod
+from functools import cached_property
 
 from revrt.constants import DEFAULT_DTYPE
 
@@ -31,8 +32,8 @@ class BaseLayerCreator(ABC):
             Data type for final dataset. By default, ``float32``.
         """
         self._io_handler = io_handler
-        self.input_layer_dir = Path(input_layer_dir)
-        self.output_tiff_dir = Path(output_tiff_dir)
+        self.input_layer_dir = Path(input_layer_dir).expanduser().resolve()
+        self._output_tiff_dir = Path(output_tiff_dir).expanduser().resolve()
         self._dtype = dtype
 
     @property
@@ -44,6 +45,12 @@ class BaseLayerCreator(ABC):
     def cell_size(self):
         """float: Size of cell in layer file"""
         return abs(self._io_handler.profile["transform"].a)
+
+    @cached_property
+    def output_tiff_dir(self):
+        """path-like: Directory to store output GeoTIFFs in"""
+        self._output_tiff_dir.mkdir(exist_ok=True, parents=True)
+        return self._output_tiff_dir
 
     @abstractmethod
     def build(self, *args, **kwargs):
