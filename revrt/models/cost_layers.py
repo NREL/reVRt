@@ -294,8 +294,8 @@ Layers = list[LayerConfig]
 class TransmissionLayerCreationConfig(BaseModel):
     """Config for transmission layer creation"""
 
-    template_raster_fpath: FilePath
-    """Template raster GeoTIFF for shape and profile"""
+    template_file: FilePath
+    """Template GeoTIFF/Zarr file for shape, profile, and transform"""
 
     fp: Path
     """Layer file to store results in"""
