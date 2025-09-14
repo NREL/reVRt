@@ -102,9 +102,16 @@ def build_routing_layers(
     )
 
     if max_workers != 1:
-        __ = Client(
+        client = Client(
             n_workers=max_workers, memory_limit=memory_limit_per_worker
         )
+        logger.info(
+            "Dask client created with %s workers and %s memory limit per "
+            "worker",
+            max_workers,
+            memory_limit_per_worker,
+        )
+        logger.info("Dashboard link: %s", client.dashboard_link)
 
     lf_handler = LayeredFile(fp=config.routing_file)
     if not lf_handler.fp.exists():
