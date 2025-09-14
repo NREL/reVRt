@@ -1,6 +1,8 @@
 """Test masks for cost layer creation"""
 
+import os
 import json
+import platform
 import traceback
 from pathlib import Path
 
@@ -358,6 +360,11 @@ def test_build_layers_only(
         assert np.allclose(ds["fi_1"], layers["fi_1.tif"])
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_build_basic_from_cli(
     tmp_path,
     sample_iso_fp,
