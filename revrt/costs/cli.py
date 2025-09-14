@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 CONFIG_ACTIONS = ["layers", "dry_costs", "merge_friction_and_barriers"]
 
 
-def build_routing_layers(
+def build_routing_layers(  # noqa: PLR0917, PLR0913
     routing_file,
     template_file=None,
     input_layer_dir=".",
@@ -34,6 +34,7 @@ def build_routing_layers(
     merge_friction_and_barriers=None,
     max_workers=1,
     memory_limit_per_worker="auto",
+    create_kwargs=None,
 ):
     """Create costs, barriers, and frictions from a config file
 
@@ -89,6 +90,11 @@ def build_routing_layers(
         used *per worker*. If a string giving a number  of bytes (like
         "1GiB"), that amount is used *per worker*. If an int, that
         number of bytes is used *per worker*. By default, ``"auto"``
+    create_kwargs : dict, optional
+        Additional keyword arguments to pass to
+        :meth:`LayeredFile.create_new` when creating a new layered file.
+        Do not include ``template_file``; it will be ignored.
+        By default, ``None``.
     """
     config = _validated_config(
         routing_file=routing_file,
@@ -115,10 +121,16 @@ def build_routing_layers(
 
     lf_handler = LayeredFile(fp=config.routing_file)
     if not lf_handler.fp.exists():
+        create_kwargs = create_kwargs or {}
+        create_kwargs.pop("template_file", None)
         logger.info(
-            "%s not found. Creating new layered file...", lf_handler.fp
+            "%s not found. Creating new layered file with kwargs:\n%r",
+            lf_handler.fp,
+            create_kwargs,
         )
-        lf_handler.create_new(template_file=config.template_file)
+        lf_handler.create_new(
+            template_file=config.template_file, **create_kwargs
+        )
 
     masks = _load_masks(config, lf_handler)
 
