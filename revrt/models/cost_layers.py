@@ -297,7 +297,7 @@ class TransmissionLayerCreationConfig(BaseModel):
     template_file: FilePath
     """Template GeoTIFF/Zarr file for shape, profile, and transform"""
 
-    fp: Path
+    routing_file: Path
     """Layer file to store results in"""
 
     input_layer_dir: DirectoryPath = Path()

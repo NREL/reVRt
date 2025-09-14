@@ -1,5 +1,7 @@
 """Test masks for cost layer creation"""
 
+import json
+import traceback
 from pathlib import Path
 
 import pytest
@@ -10,8 +12,9 @@ import geopandas as gpd
 from shapely.geometry import box
 from shapely.ops import unary_union
 
+from revrt._cli import main
 from revrt.constants import BARRIER_H5_LAYER_NAME
-from revrt.costs.cli import build_costs_file
+from revrt.costs.cli import build_routing_layers
 from revrt.costs.masks import Masks
 from revrt.exceptions import revrtConfigurationError
 
@@ -78,7 +81,9 @@ def test_build_config_missing_action(tmp_path):
         revrtConfigurationError,
         match=r"At least one of .* must be in the config file",
     ):
-        build_costs_file(fp=tmp_path / "test.zarr", template_file=tiff_fp)
+        build_routing_layers(
+            routing_file=tmp_path / "test.zarr", template_file=tiff_fp
+        )
 
 
 @pytest.mark.parametrize("mw", [None, 1, 2])
@@ -101,7 +106,7 @@ def test_build_basic_all(
     assert not out_tiff_dir.exists()
 
     config = {
-        "fp": test_fp,
+        "routing_file": test_fp,
         "template_file": sample_extra_fp,
         "input_layer_dir": layer_dir,
         "output_tiff_dir": out_tiff_dir,
@@ -137,7 +142,7 @@ def test_build_basic_all(
         },
     }
 
-    build_costs_file(**config, max_workers=mw)
+    build_routing_layers(**config, max_workers=mw)
 
     assert test_fp.exists()
     assert out_tiff_dir.exists()
@@ -195,7 +200,7 @@ def test_build_dry_only(
     assert not out_tiff_dir.exists()
 
     config = {
-        "fp": str(test_fp),
+        "routing_file": str(test_fp),
         "template_file": str(sample_extra_fp),
         "output_tiff_dir": str(out_tiff_dir),
         "masks_dir": str(masks_for_testing._masks_dir),
@@ -207,7 +212,7 @@ def test_build_dry_only(
         },
     }
 
-    build_costs_file(**config)
+    build_routing_layers(**config)
 
     assert test_fp.exists()
     assert out_tiff_dir.exists()
@@ -248,7 +253,7 @@ def test_build_layers_only(
     assert not out_tiff_dir.exists()
 
     config = {
-        "fp": str(test_fp),
+        "routing_file": str(test_fp),
         "template_file": str(sample_extra_fp),
         "input_layer_dir": str(layer_dir),
         "output_tiff_dir": str(out_tiff_dir),
@@ -273,7 +278,7 @@ def test_build_layers_only(
         ],
     }
 
-    build_costs_file(**config)
+    build_routing_layers(**config)
 
     assert test_fp.exists()
     assert out_tiff_dir.exists()
@@ -307,7 +312,7 @@ def test_build_layers_only(
 
     # Test adding one more layer
     config = {
-        "fp": str(test_fp),
+        "routing_file": str(test_fp),
         "template_file": str(sample_extra_fp),
         "input_layer_dir": str(layer_dir),
         "output_tiff_dir": str(out_tiff_dir),
@@ -337,7 +342,7 @@ def test_build_layers_only(
         ],
     }
 
-    build_costs_file(**config)
+    build_routing_layers(**config)
 
     with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
         for ds_name in expected_missing_datasets:
@@ -351,6 +356,112 @@ def test_build_layers_only(
             layers["friction_1.tif"] * masks_for_testing.dry_plus_mask,
         )
         assert np.allclose(ds["fi_1"], layers["fi_1.tif"])
+
+
+def test_build_basic_from_cli(
+    tmp_path,
+    sample_iso_fp,
+    sample_nlcd_fp,
+    sample_slope_fp,
+    sample_extra_fp,
+    tiff_layers_for_testing,
+    masks_for_testing,
+    cli_runner,
+):
+    """Test basic building from command line"""
+    test_fp = tmp_path / "test.zarr"
+    out_tiff_dir = tmp_path / "out_tiffs"
+    layer_dir, layers = tiff_layers_for_testing
+
+    assert not test_fp.exists()
+    assert not out_tiff_dir.exists()
+
+    config = {
+        "execution_control": {"max_workers": 1},
+        "routing_file": str(test_fp),
+        "template_file": str(sample_extra_fp),
+        "input_layer_dir": str(layer_dir),
+        "output_tiff_dir": str(out_tiff_dir),
+        "masks_dir": str(masks_for_testing._masks_dir),
+        "layers": [
+            {
+                "layer_name": "fi_1",
+                "include_in_file": False,
+                "build": {
+                    "fi_1.tif": {"extent": "wet+", "pass_through": True}
+                },
+            },
+            {
+                "layer_name": "friction",
+                "build": {
+                    "friction_1.tif": {
+                        "extent": "dry+",
+                        "map": {x: x for x in range(20)},
+                    }
+                },
+            },
+        ],
+        "dry_costs": {
+            "iso_region_tiff": str(sample_iso_fp),
+            "nlcd_tiff": str(sample_nlcd_fp),
+            "slope_tiff": str(sample_slope_fp),
+            "extra_tiffs": [str(sample_extra_fp)],
+        },
+        "merge_friction_and_barriers": {
+            "friction_layer": "friction",
+            "barrier_layer": "fi_1",
+            "barrier_multiplier": 100,
+        },
+    }
+
+    config_path = tmp_path / "config.json"
+    with config_path.open("w", encoding="utf-8") as f:
+        json.dump(config, f)
+
+    result = cli_runner.invoke(
+        main, ["build-routing-layers", "-c", str(config_path)]
+    )
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    assert test_fp.exists()
+    assert out_tiff_dir.exists()
+    assert (out_tiff_dir / "fi_1.tif").exists()
+    assert (out_tiff_dir / "friction.tif").exists()
+    assert (out_tiff_dir / f"{BARRIER_H5_LAYER_NAME}.tif").exists()
+
+    expected_datasets = [
+        "sample_nlcd",
+        "sample_iso",
+        "sample_slope",
+        "sample_extra_data",
+        "friction",
+        "dry_multipliers",
+        "tie_line_costs_102MW",
+        "tie_line_costs_205MW",
+        "tie_line_costs_400MW",
+        "tie_line_costs_1500MW",
+        "tie_line_costs_3000MW",
+    ]
+    with xr.open_dataset(test_fp, consolidated=False, engine="zarr") as ds:
+        for ds_name in expected_datasets:
+            assert ds_name in ds
+
+        assert "fi_1" not in ds
+        assert "friction_1" not in ds
+        assert np.allclose(
+            ds["friction"],
+            layers["friction_1.tif"] * masks_for_testing.dry_plus_mask,
+        )
+
+    with rioxarray.open_rasterio(
+        out_tiff_dir / f"{BARRIER_H5_LAYER_NAME}.tif", chunks="auto"
+    ) as ds:
+        assert np.allclose(
+            ds,
+            layers["friction_1.tif"] * masks_for_testing.dry_plus_mask
+            + layers["fi_1.tif"] * masks_for_testing.wet_plus_mask * 100,
+        )
 
 
 if __name__ == "__main__":

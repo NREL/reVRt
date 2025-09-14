@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 CONFIG_ACTIONS = ["layers", "dry_costs", "merge_friction_and_barriers"]
 
 
-def build_costs_file(
-    fp,
+def build_routing_layers(
+    routing_file,
     template_file=None,
     input_layer_dir=".",
     output_tiff_dir=".",
@@ -43,15 +43,16 @@ def build_costs_file(
 
     Parameters
     ----------
-    fp : path-like
+    routing_file : path-like
         Path to GeoTIFF/Zarr file to store cost layers in. If the file
         does not exist, it will be created based on the `template_file`
         input.
     template_file : path-like, optional
         Path to template GeoTIFF (``*.tif`` or ``*.tiff``) or Zarr
         (``*.zarr``) file containing the profile and transform to be
-        used for the layered costs file. If ``None``, then the `fp`
-        is assumed to exist on disk already. By default, ``None``.
+        used for the layered costs file. If ``None``, then the
+        `routing_file`  is assumed to exist on disk already.
+        By default, ``None``.
     input_layer_dir : path-like, optional
         Directory to search for input layers in, if not found in
         current directory. By default, ``'.'``.
@@ -90,8 +91,8 @@ def build_costs_file(
         number of bytes is used *per worker*. By default, ``"auto"``
     """
     config = _validated_config(
-        fp=fp,
-        template_file=template_file or fp,
+        routing_file=routing_file,
+        template_file=template_file or routing_file,
         input_layer_dir=input_layer_dir,
         output_tiff_dir=output_tiff_dir,
         masks_dir=masks_dir,
@@ -105,7 +106,7 @@ def build_costs_file(
             n_workers=max_workers, memory_limit=memory_limit_per_worker
         )
 
-    lf_handler = LayeredFile(fp=config.fp)
+    lf_handler = LayeredFile(fp=config.routing_file)
     if not lf_handler.fp.exists():
         logger.info(
             "%s not found. Creating new layered file...", lf_handler.fp
@@ -238,9 +239,9 @@ def _combine_friction_and_barriers(config, io_handler):
     io_handler.write_layer(combined, merge_config.output_layer_name)
 
 
-cost_build_command = CLICommandFromFunction(
-    build_costs_file,
-    name="build-costs",
+build_routing_layers_command = CLICommandFromFunction(
+    build_routing_layers,
+    name="build-routing-layers",
     add_collect=False,
     split_keys=None,
 )
