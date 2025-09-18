@@ -1,6 +1,7 @@
 """Base reVRt utilities"""
 
 import shutil
+import psutil
 import logging
 from pathlib import Path
 from warnings import warn
@@ -450,3 +451,30 @@ def _compute_half_width_using_voltages(
         return -1
 
     return routes[row_width_key].map(get_half_width)
+
+
+def log_mem(log_level="DEBUG"):
+    """Log the memory usage to the input logger object
+
+    Parameters
+    ----------
+    log_level : str, default="DEBUG"
+        Logging level to use. Can be any valid log level string, such
+        as  DEBUG or INFO for different log levels for this log message.
+        By default, ``"DEBUG"``.
+
+    Returns
+    -------
+    msg : str
+        Memory utilization log message string.
+    """
+    mem = psutil.virtual_memory()
+    msg = (
+        f"Memory utilization is {mem.used / (1024.0**3):.3f} GB "
+        f"out of {mem.total / (1024.0**3):.3f} GB total "
+        f"({mem.used / mem.total:.1%} used)"
+    )
+    log_level = logging.getLevelNamesMapping().get(log_level.upper(), "DEBUG")
+    logger.log(log_level, msg)
+
+    return msg
