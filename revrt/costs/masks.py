@@ -203,7 +203,9 @@ class Masks:
             )
             raise revrtFileNotFoundError(msg)
 
-        raster = load_data_using_layer_file_profile(layer_fp, full_fname)
+        raster = load_data_using_layer_file_profile(
+            layer_fp, full_fname, band_index=0
+        )
 
         if raster.max() != 1:  # pragma: no cover
             msg = (

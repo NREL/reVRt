@@ -227,15 +227,15 @@ class MergeFrictionBarriers(BaseModel, extra="forbid"):
     friction_layer: str
     """Name of friction layer
 
-    Must be a layer that has just been created or already exists in the
-    tiff directory with the same name and '.tif' extension.
+    A file with this name plus a '.tif' extension must have just been
+    created or had already existed in the tiff directory.
     """
 
     barrier_layer: str
     """Name of barrier layer
 
-    Must be a layer that has just been created or already exists in the
-    tiff directory with the same name and '.tif' extension.
+    A file with this name plus a '.tif' extension must have just been
+    created or had already existed in the tiff directory.
     """
 
     output_layer_name: str | None = BARRIER_H5_LAYER_NAME
@@ -269,8 +269,8 @@ class LayerConfig(BaseModel):
     description: str | None = None
     """Optional description to store in attrs for layer"""
 
-    include_in_h5: bool | None = True
-    """Flag to specify whether layer should be stored in H5 or not"""
+    include_in_file: bool | None = True
+    """Flag to specify whether layer should be stored in the file"""
 
     values_are_costs_per_mile: bool | None = False
     """Option to specify that the values given represent $/mile
@@ -294,19 +294,19 @@ Layers = list[LayerConfig]
 class TransmissionLayerCreationConfig(BaseModel):
     """Config for transmission layer creation"""
 
-    template_raster_fpath: FilePath
-    """Template raster GeoTIFF for shape and profile"""
+    template_file: FilePath
+    """Template GeoTIFF/Zarr file for shape, profile, and transform"""
 
-    h5_fpath: FilePath
-    """H5 to store results in"""
+    routing_file: Path
+    """Layer file to store results in"""
 
     input_layer_dir: DirectoryPath = Path()
     """Directory to look for GeoTIFFs in, in addition to '.'"""
 
-    masks_dir: DirectoryPath = Path()
+    masks_dir: Path = Path()
     """Optional path for mask GeoTIFFs"""
 
-    output_tiff_dir: DirectoryPath = Path()
+    output_tiff_dir: Path = Path()
     """Directory to store output tiff files in"""
 
     layers: Layers | None = None

@@ -43,7 +43,7 @@ WATER_MULTIPLIER = 10.0
 """10: Multiplier value for water cells based on NLCD"""
 
 
-class DryCostCreator(BaseLayerCreator):
+class DryCostsCreator(BaseLayerCreator):
     """Class to create and save dry transmission cost layers"""
 
     def build(
@@ -242,21 +242,21 @@ class DryCostCreator(BaseLayerCreator):
             layer_fp=self._io_handler.fp,
             geotiff=iso_region_tiff,
             tiff_chunks=tiff_chunks,
-            layer_dir=self.input_layer_dir,
+            layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
             band_index=0,
         )
         slope_layer = load_data_using_layer_file_profile(
             layer_fp=self._io_handler.fp,
             geotiff=slope_tiff,
             tiff_chunks=tiff_chunks,
-            layer_dir=self.input_layer_dir,
+            layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
             band_index=0,
         )
         nlcd_layer = load_data_using_layer_file_profile(
             layer_fp=self._io_handler.fp,
             geotiff=nlcd_tiff,
             tiff_chunks=tiff_chunks,
-            layer_dir=self.input_layer_dir,
+            layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
             band_index=0,
         )
         logger.debug("Loading complete")
@@ -284,7 +284,7 @@ class DryCostCreator(BaseLayerCreator):
                 layer_fp=self._io_handler.fp,
                 geotiff=tiff_fp,
                 tiff_chunks=tiff_chunks,
-                layer_dir=self.input_layer_dir,
+                layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
             )
         if not layer_name:
             layer_name = Path(tiff_fp).stem

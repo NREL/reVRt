@@ -21,6 +21,10 @@ class revrtAttributeError(revrtError, AttributeError):
     """revrt AttributeError"""
 
 
+class revrtConfigurationError(revrtError, ValueError):
+    """revrt ConfigurationError"""
+
+
 class revrtFileExistsError(revrtError, FileExistsError):
     """revrt FileExistsError"""
 

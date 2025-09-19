@@ -1,6 +1,7 @@
 """Base reVRt utilities"""
 
 import shutil
+import psutil
 import logging
 from pathlib import Path
 from warnings import warn
@@ -203,8 +204,8 @@ def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
             raise revrtProfileCheckError(msg)
 
 
-def file_full_path(file_name, layer_dir):
-    """Get full path to file, searching `layer_dir` if needed
+def file_full_path(file_name, *layer_dirs):
+    """Get full path to file, searching `layer_dirs` if needed
 
     Parameters
     ----------
@@ -212,8 +213,8 @@ def file_full_path(file_name, layer_dir):
         File name to get full path for. If just the file name is
         provided, the class `layer_dir` attribute value is prepended
         to get the full path.
-    layer_dir : path-like
-        Directory to search for file if not found in current
+    *layer_dirs : path-like
+        Directories to search for file if not found in current
         directory.
 
     Returns
@@ -224,23 +225,24 @@ def file_full_path(file_name, layer_dir):
     Raises
     ------
     revrtFileNotFoundError
-        If file cannot be found in either the current directory or the
-        `layer_dir` directory.
+        If file cannot be found in either the current directory or any
+        of the `layer_dirs` directories.
     """
     full_fname = Path(file_name)
     if full_fname.exists():
         return full_fname
 
-    full_fname = Path(layer_dir) / file_name
-    if full_fname.exists():
-        return full_fname
+    for layer_dir in layer_dirs:
+        full_fname = Path(layer_dir) / file_name
+        if full_fname.exists():
+            return full_fname
 
     msg = f"Unable to find file {file_name}"
     raise revrtFileNotFoundError(msg)
 
 
 def load_data_using_layer_file_profile(
-    layer_fp, geotiff, tiff_chunks="auto", layer_dir=None, band_index=None
+    layer_fp, geotiff, tiff_chunks="auto", layer_dirs=None, band_index=None
 ):
     """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
 
@@ -254,8 +256,8 @@ def load_data_using_layer_file_profile(
         Chunk size to use when reading the GeoTIFF file. This will be
         passed down as the ``chunks`` argument to
         :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
-    layer_dir : path-like, optional
-        Directory to search for `geotiff` in, if not found in current
+    layer_dirs : iterable of path-like, optional
+        Directories to search for `geotiff` in, if not found in current
         directory. By default, ``None``, which means only the current
         directory is searched.
     band_index : int, optional
@@ -274,8 +276,8 @@ def load_data_using_layer_file_profile(
         If `geotiff` cannot be found in either the current directory or
         the `layer_dir` directory.
     """
-    if layer_dir:
-        geotiff = file_full_path(geotiff, layer_dir)
+    if layer_dirs:
+        geotiff = file_full_path(geotiff, *layer_dirs)
 
     tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
 
@@ -449,3 +451,30 @@ def _compute_half_width_using_voltages(
         return -1
 
     return routes[row_width_key].map(get_half_width)
+
+
+def log_mem(log_level="DEBUG"):
+    """Log the memory usage to the input logger object
+
+    Parameters
+    ----------
+    log_level : str, default="DEBUG"
+        Logging level to use. Can be any valid log level string, such
+        as  DEBUG or INFO for different log levels for this log message.
+        By default, ``"DEBUG"``.
+
+    Returns
+    -------
+    msg : str
+        Memory utilization log message string.
+    """
+    mem = psutil.virtual_memory()
+    msg = (
+        f"Memory utilization is {mem.used / (1024.0**3):.3f} GB "
+        f"out of {mem.total / (1024.0**3):.3f} GB total "
+        f"({mem.used / mem.total:.1%} used)"
+    )
+    log_level = logging.getLevelNamesMapping().get(log_level.upper(), "DEBUG")
+    logger.log(log_level, msg)
+
+    return msg

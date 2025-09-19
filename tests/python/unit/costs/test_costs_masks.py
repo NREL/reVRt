@@ -173,6 +173,7 @@ def test_loading_basic_masks(tmp_path):
             ]
         ),
     )
+    assert new_masks.landfall_mask.shape == (5, 6)
     assert new_masks.landfall_mask.dtype == bool
 
     assert np.allclose(
@@ -187,6 +188,7 @@ def test_loading_basic_masks(tmp_path):
             ]
         ),
     )
+    assert new_masks.wet_mask.shape == (5, 6)
     assert new_masks.wet_mask.dtype == bool
 
     assert np.allclose(
@@ -201,6 +203,7 @@ def test_loading_basic_masks(tmp_path):
             ]
         ),
     )
+    assert new_masks.dry_mask.shape == (5, 6)
     assert new_masks.dry_mask.dtype == bool
 
     assert np.allclose(
@@ -215,6 +218,7 @@ def test_loading_basic_masks(tmp_path):
             ]
         ),
     )
+    assert new_masks.dry_plus_mask.shape == (5, 6)
     assert new_masks.dry_plus_mask.dtype == bool
 
     assert np.allclose(
@@ -229,6 +233,7 @@ def test_loading_basic_masks(tmp_path):
             ]
         ),
     )
+    assert new_masks.wet_plus_mask.shape == (5, 6)
     assert new_masks.wet_plus_mask.dtype == bool
 
 

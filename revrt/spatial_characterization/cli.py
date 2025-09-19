@@ -191,9 +191,16 @@ def _route_characterizations_from_config(
     parallel = False
     if max_workers != 1:
         parallel = True
-        __ = Client(
+        client = Client(
             n_workers=max_workers, memory_limit=memory_limit_per_worker
         )
+        logger.info(
+            "Dask client created with %s workers and %s memory limit per "
+            "worker",
+            max_workers,
+            memory_limit_per_worker,
+        )
+        logger.info("Dashboard link: %s", client.dashboard_link)
 
     out_data = buffered_route_characterizations(
         row_widths=_row_widths,
