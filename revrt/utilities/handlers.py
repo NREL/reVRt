@@ -1,6 +1,8 @@
 """Handler for file containing GeoTIFF layers"""
 
 import logging
+import operator
+import functools
 from pathlib import Path
 from warnings import warn
 from functools import cached_property
@@ -780,8 +782,11 @@ def _proj_to_lon_lat(xx_block, yy_block, src):
     """Block-wise transform to lon/lat; returns array shape [2, y, x]"""
     # create transformer inside the block to avoid pickling issues
     tr = Transformer.from_crs(src, "EPSG:4326", always_xy=True)
-    lon, lat = tr.transform(xx_block, yy_block)
-    out = np.empty((2, *xx_block.shape), dtype="float32")
+    lon, lat = tr.transform(xx_block.ravel(), yy_block.ravel())
+    out = np.empty(
+        (2, functools.reduce(operator.mul, xx_block.shape)), dtype="float32"
+    )
     out[0] = lon
     out[1] = lat
-    return out
+
+    return out.reshape((2, *xx_block.shape))
