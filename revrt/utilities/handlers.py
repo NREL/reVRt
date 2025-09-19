@@ -296,6 +296,7 @@ class LayeredFile:
         chunks = (1, attrs["chunks"]["y"], attrs["chunks"]["x"])
 
         da = xr.DataArray(values, dims=("band", "y", "x"), attrs=attrs)
+        da = da.chunk(attrs["chunks"])
         da = da.assign_coords(coords)
         da.attrs["count"] = 1
         da.attrs["description"] = description
