@@ -1,5 +1,6 @@
 """Handler for file containing GeoTIFF layers"""
 
+import time
 import logging
 import operator
 import functools
@@ -23,6 +24,7 @@ from revrt.exceptions import (
 from revrt.utilities.base import (
     check_geotiff,
     delete_data_file,
+    elapsed_time_as_str,
     TRANSFORM_ATOL,
     _NUM_GEOTIFF_DIMS,
 )
@@ -193,7 +195,7 @@ class LayeredFile:
         _validate_template(template_file)
 
         logger.debug("\t- Initializing %s from %s", self.fp, template_file)
-
+        start_time = time.monotonic()
         try:
             _init_zarr_file_from_template(
                 template_file,
@@ -211,6 +213,11 @@ class LayeredFile:
                 delete_data_file(self.fp)
             raise
 
+        logger.debug(
+            "Time to create %s: %s",
+            self.fp,
+            elapsed_time_as_str(time.monotonic() - start_time),
+        )
         return self
 
     def write_layer(
@@ -274,6 +281,7 @@ class LayeredFile:
             )
             raise revrtFileNotFoundError(msg)
 
+        start_time = time.monotonic()
         self._check_for_existing_layer(layer_name, overwrite)
 
         if values.ndim < _NUM_GEOTIFF_DIMS:
@@ -337,6 +345,12 @@ class LayeredFile:
             zarr_format=3,
             consolidated=False,
             compute=True,
+        )
+
+        logger.debug(
+            "Time to write layer %s: %s",
+            layer_name,
+            elapsed_time_as_str(time.monotonic() - start_time),
         )
 
     def _check_for_existing_layer(self, layer_name, overwrite):
@@ -411,6 +425,7 @@ class LayeredFile:
             logger.info("%s not found - creating from %s...", self.fp, geotiff)
             self.create_new(geotiff)
 
+        start_time = time.monotonic()
         logger.info(
             "%s being extracted from %s and added to %s",
             layer_name,
@@ -431,6 +446,12 @@ class LayeredFile:
                 overwrite=overwrite,
                 nodata=nodata,
             )
+
+        logger.debug(
+            "Time to write GeoTIFF %s: %s",
+            geotiff,
+            elapsed_time_as_str(time.monotonic() - start_time),
+        )
 
     def layer_to_geotiff(
         self, layer, geotiff, ds_chunks="auto", **profile_kwargs
