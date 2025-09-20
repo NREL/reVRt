@@ -365,7 +365,7 @@ class LayerCreator(BaseLayerCreator):
                 tiff_chunks=tiff_chunks,
                 layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
                 band_index=0,
-            ).values
+            )
 
             if config.extent == ALL:
                 fi += temp
