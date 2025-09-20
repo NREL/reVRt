@@ -69,6 +69,7 @@ class LayerCreator(BaseLayerCreator):
         description=None,
         tiff_chunks="auto",
         nodata=None,
+        lock=None,
         **profile_kwargs,
     ):
         """Combine multiple GeoTIFFs and vectors to a raster layer
@@ -102,6 +103,10 @@ class LayerCreator(BaseLayerCreator):
             Optional nodata value for output rasters. This value will
             be added to the layer's attributes meta dictionary under the
             "nodata" key.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data to GeoTIFF using dask. If not
+            supplied, a single process is used for writing data to disk.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing output
             rasters. The following attributes ar ignored (they are set
@@ -153,6 +158,7 @@ class LayerCreator(BaseLayerCreator):
             data=result,
             geotiff=out_filename,
             nodata=nodata,
+            lock=lock,
             **profile_kwargs,
         )
         if write_to_file:
