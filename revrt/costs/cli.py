@@ -106,6 +106,9 @@ def build_routing_layers(  # noqa: PLR0917, PLR0913
         dry_costs=dry_costs,
         merge_friction_and_barriers=merge_friction_and_barriers,
     )
+    logger.debug(
+        "Using dask config:\n%s", json.dumps(dask.config.config, indent=4)
+    )
 
     lock = None
     if max_workers != 1:
