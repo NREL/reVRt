@@ -55,7 +55,7 @@ class DryCostsCreator(BaseLayerCreator):
         mask=None,
         default_multipliers=None,
         extra_tiffs=None,
-        tiff_chunks="auto",
+        tiff_chunks="file",
         descriptions=None,
         nodata=None,
         lock=None,
@@ -242,7 +242,7 @@ class DryCostsCreator(BaseLayerCreator):
             )
 
     def _load_layers(
-        self, iso_region_tiff, slope_tiff, nlcd_tiff, tiff_chunks="auto"
+        self, iso_region_tiff, slope_tiff, nlcd_tiff, tiff_chunks="file"
     ):
         """Load ISO region, slope and land use rasters"""
         logger.debug("Loading ISO region, slope and land use rasters")
@@ -281,7 +281,7 @@ class DryCostsCreator(BaseLayerCreator):
         layer_name=None,
         nodata=None,
         descriptions=None,
-        tiff_chunks="auto",
+        tiff_chunks="file",
     ):
         """Write a single layer to the layered file"""
         nodata = nodata or {}

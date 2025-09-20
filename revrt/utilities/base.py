@@ -253,10 +253,10 @@ def load_data_using_layer_file_profile(
         Path to layered file on disk. This file must already exist.
     geotiff : path-like
         Path to GeoTIFF from which data should be read.
-    tiff_chunks : int | str, default="auto"
+    tiff_chunks : int | str, default="file"
         Chunk size to use when reading the GeoTIFF file. This will be
         passed down as the ``chunks`` argument to
-        :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+        :meth:`rioxarray.open_rasterio`. By default, ``"file"``.
     layer_dirs : iterable of path-like, optional
         Directories to search for `geotiff` in, if not found in current
         directory. By default, ``None``, which means only the current

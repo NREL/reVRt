@@ -68,7 +68,7 @@ class LayerCreator(BaseLayerCreator):
         values_are_costs_per_mile=False,
         write_to_file=True,
         description=None,
-        tiff_chunks="auto",
+        tiff_chunks="file",
         nodata=None,
         lock=None,
         **profile_kwargs,
@@ -96,10 +96,10 @@ class LayerCreator(BaseLayerCreator):
         description : str, optional
             Optional description to store with this layer in the H5
             file. By default, ``None``.
-        tiff_chunks : int | str, default="auto"
+        tiff_chunks : int | str, default="file"
             Chunk size to use when reading the GeoTIFF file. This will
             be passed down as the ``chunks`` argument to
-            :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+            :meth:`rioxarray.open_rasterio`. By default, ``"file"``.
         nodata : int | float, optional
             Optional nodata value for output rasters. This value will
             be added to the layer's attributes meta dictionary under the
@@ -150,7 +150,7 @@ class LayerCreator(BaseLayerCreator):
         layer_name,
         build_config,
         values_are_costs_per_mile=False,
-        tiff_chunks="auto",
+        tiff_chunks="file",
         nodata=None,
         lock=None,
         **profile_kwargs,
@@ -208,7 +208,7 @@ class LayerCreator(BaseLayerCreator):
         )
         return out_filename
 
-    def _process_raster_layer(self, fname, config, tiff_chunks="auto"):
+    def _process_raster_layer(self, fname, config, tiff_chunks="file"):
         """Create the desired layer from the input file"""
         _check_tiff_layer_config(config, fname)
         data = load_data_using_layer_file_profile(
@@ -320,7 +320,7 @@ class LayerCreator(BaseLayerCreator):
         mask = self._get_mask(config.extent)
         return da.where(mask, data, 0)
 
-    def _process_forced_inclusions(self, data, fi_layers, tiff_chunks="auto"):
+    def _process_forced_inclusions(self, data, fi_layers, tiff_chunks="file"):
         """Use forced inclusion (FI) layers to remove barriers/friction
 
         Any value > 0 in the FI layers will result in a 0 in the
