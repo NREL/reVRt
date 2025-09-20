@@ -572,13 +572,23 @@ class LayeredFile:
 
         return str(self.fp)
 
-    def extract_layers(self, layers, **profile_kwargs):
+    def extract_layers(
+        self, layers, ds_chunks="auto", lock=None, **profile_kwargs
+    ):
         """Extract layers from file and save to disk as GeoTIFFs
 
         Parameters
         ----------
         layers : dict
             Dictionary mapping layer names to GeoTIFF files to create.
+        ds_chunks : int | str, default="auto"
+            Chunk size to use when reading the :class:`LayeredFile`.
+            This will be passed down as the ``chunks`` argument to
+            :meth:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data using dask. If not supplied, a
+            single process is used for writing data to the GeoTIFFs.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
@@ -594,9 +604,17 @@ class LayeredFile:
         logger.info("Extracting layers from %s", self.fp)
         for layer_name, geotiff in layers.items():
             logger.info("- Extracting %s", layer_name)
-            self.layer_to_geotiff(layer_name, geotiff, **profile_kwargs)
+            self.layer_to_geotiff(
+                layer_name,
+                geotiff,
+                ds_chunks=ds_chunks,
+                lock=lock,
+                **profile_kwargs,
+            )
 
-    def extract_all_layers(self, out_dir, **profile_kwargs):
+    def extract_all_layers(
+        self, out_dir, ds_chunks="auto", lock=None, **profile_kwargs
+    ):
         """Extract all layers from file and save to disk as GeoTIFFs
 
         Parameters
@@ -605,6 +623,14 @@ class LayeredFile:
             Path to output directory into which layers should be saved
             as GeoTIFFs. This directory will be created if it does not
             already exist.
+        ds_chunks : int | str, default="auto"
+            Chunk size to use when reading the :class:`LayeredFile`.
+            This will be passed down as the ``chunks`` argument to
+            :meth:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data using dask. If not supplied, a
+            single process is used for writing data to the GeoTIFFs.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
@@ -630,7 +656,9 @@ class LayeredFile:
             layer_name: out_dir / f"{layer_name}.tif"
             for layer_name in self.data_layers
         }
-        self.extract_layers(layers, **profile_kwargs)
+        self.extract_layers(
+            layers, ds_chunks=ds_chunks, lock=lock, **profile_kwargs
+        )
         return layers
 
 
