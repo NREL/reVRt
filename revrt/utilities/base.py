@@ -435,7 +435,24 @@ def save_data_using_custom_props(
         nodata = da.dtype.type(nodata)
         da = da.rio.write_nodata(nodata)
 
-    da.rio.to_raster(geotiff, driver="GTiff", lock=lock, **profile_kwargs)
+    # TODO: Grab default profile from template when creating layer file
+    # and use that instead
+    pk = {
+        "blockxsize": 256,
+        "blockysize": 256,
+        "tiled": True,
+        "compress": "lzw",
+        "interleave": "band",
+    }
+    pk.update(profile_kwargs)
+    logger.debug(
+        "Saving TIFF with shape %r and dtype %r to %s",
+        da.shape,
+        da.dtype,
+        geotiff,
+    )
+
+    da.rio.to_raster(geotiff, driver="GTiff", lock=lock, **pk)
 
 
 def _compute_half_width_using_ranges(
