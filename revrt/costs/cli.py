@@ -3,6 +3,7 @@
 import logging
 from warnings import warn
 
+import dask.config
 import dask.distributed
 from gaps.cli import CLICommandFromFunction
 
