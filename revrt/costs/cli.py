@@ -113,7 +113,7 @@ def build_routing_layers(  # noqa: PLR0917, PLR0913
             n_workers=max_workers, memory_limit=memory_limit_per_worker
         )
         logger.info(
-            "Dask client created with %s workers and %s memory limit per "
+            "Dask client created with %s workers and %r memory limit per "
             "worker",
             max_workers,
             memory_limit_per_worker,
