@@ -7,6 +7,7 @@ from pathlib import Path
 from warnings import warn
 
 import rioxarray
+import odc.geo.xr  # noqa
 import numpy as np
 import xarray as xr
 from rasterio.warp import Resampling
@@ -242,7 +243,7 @@ def file_full_path(file_name, *layer_dirs):
 
 
 def load_data_using_layer_file_profile(
-    layer_fp, geotiff, tiff_chunks="auto", layer_dirs=None, band_index=None
+    layer_fp, geotiff, tiff_chunks="file", layer_dirs=None, band_index=None
 ):
     """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
 
@@ -279,28 +280,32 @@ def load_data_using_layer_file_profile(
     if layer_dirs:
         geotiff = file_full_path(geotiff, *layer_dirs)
 
+    with xr.open_dataset(layer_fp, consolidated=False, engine="zarr") as ds:
+        crs = ds.rio.crs
+        width, height = ds.rio.width, ds.rio.height
+        transform = ds.rio.transform()
+        if tiff_chunks == "file":
+            tiff_chunks = ds.attrs.get("chunks", "auto")
+
+    logger.debug(
+        "Using the following chunks to open '%s': %r", geotiff, tiff_chunks
+    )
+
     tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
 
     try:
         check_geotiff(layer_fp, geotiff, transform_atol=TRANSFORM_ATOL)
     except revrtProfileCheckError:
-        logger.debug(
-            "Profile of %s does not match template, reprojecting...",
+        logger.info(
+            "Profile of '%s' does not match template, reprojecting...",
             geotiff,
         )
-        with xr.open_dataset(
-            layer_fp, consolidated=False, engine="zarr"
-        ) as ds:
-            crs = ds.rio.crs
-            width, height = ds.rio.width, ds.rio.height
-            transform = ds.rio.transform()
 
-        tif = tif.rio.reproject(
-            dst_crs=crs,
+        tif = tif.odc.reproject(
+            how=crs,
+            resampling=Resampling.nearest,
             shape=(height, width),
             transform=transform,
-            num_threads=4,
-            resampling=Resampling.nearest,
             INIT_DEST=0,
         )
 
