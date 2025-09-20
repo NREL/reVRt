@@ -122,7 +122,7 @@ class LayerCreator(BaseLayerCreator):
         """
         layer_name = layer_name.replace(".tif", "").replace(".tiff", "")
         logger.debug("Combining %s layers", layer_name)
-        result = da.zeros(self.shape, dtype=self._dtype)
+        result = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
         fi_layers = {}
 
         for fname, config in build_config.items():
@@ -202,7 +202,10 @@ class LayerCreator(BaseLayerCreator):
     def _process_global_raster_value(self, config):
         """Create the desired layer from the global value"""
         temp = da.full(
-            self.shape, fill_value=config.global_value, dtype=self._dtype
+            self.shape,
+            fill_value=config.global_value,
+            dtype=self._dtype,
+            chunks=self.chunks,
         )
         return self._apply_mask(config, temp)
 
@@ -211,7 +214,7 @@ class LayerCreator(BaseLayerCreator):
         _validate_bin_range(config.bins)
         _validate_bin_continuity(config.bins)
 
-        processed = da.zeros(self.shape, dtype=self._dtype)
+        processed = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
         if config.extent != ALL:
             mask = self._get_mask(config.extent)
 
@@ -242,7 +245,7 @@ class LayerCreator(BaseLayerCreator):
 
     def _process_raster_map(self, config, data):
         """Create the desired layer from the input file using a map"""
-        temp = da.zeros(self.shape, dtype=self._dtype)
+        temp = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
         for key, val in config.map.items():
             temp = da.where(data == key, val, temp)
 
@@ -289,7 +292,7 @@ class LayerCreator(BaseLayerCreator):
         Any value > 0 in the FI layers will result in a 0 in the
         corresponding cell in the returned raster.
         """
-        fi = da.zeros(self.shape)
+        fi = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
 
         for fname, config in fi_layers.items():
             if Path(fname).suffix.lower() not in TIFF_EXTENSIONS:

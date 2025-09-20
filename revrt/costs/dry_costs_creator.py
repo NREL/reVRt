@@ -318,8 +318,12 @@ class DryCostsCreator(BaseLayerCreator):
         default_multipliers=None,
     ):
         """Create costs multiplier raster"""
-        multipliers = da.ones(self.shape, dtype=self._dtype)
-        regions_mask = da.full(self.shape, False, dtype=bool)
+        multipliers = da.ones(
+            self.shape, dtype=self._dtype, chunks=self.chunks
+        )
+        regions_mask = da.full(
+            self.shape, False, dtype=bool, chunks=self.chunks
+        )
         land_use_classes = land_use_classes or NLCD_LAND_USE_CLASSES
 
         for r_conf in iso_multipliers:
