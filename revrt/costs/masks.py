@@ -100,7 +100,13 @@ class Masks:
             )
         return self._wet_plus_mask
 
-    def create(self, land_mask_shp_fp, save_tiff=True, reproject_vector=True):
+    def create(
+        self,
+        land_mask_shp_fp,
+        save_tiff=True,
+        reproject_vector=True,
+        lock=None,
+    ):
         """Create mask layers from a polygon land vector file
 
         Parameters
@@ -112,6 +118,11 @@ class Masks:
         reproject_vector : bool, optional
             Reproject CRS of vector to match template raster if True.
             By default, ``True``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data using dask. If not supplied, a
+            single process is used for writing data to the mask
+            GeoTIFFs.
+            By default, ``None``.
         """
         logger.debug("Creating masks from %s", land_mask_shp_fp)
 
@@ -154,13 +165,15 @@ class Masks:
 
         if save_tiff:
             logger.debug("Saving masks to GeoTIFF")
-            self._save_mask(raw_land_mask, self.RAW_LAND_MASK_FNAME)
-            self._save_mask(self.wet_mask, self.OFFSHORE_MASK_FNAME)
-            self._save_mask(self.dry_mask, self.LAND_MASK_FNAME)
-            self._save_mask(self.landfall_mask, self.LANDFALL_MASK_FNAME)
+            self._save_mask(raw_land_mask, self.RAW_LAND_MASK_FNAME, lock=lock)
+            self._save_mask(self.wet_mask, self.OFFSHORE_MASK_FNAME, lock=lock)
+            self._save_mask(self.dry_mask, self.LAND_MASK_FNAME, lock=lock)
+            self._save_mask(
+                self.landfall_mask, self.LANDFALL_MASK_FNAME, lock=lock
+            )
             logger.debug("Completed saving all masks")
 
-    def _save_mask(self, data, fname):
+    def _save_mask(self, data, fname, lock):
         """Save mask to GeoTiff"""
         full_fname = self._masks_dir / fname
         save_data_using_custom_props(
@@ -169,6 +182,7 @@ class Masks:
             shape=self.shape,
             crs=self.crs,
             transform=self.transform,
+            lock=lock,
         )
 
     def load(self, layer_fp):
