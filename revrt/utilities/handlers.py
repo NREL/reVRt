@@ -794,7 +794,7 @@ def _save_ds_as_zarr_with_encodings(out_ds, chunk_x, chunk_y, out_fp):
             "chunks": (chunk_y, chunk_x),
         },
     }
-    logger.debug("Writing data to %s with encoding:\n %r", out_fp, encoding)
+    logger.debug("Writing data to '%s' with encoding:\n%r", out_fp, encoding)
     out_ds.to_zarr(
         out_fp, mode="w", encoding=encoding, zarr_format=3, consolidated=False
     )
