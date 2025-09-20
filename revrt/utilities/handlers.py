@@ -454,7 +454,7 @@ class LayeredFile:
         )
 
     def layer_to_geotiff(
-        self, layer, geotiff, ds_chunks="auto", **profile_kwargs
+        self, layer, geotiff, ds_chunks="auto", lock=None, **profile_kwargs
     ):
         """Extract layer from file and write to GeoTIFF file
 
@@ -468,6 +468,10 @@ class LayeredFile:
             Chunk size to use when reading the :class:`LayeredFile`.
             This will be passed down as the ``chunks`` argument to
             :meth:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data using dask. If not supplied, a
+            single process is used for writing data to the GeoTIFF.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
@@ -485,7 +489,9 @@ class LayeredFile:
         with xr.open_dataset(
             self.fp, chunks=ds_chunks, consolidated=False, engine="zarr"
         ) as ds:
-            ds[layer].rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
+            ds[layer].rio.to_raster(
+                geotiff, driver="GTiff", lock=lock, **profile_kwargs
+            )
 
     def layers_to_file(
         self,
