@@ -3,7 +3,7 @@
 import logging
 from warnings import warn
 
-from dask.distributed import Client
+import dask.distributed
 from gaps.cli import CLICommandFromFunction
 
 from revrt.models.cost_layers import ALL, TransmissionLayerCreationConfig
@@ -107,8 +107,9 @@ def build_routing_layers(  # noqa: PLR0917, PLR0913
         merge_friction_and_barriers=merge_friction_and_barriers,
     )
 
+    lock = None
     if max_workers != 1:
-        client = Client(
+        client = dask.distributed.Client(
             n_workers=max_workers, memory_limit=memory_limit_per_worker
         )
         logger.info(
@@ -118,6 +119,7 @@ def build_routing_layers(  # noqa: PLR0917, PLR0913
             memory_limit_per_worker,
         )
         logger.info("Dashboard link: %s", client.dashboard_link)
+        lock = dask.distributed.Lock("rioxarray-write", client=client)
 
     lf_handler = LayeredFile(fp=config.routing_file)
     if not lf_handler.fp.exists():
@@ -140,13 +142,13 @@ def build_routing_layers(  # noqa: PLR0917, PLR0913
         input_layer_dir=config.input_layer_dir,
         output_tiff_dir=config.output_tiff_dir,
     )
-    _build_layers(config, builder, lf_handler)
+    _build_layers(config, builder, lf_handler, lock=lock)
 
     if config.dry_costs is not None:
-        _build_dry_costs(config, masks, lf_handler)
+        _build_dry_costs(config, masks, lf_handler, lock=lock)
 
     if config.merge_friction_and_barriers is not None:
-        _combine_friction_and_barriers(config, lf_handler)
+        _combine_friction_and_barriers(config, lf_handler, lock=lock)
 
 
 def _validated_config(**config_dict):
@@ -180,7 +182,7 @@ def _load_masks(config, lf_handler):
     return masks
 
 
-def _build_layers(config, builder, lf_handler):
+def _build_layers(config, builder, lf_handler, lock):
     """Build layers from config file"""
     existing_layers = set(lf_handler.data_layers)
 
@@ -199,10 +201,11 @@ def _build_layers(config, builder, lf_handler):
             values_are_costs_per_mile=lc.values_are_costs_per_mile,
             write_to_file=lc.include_in_file,
             description=lc.description,
+            lock=lock,
         )
 
 
-def _build_dry_costs(config, masks, lf_handler):
+def _build_dry_costs(config, masks, lf_handler, lock):
     """Build dry costs from config file"""
     dc = config.dry_costs
 
@@ -227,10 +230,11 @@ def _build_dry_costs(config, masks, lf_handler):
         mask=dry_mask,
         default_mults=dc.default_mults,
         extra_tiffs=dc.extra_tiffs,
+        lock=lock,
     )
 
 
-def _combine_friction_and_barriers(config, io_handler):
+def _combine_friction_and_barriers(config, io_handler, lock):
     """Combine friction and barriers and save to layered file"""
 
     logger.info("Loading friction and raw barriers")
@@ -251,7 +255,7 @@ def _combine_friction_and_barriers(config, io_handler):
     out_fp = config.output_tiff_dir / f"{merge_config.output_layer_name}.tif"
     logger.debug("Saving combined barriers to %s", out_fp)
     save_data_using_layer_file_profile(
-        layer_fp=io_handler.fp, data=combined, geotiff=out_fp
+        layer_fp=io_handler.fp, data=combined, geotiff=out_fp, lock=lock
     )
 
     logger.info("Writing combined barriers to H5")
