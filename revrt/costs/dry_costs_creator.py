@@ -46,7 +46,7 @@ WATER_MULTIPLIER = 10.0
 class DryCostsCreator(BaseLayerCreator):
     """Class to create and save dry transmission cost layers"""
 
-    def build(
+    def build(  # noqa: PLR0913, PLR0917
         self,
         iso_region_tiff,
         nlcd_tiff,
@@ -56,8 +56,9 @@ class DryCostsCreator(BaseLayerCreator):
         default_multipliers=None,
         extra_tiffs=None,
         tiff_chunks="auto",
-        nodata=None,
         descriptions=None,
+        nodata=None,
+        lock=None,
         **profile_kwargs,
     ):
         """Build cost rasters using base line costs and multipliers
@@ -120,16 +121,20 @@ class DryCostsCreator(BaseLayerCreator):
             Optional list of extra GeoTIFFs to add to cost layer file
             (e.g. a transmission barrier file). By default, ``None``,
             which does not add any extra layers.
-        nodata : dict, optional
-            Optional mapping where keys are layer names and values are
-            the nodata value for the output raster of that layer. This
-            value will be added to the layer's attributes meta
-            dictionary under the "nodata" key. By default, ``None``.
         descriptions : dict, optional
             Optional mapping  where keys are layer names and values are
             descriptions to add to the layer's attributes meta
             dictionary under the "description" key.
             By default, ``None``, which does not add any description.
+        nodata : dict, optional
+            Optional mapping where keys are layer names and values are
+            the nodata value for the output raster of that layer. This
+            value will be added to the layer's attributes meta
+            dictionary under the "nodata" key. By default, ``None``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data to GeoTIFF using dask. If not
+            supplied, a single process is used for writing data to disk.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing output
             rasters. The following attributes ar ignored (they are set
@@ -166,6 +171,7 @@ class DryCostsCreator(BaseLayerCreator):
             data=multipliers,
             geotiff=multiplier_tiff_fp,
             nodata=nodata.get(multiplier_tiff_fp.stem, None),
+            lock=lock,
             **profile_kwargs,
         )
         layers[multiplier_tiff_fp.stem] = multipliers
@@ -207,6 +213,7 @@ class DryCostsCreator(BaseLayerCreator):
                 data=blc_arr,
                 geotiff=out_fp,
                 nodata=nodata.get(out_fp.stem),
+                lock=lock,
                 **profile_kwargs,
             )
 
@@ -222,6 +229,7 @@ class DryCostsCreator(BaseLayerCreator):
                 data=costs_arr,
                 geotiff=out_fp,
                 nodata=nodata.get(out_fp.stem),
+                lock=lock,
                 **profile_kwargs,
             )
 
