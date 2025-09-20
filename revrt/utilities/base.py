@@ -311,7 +311,7 @@ def load_data_using_layer_file_profile(
 
 
 def save_data_using_layer_file_profile(
-    layer_fp, data, geotiff, nodata=None, **profile_kwargs
+    layer_fp, data, geotiff, nodata=None, lock=None, **profile_kwargs
 ):
     """Write to GeoTIFF file
 
@@ -326,6 +326,10 @@ def save_data_using_layer_file_profile(
     nodata : int | float, optional
         Optional nodata value for the raster layer. By default,
         ``None``, which does not add a "nodata" value.
+    lock : bool | `dask.distributed.Lock`, optional
+        Lock to use to write data using dask. If not supplied, a single
+        process is used for writing data to the GeoTIFF.
+        By default, ``None``.
     **profile_kwargs
         Additional keyword arguments to pass into writing the
         raster. The following attributes ar ignored (they are set
@@ -356,12 +360,20 @@ def save_data_using_layer_file_profile(
         crs=crs,
         transform=transform,
         nodata=nodata,
+        lock=lock,
         **profile_kwargs,
     )
 
 
 def save_data_using_custom_props(
-    data, geotiff, shape, crs, transform, nodata=None, **profile_kwargs
+    data,
+    geotiff,
+    shape,
+    crs,
+    transform,
+    nodata=None,
+    lock=None,
+    **profile_kwargs,
 ):
     """Write to GeoTIFF file
 
@@ -380,6 +392,10 @@ def save_data_using_custom_props(
     nodata : int | float, optional
         Optional nodata value for the raster layer. By default,
         ``None``, which does not add a "nodata" value.
+    lock : bool | `dask.distributed.Lock`, optional
+        Lock to use to write data using dask. If not supplied, a single
+        process is used for writing data to the GeoTIFF.
+        By default, ``None``.
     **profile_kwargs
         Additional keyword arguments to pass into writing the
         raster. The following attributes ar ignored (they are set
@@ -419,7 +435,7 @@ def save_data_using_custom_props(
         nodata = da.dtype.type(nodata)
         da = da.rio.write_nodata(nodata)
 
-    da.rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
+    da.rio.to_raster(geotiff, driver="GTiff", lock=lock, **profile_kwargs)
 
 
 def _compute_half_width_using_ranges(
