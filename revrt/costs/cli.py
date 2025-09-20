@@ -1,5 +1,6 @@
 """Code to build cost layer file"""
 
+import json
 import logging
 from warnings import warn
 
