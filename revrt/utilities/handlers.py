@@ -340,7 +340,7 @@ class LayeredFile:
 
         ds_to_add.to_zarr(
             self.fp,
-            mode="a",
+            mode="a-",
             encoding=encoding,
             zarr_format=3,
             consolidated=False,
