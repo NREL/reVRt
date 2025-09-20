@@ -7,7 +7,7 @@ from pathlib import Path
 from warnings import warn
 
 import rioxarray
-import odc.geo.xr  # noqa
+import odc.geo.xr
 import numpy as np
 import xarray as xr
 from rasterio.warp import Resampling
@@ -292,7 +292,6 @@ def load_data_using_layer_file_profile(
     )
 
     tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
-
     try:
         check_geotiff(layer_fp, geotiff, transform_atol=TRANSFORM_ATOL)
     except revrtProfileCheckError:
@@ -300,13 +299,11 @@ def load_data_using_layer_file_profile(
             "Profile of '%s' does not match template, reprojecting...",
             geotiff,
         )
-
+        geo_box = odc.geo.geobox.GeoBox(
+            shape=(height, width), affine=transform, crs=crs
+        )
         tif = tif.odc.reproject(
-            how=crs,
-            resampling=Resampling.nearest,
-            shape=(height, width),
-            transform=transform,
-            INIT_DEST=0,
+            how=geo_box, resampling=Resampling.nearest, INIT_DEST=0
         )
 
     if band_index is not None:
