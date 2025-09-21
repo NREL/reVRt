@@ -285,7 +285,10 @@ class LayeredFile:
         self._check_for_existing_layer(layer_name, overwrite)
 
         if values.ndim < _NUM_GEOTIFF_DIMS:
-            values = np.expand_dims(values, 0)
+            try:
+                values = values.expand_dims(dim={"band": 1})
+            except AttributeError:
+                values = np.expand_dims(values, 0)
 
         if values.shape[1:] != self.shape:
             msg = (
