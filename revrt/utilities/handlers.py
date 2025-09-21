@@ -25,9 +25,9 @@ from revrt.utilities.base import (
     check_geotiff,
     delete_data_file,
     elapsed_time_as_str,
+    expand_dim_if_needed,
     log_mem,
     TRANSFORM_ATOL,
-    _NUM_GEOTIFF_DIMS,
 )
 from revrt.warn import revrtWarning
 
@@ -286,11 +286,7 @@ class LayeredFile:
         logger.info("Writing layer %s to %s", layer_name, self.fp)
         self._check_for_existing_layer(layer_name, overwrite)
 
-        if values.ndim < _NUM_GEOTIFF_DIMS:
-            try:
-                values = values.expand_dims(dim={"band": 1})
-            except AttributeError:
-                values = np.expand_dims(values, 0)
+        values = expand_dim_if_needed(values)
 
         if values.shape[1:] != self.shape:
             msg = (
