@@ -29,3 +29,22 @@ to support informed decision-making. Although it's designed to integrate
 seamlessly with the reV model, the reV Routing tool is versatile and can also
 be utilized independently for standalone analyses in transmission planning and
 resource assessment scenarios.
+
+
+Installing reVRt
+================
+The quickest way to install reVRt for users and analysts is from PyPi:
+
+.. code-block:: bash
+
+    pip install nrel-revrt
+
+If you would like to install and run reVRt from source, we recommend using `pixi <https://pixi.sh/latest/>`_:
+
+.. code-block:: bash
+
+    git clone git@github.com:NREL/reVRt.git; cd reVRt
+    pixi run reVRt
+
+
+.. For detailed instructions, see the `installation documentation <https://nrel.github.io/reVRt/misc/installation.html>`_.
