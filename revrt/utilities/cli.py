@@ -38,6 +38,7 @@ def layers_from_file(fp, _out_layer_dir, layers=None, profile_kwargs=None):
     list
         List of paths to the GeoTIFF files that were created.
     """
+    # TODO: Add dask client here??
     out_layer_dir = Path(_out_layer_dir)
     out_layer_dir.mkdir(parents=True, exist_ok=True)
 

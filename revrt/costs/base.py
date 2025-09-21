@@ -4,6 +4,8 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from functools import cached_property
 
+import xarray as xr
+
 from revrt.constants import DEFAULT_DTYPE
 
 
@@ -51,6 +53,17 @@ class BaseLayerCreator(ABC):
         """path-like: Directory to store output GeoTIFFs in"""
         self._output_tiff_dir.mkdir(exist_ok=True, parents=True)
         return self._output_tiff_dir
+
+    @cached_property
+    def chunks(self):
+        """tuple: Layer chunks (no band dimension)"""
+
+        with xr.open_dataset(
+            self._io_handler.fp, consolidated=False, engine="zarr"
+        ) as ds:
+            attrs = ds.attrs
+
+        return attrs["chunks"]["y"], attrs["chunks"]["x"]
 
     @abstractmethod
     def build(self, *args, **kwargs):

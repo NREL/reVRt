@@ -12,6 +12,7 @@ from revrt.utilities import (
     file_full_path,
     load_data_using_layer_file_profile,
     save_data_using_layer_file_profile,
+    log_mem,
 )
 from revrt.utilities.raster import rasterize_shape_file
 from revrt.constants import DEFAULT_DTYPE, ALL, METERS_IN_MILE
@@ -67,8 +68,9 @@ class LayerCreator(BaseLayerCreator):
         values_are_costs_per_mile=False,
         write_to_file=True,
         description=None,
-        tiff_chunks="auto",
+        tiff_chunks="file",
         nodata=None,
+        lock=None,
         **profile_kwargs,
     ):
         """Combine multiple GeoTIFFs and vectors to a raster layer
@@ -94,14 +96,18 @@ class LayerCreator(BaseLayerCreator):
         description : str, optional
             Optional description to store with this layer in the H5
             file. By default, ``None``.
-        tiff_chunks : int | str, default="auto"
+        tiff_chunks : int | str, default="file"
             Chunk size to use when reading the GeoTIFF file. This will
             be passed down as the ``chunks`` argument to
-            :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+            :meth:`rioxarray.open_rasterio`. By default, ``"file"``.
         nodata : int | float, optional
             Optional nodata value for output rasters. This value will
             be added to the layer's attributes meta dictionary under the
             "nodata" key.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data to GeoTIFF using dask. If not
+            supplied, a single process is used for writing data to disk.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing output
             rasters. The following attributes ar ignored (they are set
@@ -115,10 +121,47 @@ class LayerCreator(BaseLayerCreator):
                 - height
 
         """
+        tiff_filename = self._process_and_write_as_tiff(
+            layer_name=layer_name,
+            build_config=build_config,
+            values_are_costs_per_mile=values_are_costs_per_mile,
+            tiff_chunks=tiff_chunks,
+            nodata=nodata,
+            lock=lock,
+            **profile_kwargs,
+        )
+        if write_to_file:
+            out = load_data_using_layer_file_profile(
+                layer_fp=self._io_handler.fp,
+                geotiff=tiff_filename,
+                tiff_chunks=tiff_chunks,
+                layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
+                band_index=0,
+            )
+            log_mem()
+            logger.debug("Writing %r to '%s'", layer_name, self._io_handler.fp)
+            self._io_handler.write_layer(
+                out, layer_name, description=description, overwrite=True
+            )
+            log_mem()
+
+    def _process_and_write_as_tiff(
+        self,
+        layer_name,
+        build_config,
+        values_are_costs_per_mile=False,
+        tiff_chunks="file",
+        nodata=None,
+        lock=None,
+        **profile_kwargs,
+    ):
         layer_name = layer_name.replace(".tif", "").replace(".tiff", "")
         logger.debug("Combining %s layers", layer_name)
-        result = da.zeros(self.shape, dtype=self._dtype)
+        log_mem()
+        result = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
         fi_layers = {}
+        logger.debug("Initialized zeros")
+        log_mem()
 
         for fname, config in build_config.items():
             if config.forced_inclusion:
@@ -138,37 +181,34 @@ class LayerCreator(BaseLayerCreator):
                 msg = f"Unsupported file extension on {fname!r}"
                 raise revrtValueError(msg)
 
+            log_mem()
+
         result = self._process_forced_inclusions(
             result, fi_layers, tiff_chunks=tiff_chunks
         )
+        logger.debug("After forced inclusions")
+        log_mem()
         if values_are_costs_per_mile:
             result = result / METERS_IN_MILE * self.cell_size
+            log_mem()
 
+        result = result.astype(self._dtype)
         out_filename = self.output_tiff_dir / f"{layer_name}.tif"
         logger.debug(
             "Writing combined %s layers to %s", layer_name, out_filename
         )
+        log_mem()
         save_data_using_layer_file_profile(
             layer_fp=self._io_handler.fp,
             data=result,
             geotiff=out_filename,
             nodata=nodata,
+            lock=lock,
             **profile_kwargs,
         )
-        if write_to_file:
-            out = load_data_using_layer_file_profile(
-                layer_fp=self._io_handler.fp,
-                geotiff=out_filename,
-                tiff_chunks=tiff_chunks,
-                layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
-                band_index=0,
-            )
-            logger.debug("Writing %s to H5", layer_name)
-            self._io_handler.write_layer(
-                out, layer_name, description=description, overwrite=True
-            )
+        return out_filename
 
-    def _process_raster_layer(self, fname, config, tiff_chunks="auto"):
+    def _process_raster_layer(self, fname, config, tiff_chunks="file"):
         """Create the desired layer from the input file"""
         _check_tiff_layer_config(config, fname)
         data = load_data_using_layer_file_profile(
@@ -196,7 +236,10 @@ class LayerCreator(BaseLayerCreator):
     def _process_global_raster_value(self, config):
         """Create the desired layer from the global value"""
         temp = da.full(
-            self.shape, fill_value=config.global_value, dtype=self._dtype
+            self.shape,
+            fill_value=config.global_value,
+            dtype=self._dtype,
+            chunks=self.chunks,
         )
         return self._apply_mask(config, temp)
 
@@ -205,7 +248,7 @@ class LayerCreator(BaseLayerCreator):
         _validate_bin_range(config.bins)
         _validate_bin_continuity(config.bins)
 
-        processed = da.zeros(self.shape, dtype=self._dtype)
+        processed = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
         if config.extent != ALL:
             mask = self._get_mask(config.extent)
 
@@ -236,7 +279,7 @@ class LayerCreator(BaseLayerCreator):
 
     def _process_raster_map(self, config, data):
         """Create the desired layer from the input file using a map"""
-        temp = da.zeros(self.shape, dtype=self._dtype)
+        temp = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
         for key, val in config.map.items():
             temp = da.where(data == key, val, temp)
 
@@ -277,13 +320,13 @@ class LayerCreator(BaseLayerCreator):
         mask = self._get_mask(config.extent)
         return da.where(mask, data, 0)
 
-    def _process_forced_inclusions(self, data, fi_layers, tiff_chunks="auto"):
+    def _process_forced_inclusions(self, data, fi_layers, tiff_chunks="file"):
         """Use forced inclusion (FI) layers to remove barriers/friction
 
         Any value > 0 in the FI layers will result in a 0 in the
         corresponding cell in the returned raster.
         """
-        fi = da.zeros(self.shape)
+        fi = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
 
         for fname, config in fi_layers.items():
             if Path(fname).suffix.lower() not in TIFF_EXTENSIONS:
@@ -322,7 +365,7 @@ class LayerCreator(BaseLayerCreator):
                 tiff_chunks=tiff_chunks,
                 layer_dirs=[self.input_layer_dir, self.output_tiff_dir],
                 band_index=0,
-            ).values
+            )
 
             if config.extent == ALL:
                 fi += temp

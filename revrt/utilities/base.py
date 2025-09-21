@@ -7,6 +7,7 @@ from pathlib import Path
 from warnings import warn
 
 import rioxarray
+import odc.geo.xr
 import numpy as np
 import xarray as xr
 from rasterio.warp import Resampling
@@ -242,7 +243,7 @@ def file_full_path(file_name, *layer_dirs):
 
 
 def load_data_using_layer_file_profile(
-    layer_fp, geotiff, tiff_chunks="auto", layer_dirs=None, band_index=None
+    layer_fp, geotiff, tiff_chunks="file", layer_dirs=None, band_index=None
 ):
     """Load GeoTIFF data, reprojecting to LayeredFile CRS if needed
 
@@ -252,10 +253,10 @@ def load_data_using_layer_file_profile(
         Path to layered file on disk. This file must already exist.
     geotiff : path-like
         Path to GeoTIFF from which data should be read.
-    tiff_chunks : int | str, default="auto"
+    tiff_chunks : int | str, default="file"
         Chunk size to use when reading the GeoTIFF file. This will be
         passed down as the ``chunks`` argument to
-        :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+        :meth:`rioxarray.open_rasterio`. By default, ``"file"``.
     layer_dirs : iterable of path-like, optional
         Directories to search for `geotiff` in, if not found in current
         directory. By default, ``None``, which means only the current
@@ -279,29 +280,30 @@ def load_data_using_layer_file_profile(
     if layer_dirs:
         geotiff = file_full_path(geotiff, *layer_dirs)
 
-    tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
+    with xr.open_dataset(layer_fp, consolidated=False, engine="zarr") as ds:
+        crs = ds.rio.crs
+        width, height = ds.rio.width, ds.rio.height
+        transform = ds.rio.transform()
+        if tiff_chunks == "file":
+            tiff_chunks = ds.attrs.get("chunks", "auto")
 
+    logger.debug(
+        "Using the following chunks to open '%s': %r", geotiff, tiff_chunks
+    )
+
+    tif = rioxarray.open_rasterio(geotiff, chunks=tiff_chunks)
     try:
         check_geotiff(layer_fp, geotiff, transform_atol=TRANSFORM_ATOL)
     except revrtProfileCheckError:
-        logger.debug(
-            "Profile of %s does not match template, reprojecting...",
+        logger.info(
+            "Profile of '%s' does not match template, reprojecting...",
             geotiff,
         )
-        with xr.open_dataset(
-            layer_fp, consolidated=False, engine="zarr"
-        ) as ds:
-            crs = ds.rio.crs
-            width, height = ds.rio.width, ds.rio.height
-            transform = ds.rio.transform()
-
-        tif = tif.rio.reproject(
-            dst_crs=crs,
-            shape=(height, width),
-            transform=transform,
-            num_threads=4,
-            resampling=Resampling.nearest,
-            INIT_DEST=0,
+        geo_box = odc.geo.geobox.GeoBox(
+            shape=(height, width), affine=transform, crs=crs
+        )
+        tif = tif.odc.reproject(
+            how=geo_box, resampling=Resampling.nearest, INIT_DEST=0
         )
 
     if band_index is not None:
@@ -311,7 +313,7 @@ def load_data_using_layer_file_profile(
 
 
 def save_data_using_layer_file_profile(
-    layer_fp, data, geotiff, nodata=None, **profile_kwargs
+    layer_fp, data, geotiff, nodata=None, lock=None, **profile_kwargs
 ):
     """Write to GeoTIFF file
 
@@ -326,6 +328,10 @@ def save_data_using_layer_file_profile(
     nodata : int | float, optional
         Optional nodata value for the raster layer. By default,
         ``None``, which does not add a "nodata" value.
+    lock : bool | `dask.distributed.Lock`, optional
+        Lock to use to write data using dask. If not supplied, a single
+        process is used for writing data to the GeoTIFF.
+        By default, ``None``.
     **profile_kwargs
         Additional keyword arguments to pass into writing the
         raster. The following attributes ar ignored (they are set
@@ -356,12 +362,20 @@ def save_data_using_layer_file_profile(
         crs=crs,
         transform=transform,
         nodata=nodata,
+        lock=lock,
         **profile_kwargs,
     )
 
 
 def save_data_using_custom_props(
-    data, geotiff, shape, crs, transform, nodata=None, **profile_kwargs
+    data,
+    geotiff,
+    shape,
+    crs,
+    transform,
+    nodata=None,
+    lock=None,
+    **profile_kwargs,
 ):
     """Write to GeoTIFF file
 
@@ -380,6 +394,10 @@ def save_data_using_custom_props(
     nodata : int | float, optional
         Optional nodata value for the raster layer. By default,
         ``None``, which does not add a "nodata" value.
+    lock : bool | `dask.distributed.Lock`, optional
+        Lock to use to write data using dask. If not supplied, a single
+        process is used for writing data to the GeoTIFF.
+        By default, ``None``.
     **profile_kwargs
         Additional keyword arguments to pass into writing the
         raster. The following attributes ar ignored (they are set
@@ -398,8 +416,7 @@ def save_data_using_custom_props(
         If shape of provided data does not match shape of
         :class:`LayeredFile`.
     """
-    if data.ndim < _NUM_GEOTIFF_DIMS:
-        data = np.expand_dims(data, 0)
+    data = expand_dim_if_needed(data)
 
     if data.shape[1:] != shape:
         msg = (
@@ -419,7 +436,48 @@ def save_data_using_custom_props(
         nodata = da.dtype.type(nodata)
         da = da.rio.write_nodata(nodata)
 
-    da.rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
+    # TODO: Grab default profile from template when creating layer file
+    # and use that instead
+    pk = {
+        "blockxsize": 256,
+        "blockysize": 256,
+        "tiled": True,
+        "compress": "lzw",
+        "interleave": "band",
+    }
+    pk.update(profile_kwargs)
+    logger.debug(
+        "Saving TIFF with shape %r and dtype %r to %s",
+        da.shape,
+        da.dtype,
+        geotiff,
+    )
+
+    da.rio.to_raster(geotiff, driver="GTiff", lock=lock, **pk)
+
+
+def expand_dim_if_needed(values):
+    """Expand data array dimensions if needed to ensure 3D (band, y, x)
+
+    Parameters
+    ----------
+    values : array-like
+        Array that is possibly missing a "band" dimension.
+
+    Returns
+    -------
+    array-like
+        Input array with a "band" dimension added if it was missing one.
+    """
+    if values.ndim >= _NUM_GEOTIFF_DIMS:
+        return values
+
+    try:
+        values = values.expand_dims(dim={"band": 1})
+    except AttributeError:
+        values = np.expand_dims(values, 0)
+
+    return values
 
 
 def _compute_half_width_using_ranges(
@@ -478,3 +536,26 @@ def log_mem(log_level="DEBUG"):
     logger.log(log_level, msg)
 
     return msg
+
+
+def elapsed_time_as_str(seconds_elapsed):
+    """Format elapsed time into human readable string
+
+    Parameters
+    ----------
+    seconds_elapsed : int
+        Number of seconds that should be represented in string form.
+
+    Returns
+    -------
+    str
+        Human-readable string representing the number of elapsed
+        seconds.
+    """
+    days, seconds = divmod(int(seconds_elapsed), 24 * 3600)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    time_str = f"{hours:d}:{minutes:02d}:{seconds:02d}"
+    if days:
+        time_str = f"{days:,d} day{'s' if abs(days) != 1 else ''}, {time_str}"
+    return time_str

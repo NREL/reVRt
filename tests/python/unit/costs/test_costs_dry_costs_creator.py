@@ -38,7 +38,7 @@ def test_compute_slope_multipliers_defaults():
         ]
     )
 
-    slope_multipliers = compute_slope_multipliers(input_slopes)
+    slope_multipliers = compute_slope_multipliers(input_slopes, chunks=(1, 3))
     expected_multipliers = np.array(
         [
             [1.0, DEFAULT_HILL_MULTIPLIER, DEFAULT_HILL_MULTIPLIER],
@@ -61,7 +61,9 @@ def test_compute_slope_multipliers_custom():
         "mtn_mult": mountain_multiplier,
     }
 
-    slope_multipliers = compute_slope_multipliers(input_slopes, config)
+    slope_multipliers = compute_slope_multipliers(
+        input_slopes, chunks=(1, 3), config=config
+    )
     expected_multipliers = np.array(
         [
             [1.0, hill_multiplier, hill_multiplier],
@@ -78,7 +80,7 @@ def test_compute_land_use_multipliers():
     multipliers = {"TestClassA": 1.5, "TestClassB": 2.0}
 
     land_use_multipliers = compute_land_use_multipliers(
-        input_classes, multipliers, land_use_classes
+        input_classes, multipliers, land_use_classes, chunks=(1, 3)
     )
     expected_multipliers = np.array(
         [
@@ -104,7 +106,7 @@ def test_compute_land_use_multipliers_missing_class_mapping():
         match="Class TestClassC not in land_use_classes:",
     ):
         compute_land_use_multipliers(
-            input_classes, multipliers, land_use_classes
+            input_classes, multipliers, land_use_classes, chunks=(1, 3)
         )
 
 
@@ -118,7 +120,7 @@ def test_compute_land_use_multipliers_bad_class_mapping():
         revrtValueError, match="NLCD values must be in list form"
     ):
         compute_land_use_multipliers(
-            input_classes, multipliers, land_use_classes
+            input_classes, multipliers, land_use_classes, chunks=(1, 3)
         )
 
 

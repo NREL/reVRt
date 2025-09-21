@@ -1,6 +1,9 @@
 """Handler for file containing GeoTIFF layers"""
 
+import time
 import logging
+import operator
+import functools
 from pathlib import Path
 from warnings import warn
 from functools import cached_property
@@ -21,8 +24,10 @@ from revrt.exceptions import (
 from revrt.utilities.base import (
     check_geotiff,
     delete_data_file,
+    elapsed_time_as_str,
+    expand_dim_if_needed,
+    log_mem,
     TRANSFORM_ATOL,
-    _NUM_GEOTIFF_DIMS,
 )
 from revrt.warn import revrtWarning
 
@@ -191,7 +196,7 @@ class LayeredFile:
         _validate_template(template_file)
 
         logger.debug("\t- Initializing %s from %s", self.fp, template_file)
-
+        start_time = time.monotonic()
         try:
             _init_zarr_file_from_template(
                 template_file,
@@ -209,6 +214,11 @@ class LayeredFile:
                 delete_data_file(self.fp)
             raise
 
+        logger.debug(
+            "Time to create %s: %s",
+            self.fp,
+            elapsed_time_as_str(time.monotonic() - start_time),
+        )
         return self
 
     def write_layer(
@@ -272,10 +282,11 @@ class LayeredFile:
             )
             raise revrtFileNotFoundError(msg)
 
+        start_time = time.monotonic()
+        logger.info("Writing layer %s to %s", layer_name, self.fp)
         self._check_for_existing_layer(layer_name, overwrite)
 
-        if values.ndim < _NUM_GEOTIFF_DIMS:
-            values = np.expand_dims(values, 0)
+        values = expand_dim_if_needed(values)
 
         if values.shape[1:] != self.shape:
             msg = (
@@ -294,6 +305,7 @@ class LayeredFile:
         chunks = (1, attrs["chunks"]["y"], attrs["chunks"]["x"])
 
         da = xr.DataArray(values, dims=("band", "y", "x"), attrs=attrs)
+        da = da.chunk(attrs["chunks"])
         da = da.assign_coords(coords)
         da.attrs["count"] = 1
         da.attrs["description"] = description
@@ -327,13 +339,20 @@ class LayeredFile:
                 }
             )
 
+        log_mem()
         ds_to_add.to_zarr(
             self.fp,
-            mode="a",
+            mode="a-",
             encoding=encoding,
             zarr_format=3,
             consolidated=False,
             compute=True,
+        )
+
+        logger.debug(
+            "Time to write layer %s: %s",
+            layer_name,
+            elapsed_time_as_str(time.monotonic() - start_time),
         )
 
     def _check_for_existing_layer(self, layer_name, overwrite):
@@ -408,6 +427,7 @@ class LayeredFile:
             logger.info("%s not found - creating from %s...", self.fp, geotiff)
             self.create_new(geotiff)
 
+        start_time = time.monotonic()
         logger.info(
             "%s being extracted from %s and added to %s",
             layer_name,
@@ -429,8 +449,14 @@ class LayeredFile:
                 nodata=nodata,
             )
 
+        logger.debug(
+            "Time to write GeoTIFF %s: %s",
+            geotiff,
+            elapsed_time_as_str(time.monotonic() - start_time),
+        )
+
     def layer_to_geotiff(
-        self, layer, geotiff, ds_chunks="auto", **profile_kwargs
+        self, layer, geotiff, ds_chunks="auto", lock=None, **profile_kwargs
     ):
         """Extract layer from file and write to GeoTIFF file
 
@@ -444,6 +470,10 @@ class LayeredFile:
             Chunk size to use when reading the :class:`LayeredFile`.
             This will be passed down as the ``chunks`` argument to
             :meth:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data using dask. If not supplied, a
+            single process is used for writing data to the GeoTIFF.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
@@ -461,7 +491,9 @@ class LayeredFile:
         with xr.open_dataset(
             self.fp, chunks=ds_chunks, consolidated=False, engine="zarr"
         ) as ds:
-            ds[layer].rio.to_raster(geotiff, driver="GTiff", **profile_kwargs)
+            ds[layer].rio.to_raster(
+                geotiff, driver="GTiff", lock=lock, **profile_kwargs
+            )
 
     def layers_to_file(
         self,
@@ -542,13 +574,23 @@ class LayeredFile:
 
         return str(self.fp)
 
-    def extract_layers(self, layers, **profile_kwargs):
+    def extract_layers(
+        self, layers, ds_chunks="auto", lock=None, **profile_kwargs
+    ):
         """Extract layers from file and save to disk as GeoTIFFs
 
         Parameters
         ----------
         layers : dict
             Dictionary mapping layer names to GeoTIFF files to create.
+        ds_chunks : int | str, default="auto"
+            Chunk size to use when reading the :class:`LayeredFile`.
+            This will be passed down as the ``chunks`` argument to
+            :meth:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data using dask. If not supplied, a
+            single process is used for writing data to the GeoTIFFs.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
@@ -564,9 +606,17 @@ class LayeredFile:
         logger.info("Extracting layers from %s", self.fp)
         for layer_name, geotiff in layers.items():
             logger.info("- Extracting %s", layer_name)
-            self.layer_to_geotiff(layer_name, geotiff, **profile_kwargs)
+            self.layer_to_geotiff(
+                layer_name,
+                geotiff,
+                ds_chunks=ds_chunks,
+                lock=lock,
+                **profile_kwargs,
+            )
 
-    def extract_all_layers(self, out_dir, **profile_kwargs):
+    def extract_all_layers(
+        self, out_dir, ds_chunks="auto", lock=None, **profile_kwargs
+    ):
         """Extract all layers from file and save to disk as GeoTIFFs
 
         Parameters
@@ -575,6 +625,14 @@ class LayeredFile:
             Path to output directory into which layers should be saved
             as GeoTIFFs. This directory will be created if it does not
             already exist.
+        ds_chunks : int | str, default="auto"
+            Chunk size to use when reading the :class:`LayeredFile`.
+            This will be passed down as the ``chunks`` argument to
+            :meth:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data using dask. If not supplied, a
+            single process is used for writing data to the GeoTIFFs.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
@@ -600,7 +658,9 @@ class LayeredFile:
             layer_name: out_dir / f"{layer_name}.tif"
             for layer_name in self.data_layers
         }
-        self.extract_layers(layers, **profile_kwargs)
+        self.extract_layers(
+            layers, ds_chunks=ds_chunks, lock=lock, **profile_kwargs
+        )
         return layers
 
 
@@ -770,7 +830,7 @@ def _save_ds_as_zarr_with_encodings(out_ds, chunk_x, chunk_y, out_fp):
             "chunks": (chunk_y, chunk_x),
         },
     }
-    logger.debug("Writing data to %s with encoding:\n %r", out_fp, encoding)
+    logger.debug("Writing data to '%s' with encoding:\n%r", out_fp, encoding)
     out_ds.to_zarr(
         out_fp, mode="w", encoding=encoding, zarr_format=3, consolidated=False
     )
@@ -780,8 +840,11 @@ def _proj_to_lon_lat(xx_block, yy_block, src):
     """Block-wise transform to lon/lat; returns array shape [2, y, x]"""
     # create transformer inside the block to avoid pickling issues
     tr = Transformer.from_crs(src, "EPSG:4326", always_xy=True)
-    lon, lat = tr.transform(xx_block, yy_block)
-    out = np.empty((2, *xx_block.shape), dtype="float32")
+    lon, lat = tr.transform(xx_block.ravel(), yy_block.ravel())
+    out = np.empty(
+        (2, functools.reduce(operator.mul, xx_block.shape)), dtype="float32"
+    )
     out[0] = lon
     out[1] = lat
-    return out
+
+    return out.reshape((2, *xx_block.shape))

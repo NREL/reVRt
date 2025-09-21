@@ -3,7 +3,6 @@
 import logging
 from pathlib import Path
 
-import numpy as np
 import dask.array as da
 
 from revrt.costs.config import TransmissionConfig
@@ -46,7 +45,7 @@ WATER_MULTIPLIER = 10.0
 class DryCostsCreator(BaseLayerCreator):
     """Class to create and save dry transmission cost layers"""
 
-    def build(
+    def build(  # noqa: PLR0913, PLR0917
         self,
         iso_region_tiff,
         nlcd_tiff,
@@ -55,9 +54,10 @@ class DryCostsCreator(BaseLayerCreator):
         mask=None,
         default_multipliers=None,
         extra_tiffs=None,
-        tiff_chunks="auto",
-        nodata=None,
+        tiff_chunks="file",
         descriptions=None,
+        nodata=None,
+        lock=None,
         **profile_kwargs,
     ):
         """Build cost rasters using base line costs and multipliers
@@ -120,16 +120,20 @@ class DryCostsCreator(BaseLayerCreator):
             Optional list of extra GeoTIFFs to add to cost layer file
             (e.g. a transmission barrier file). By default, ``None``,
             which does not add any extra layers.
-        nodata : dict, optional
-            Optional mapping where keys are layer names and values are
-            the nodata value for the output raster of that layer. This
-            value will be added to the layer's attributes meta
-            dictionary under the "nodata" key. By default, ``None``.
         descriptions : dict, optional
             Optional mapping  where keys are layer names and values are
             descriptions to add to the layer's attributes meta
             dictionary under the "description" key.
             By default, ``None``, which does not add any description.
+        nodata : dict, optional
+            Optional mapping where keys are layer names and values are
+            the nodata value for the output raster of that layer. This
+            value will be added to the layer's attributes meta
+            dictionary under the "nodata" key. By default, ``None``.
+        lock : bool | `dask.distributed.Lock`, optional
+            Lock to use to write data to GeoTIFF using dask. If not
+            supplied, a single process is used for writing data to disk.
+            By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing output
             rasters. The following attributes ar ignored (they are set
@@ -166,6 +170,7 @@ class DryCostsCreator(BaseLayerCreator):
             data=multipliers,
             geotiff=multiplier_tiff_fp,
             nodata=nodata.get(multiplier_tiff_fp.stem, None),
+            lock=lock,
             **profile_kwargs,
         )
         layers[multiplier_tiff_fp.stem] = multipliers
@@ -207,6 +212,7 @@ class DryCostsCreator(BaseLayerCreator):
                 data=blc_arr,
                 geotiff=out_fp,
                 nodata=nodata.get(out_fp.stem),
+                lock=lock,
                 **profile_kwargs,
             )
 
@@ -222,6 +228,7 @@ class DryCostsCreator(BaseLayerCreator):
                 data=costs_arr,
                 geotiff=out_fp,
                 nodata=nodata.get(out_fp.stem),
+                lock=lock,
                 **profile_kwargs,
             )
 
@@ -234,7 +241,7 @@ class DryCostsCreator(BaseLayerCreator):
             )
 
     def _load_layers(
-        self, iso_region_tiff, slope_tiff, nlcd_tiff, tiff_chunks="auto"
+        self, iso_region_tiff, slope_tiff, nlcd_tiff, tiff_chunks="file"
     ):
         """Load ISO region, slope and land use rasters"""
         logger.debug("Loading ISO region, slope and land use rasters")
@@ -273,7 +280,7 @@ class DryCostsCreator(BaseLayerCreator):
         layer_name=None,
         nodata=None,
         descriptions=None,
-        tiff_chunks="auto",
+        tiff_chunks="file",
     ):
         """Write a single layer to the layered file"""
         nodata = nodata or {}
@@ -310,8 +317,12 @@ class DryCostsCreator(BaseLayerCreator):
         default_multipliers=None,
     ):
         """Create costs multiplier raster"""
-        multipliers = da.ones(self.shape, dtype=self._dtype)
-        regions_mask = da.full(self.shape, False, dtype=bool)
+        multipliers = da.ones(
+            self.shape, dtype=self._dtype, chunks=self.chunks
+        )
+        regions_mask = da.full(
+            self.shape, False, dtype=bool, chunks=self.chunks
+        )
         land_use_classes = land_use_classes or NLCD_LAND_USE_CLASSES
 
         for r_conf in iso_multipliers:
@@ -327,14 +338,19 @@ class DryCostsCreator(BaseLayerCreator):
             if "land_use" in r_conf:
                 r_lu = da.where(mask, land_use_layer, da.nan)
                 lum = compute_land_use_multipliers(
-                    r_lu, r_conf["land_use"], land_use_classes
+                    r_lu,
+                    r_conf["land_use"],
+                    land_use_classes,
+                    chunks=self.chunks,
                 )
                 multipliers = da.where(mask, multipliers * lum, multipliers)
 
             if "slope" in r_conf:
                 r_slope = da.where(mask, slope_layer, da.nan)
                 slope_multipliers = compute_slope_multipliers(
-                    r_slope, r_conf["slope"]
+                    r_slope,
+                    chunks=self.chunks,
+                    config=r_conf["slope"],
                 )
                 multipliers = da.where(
                     mask, multipliers * slope_multipliers, multipliers
@@ -351,7 +367,10 @@ class DryCostsCreator(BaseLayerCreator):
                 )
                 lum_dict = default_multipliers["land_use"]
                 lum = compute_land_use_multipliers(
-                    region_land_use, lum_dict, land_use_classes
+                    region_land_use,
+                    lum_dict,
+                    land_use_classes,
+                    chunks=self.chunks,
                 )
                 multipliers = da.where(
                     default_mask, multipliers * lum, multipliers
@@ -360,7 +379,9 @@ class DryCostsCreator(BaseLayerCreator):
             if "slope" in default_multipliers:
                 region_slope = da.where(default_mask, slope_layer, da.nan)
                 slope_multipliers = compute_slope_multipliers(
-                    region_slope, default_multipliers["slope"]
+                    region_slope,
+                    chunks=self.chunks,
+                    config=default_multipliers["slope"],
                 )
                 multipliers = da.where(
                     default_mask, multipliers * slope_multipliers, multipliers
@@ -376,7 +397,7 @@ class DryCostsCreator(BaseLayerCreator):
         self, capacity, base_line_costs, iso_layer, iso_lookup
     ):
         """Get base line cost per cell raster for a given voltage"""
-        base_cost = np.zeros(self.shape, dtype=self._dtype)
+        base_cost = da.zeros(self.shape, dtype=self._dtype, chunks=self.chunks)
 
         for iso in base_line_costs:
             logger.info("Processing costs for %s for %sMW", iso, capacity)
@@ -390,12 +411,13 @@ class DryCostsCreator(BaseLayerCreator):
                 cost_per_cell,
             )
             mask = iso_layer == iso_code
-            base_cost[mask] = cost_per_cell
+            base_cost = da.where(mask, cost_per_cell, base_cost)
+            # base_cost[mask] = cost_per_cell
 
         return base_cost
 
 
-def compute_slope_multipliers(slope, config=None):
+def compute_slope_multipliers(slope, chunks, config=None):
     """Create slope multiplier raster for a region
 
     Unspecified slopes are left at 1.0
@@ -404,6 +426,9 @@ def compute_slope_multipliers(slope, config=None):
     ----------
     slope : array-like
         Slope raster clipped to a region - "Terrain slope in % of grade"
+    chunks : tuple
+        Dask chunks to use when creating multipliers array. Should be
+        of the same shape as `slope`.
     config : dict | None
         Multipliers and slope cut offs for hilly and mountain terrain.
         The following keys are allowed:
@@ -432,14 +457,15 @@ def compute_slope_multipliers(slope, config=None):
     hilly = (slope >= hill_slope) & (slope < mtn_slope)
     mountainous = slope >= mtn_slope
 
-    multipliers = np.ones(slope.shape, dtype=DEFAULT_DTYPE)
-    multipliers[hilly] = hill_multiplier
-    multipliers[mountainous] = mtn_multiplier
+    multipliers = da.ones(slope.shape, dtype=DEFAULT_DTYPE, chunks=chunks)
+    multipliers = da.where(hilly, hill_multiplier, multipliers)
 
-    return multipliers
+    return da.where(mountainous, mtn_multiplier, multipliers)
 
 
-def compute_land_use_multipliers(land_use, multipliers, land_use_classes):
+def compute_land_use_multipliers(
+    land_use, multipliers, land_use_classes, chunks
+):
     """Convert NLCD raster to land use multiplier raster
 
     Land classes without specified multipliers are left at 1.
@@ -453,13 +479,18 @@ def compute_land_use_multipliers(land_use, multipliers, land_use_classes):
     land_use_classes : dict
         NLCD land use codes corresponding to use classes for
         multipliers.
+    chunks : tuple
+        Dask chunks to use when creating multipliers array. Should be
+        of the same shape as `land_use`.
 
     Returns
     -------
     array-like
         Land use multiplier raster. Minimum value for any cell is 1.
     """
-    multiplier_raster = np.ones(land_use.shape, dtype=DEFAULT_DTYPE)
+    multiplier_raster = da.ones(
+        land_use.shape, dtype=DEFAULT_DTYPE, chunks=chunks
+    )
 
     # Determine mask arrays for NLCD values and multiplier to apply
     indices = []
@@ -479,6 +510,6 @@ def compute_land_use_multipliers(land_use, multipliers, land_use_classes):
 
     # Apply multipliers to appropriate cells
     for i in indices:
-        multiplier_raster[i[0]] = i[1]
+        multiplier_raster = da.where(i[0], i[1], multiplier_raster)
 
     return multiplier_raster
