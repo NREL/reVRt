@@ -25,6 +25,7 @@ from revrt.utilities.base import (
     check_geotiff,
     delete_data_file,
     elapsed_time_as_str,
+    log_mem,
     TRANSFORM_ATOL,
     _NUM_GEOTIFF_DIMS,
 )
@@ -282,6 +283,7 @@ class LayeredFile:
             raise revrtFileNotFoundError(msg)
 
         start_time = time.monotonic()
+        logger.info("Writing layer %s to %s", layer_name, self.fp)
         self._check_for_existing_layer(layer_name, overwrite)
 
         if values.ndim < _NUM_GEOTIFF_DIMS:
@@ -341,6 +343,7 @@ class LayeredFile:
                 }
             )
 
+        log_mem()
         ds_to_add.to_zarr(
             self.fp,
             mode="a-",
