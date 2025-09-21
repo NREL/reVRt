@@ -1,6 +1,22 @@
+*******************************
 Welcome to reV Routing (reVRt)!
-===============================
+*******************************
 
+|License| |Ruff| |Pixi| |SWR|
+
+.. |Ruff| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+    :target: https://github.com/astral-sh/ruff
+
+.. |License| image:: https://img.shields.io/badge/License-BSD_3--Clause-orange.svg
+    :target: https://opensource.org/licenses/BSD-3-Clause
+
+.. |Pixi| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json
+    :target: https://pixi.sh
+
+.. |SWR| image:: https://img.shields.io/badge/SWR--25--112_-blue?label=NREL
+    :alt: Static Badge
+
+.. inclusion-intro
 
 The reV Routing tool is a computational framework for modeling and optimizing
 transmission infrastructure requirements for electrical grid connections. By
