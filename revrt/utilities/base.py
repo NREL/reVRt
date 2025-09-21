@@ -416,8 +416,7 @@ def save_data_using_custom_props(
         If shape of provided data does not match shape of
         :class:`LayeredFile`.
     """
-    if data.ndim < _NUM_GEOTIFF_DIMS:
-        data = np.expand_dims(data, 0)
+    data = expand_dim_if_needed(data)
 
     if data.shape[1:] != shape:
         msg = (
@@ -455,6 +454,30 @@ def save_data_using_custom_props(
     )
 
     da.rio.to_raster(geotiff, driver="GTiff", lock=lock, **pk)
+
+
+def expand_dim_if_needed(values):
+    """Expand data array dimensions if needed to ensure 3D (band, y, x)
+
+    Parameters
+    ----------
+    values : array-like
+        Array that is possibly missing a "band" dimension.
+
+    Returns
+    -------
+    array-like
+        Input array with a "band" dimension added if it was missing one.
+    """
+    if values.ndim >= _NUM_GEOTIFF_DIMS:
+        return values
+
+    try:
+        values = values.expand_dims(dim={"band": 1})
+    except AttributeError:
+        values = np.expand_dims(values, 0)
+
+    return values
 
 
 def _compute_half_width_using_ranges(
