@@ -2,7 +2,7 @@
 Welcome to reV Routing (reVRt)!
 *******************************
 
-|License| |Ruff| |Pixi| |SWR|
+|Zenodo| |License| |Ruff| |Pixi| |SWR|
 
 .. |Ruff| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
     :target: https://github.com/astral-sh/ruff
@@ -15,6 +15,9 @@ Welcome to reV Routing (reVRt)!
 
 .. |SWR| image:: https://img.shields.io/badge/SWR--25--112_-blue?label=NREL
     :alt: Static Badge
+
+.. |Zenodo| image:: https://zenodo.org/badge/944738283.svg
+    :target: https://doi.org/10.5281/zenodo.17173574
 
 .. inclusion-intro
 

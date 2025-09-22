@@ -20,9 +20,9 @@ authors:
     given-names: Marie
     affiliation: National Renewable Energy Laboratory
     orcid: 'https://orcid.org/0000-0002-0804-9365'
-# identifiers:
-#   - type: doi
-#     value:
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.17173574
 repository-code: 'https://github.com/NREL/reVRt'
 abstract: >-
   The reV Routing tool is a computational framework for modeling

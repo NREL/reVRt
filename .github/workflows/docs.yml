@@ -1,0 +1,38 @@
+name: Release Documentation
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [created, published]
+  workflow_dispatch:
+
+jobs:
+  build_docs:
+    name: Build docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pull Repo
+        uses: actions/checkout@v5
+
+      - uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          pixi-version: v0.50.2
+          locked: true
+          cache: false
+          environments: dev
+
+      - name: Build Docs
+        run: pixi run -e dev make-html
+
+      - name: deploy
+        uses: peaceiris/actions-gh-pages@v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_build/html
+          force_orphan: true
+          full_commit_message: ${{ github.event.head_commit.message || format('Update docs: {0}', github.sha) }}
