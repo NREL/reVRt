@@ -99,7 +99,7 @@ class DryCostsCreator(BaseLayerCreator):
             mask to the cost array.
         default_multipliers : dict | IsoMultipliers, optional
             Multipliers for regions not specified in the
-            `iso_region_tiff`. Must be a dictionary of the form:
+            `iso_region_tiff`. Must be a dictionary of the form::
 
                 "land_use": {
                     "cropland": 1.03,
