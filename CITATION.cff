@@ -1,0 +1,47 @@
+cff-version: 1.2.0
+title: reVRt
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - family-names: Castelão
+    given-names: Guilherme
+    affiliation: National Renewable Energy Laboratory
+    orcid: 'https://orcid.org/0000-0002-6765-0708'
+  - family-names: Pinchuk
+    given-names: Pavlo
+    affiliation: National Renewable Energy Laboratory
+    orcid: 'https://orcid.org/0000-0003-4736-4728'
+  - family-names: Gu
+    given-names: Jianyu
+    affiliation: National Renewable Energy Laboratory
+  - family-names: Rivers
+    given-names: Marie
+    affiliation: National Renewable Energy Laboratory
+    orcid: 'https://orcid.org/0000-0002-0804-9365'
+# identifiers:
+#   - type: doi
+#     value:
+repository-code: 'https://github.com/NREL/reVRt'
+abstract: >-
+  The reV Routing tool is a computational framework for modeling
+  and optimizing transmission infrastructure requirements for
+  electrical grid connections. By employing a spatially-aware
+  least-cost-path methodology, it allows users to incorporate a
+  wide range of factors including siting constraints, regional
+  component costs, land composition costs, point-of-interconnection
+  costs, and network upgrade costs. Additionally, the tool enables
+  advanced follow-on analyses, such as land characterization for
+  potential transmission line routes, to support informed
+  decision-making. Although it's designed to integrate seamlessly
+  with the reV model, the reV Routing tool is versatile and
+  can also be utilized independently for standalone analyses in
+  transmission planning and resource assessment scenarios.
+keywords:
+  - Energy Analysis
+  - Transmission
+  - Least-cost-path
+license: BSD-3-Clause
+version: 0.2.0
+date-released: '2025-09-21'
