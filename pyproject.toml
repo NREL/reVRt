@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "NREL-reVRt"
-version = "0.1.0"
+version = "0.2.0"
 description = "National Renewable Energy Laboratory's (NREL's) Transmission for reVX tool"
 readme = "README.rst"
 authors = [
@@ -15,13 +15,13 @@ maintainers = [
   {name = "Guilherme Castelão", email = "gpimenta@nrel.gov"},
   {name = "Paul Pinchuk", email = "ppinchuk@nrel.gov"},
 ]
-# license = {text = "BSD-3-Clause"}
+license = {text = "BSD-3-Clause"}
 keywords = ["NREL", "routing", "transmission", "reVRt", "reV", "reVX"]
 requires-python = ">= 3.11"
 classifiers=[
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: Science/Research",
-#   "License :: OSI Approved :: BSD License",
+  "License :: OSI Approved :: BSD License",
   "Natural Language :: English",
   "Operating System :: OS Independent",
   "Programming Language :: Rust",
@@ -43,6 +43,7 @@ dependencies = [
   "rasterio>=1.4.3,<2",
   "rioxarray>=0.18.2,<0.19",
   "shapely>=2.1.1,<3",
+  "xarray>=2025.9.0,<2026",
   "zarr>=3.0.7,<4",
 ]
 
@@ -86,9 +87,9 @@ build = [
 
 
 [project.urls]
-# homepage = ""
-# documentation = ""
-# repository = ""
+homepage = "https://github.com/NREL/reVRt"
+documentation = "https://nrel.github.io/reVRt/"
+repository = "https://github.com/NREL/reVRt"
 
 [project.scripts]
 reVRt = "revrt._cli:main"
@@ -240,6 +241,7 @@ pydantic = ">=2.11.7,<3"
 rasterio = ">=1.4.3,<2"
 rioxarray = ">=0.18.2,<0.19"
 shapely = ">=2.1.1,<3"
+xarray = ">=2025.9.0,<2026"
 zarr = ">=3.0.7,<4"
 
 # for gaps
