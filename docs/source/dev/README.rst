@@ -326,7 +326,7 @@ Rust Benchmarking
 ^^^^^^^^^^^^^^^^^
 To ensure the routing algorithm remains performant, we have set up
 `Rust benchmarks <https://nrel.github.io/reVRt/dev/bench/index.html>`
-that are automatically run on GitHub Actions on the main branch. If you
-are actively developing the Rust-based CLI, you should monitor the
-benchmarks to ensure that your changes do not introduce performance
-regressions.
+that are automatically run on GitHub Actions on the main branch. If
+you are actively developing the Rust-based routing algorithm, you
+should monitor the benchmarks to ensure that your changes do not
+introduce performance regressions.
