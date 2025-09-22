@@ -72,6 +72,7 @@ impl CostFunction {
     /// features.
     pub(crate) fn compute(
         &self,
+        // For now let's restrict to f32, but we are ready to move to generic types.
         mut features: LazySubset<f32>,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
         debug!("Calculating cost for ({})", features.subset());
@@ -117,7 +118,6 @@ impl CostFunction {
         let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
         let stack = stack(Axis(0), &views).unwrap();
         //let cost = stack![Axis(3), &cost];
-        trace!("Stack shape: {:?}", stack.shape());
         let cost = stack.sum_axis(Axis(0));
         trace!("Stack shape: {:?}", stack.shape());
 
