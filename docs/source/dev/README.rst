@@ -320,3 +320,13 @@ All test files (e.g. ``test_scenario.py``) should start/end with the following b
 
 This allows the (single) file to be executed, running only the tests contained
 within. This is extremely useful when updating/modifying/adding tests in the file.
+
+
+Rust Benchmarking
+^^^^^^^^^^^^^^^^^
+To ensure the routing algorithm remains performant, we have set up
+`Rust benchmarks <https://nrel.github.io/reVRt/dev/bench/index.html>`
+that are automatically run on GitHub Actions on the main branch. If you
+are actively developing the Rust-based CLI, you should monitor the
+benchmarks to ensure that your changes do not introduce performance
+regressions.
