@@ -24,12 +24,6 @@ commands = [
 ]
 main = make_cli(commands, info={"name": "reVRt", "version": __version__})
 
-# export GAPs commands to namespace for documentation
-build_routing_layers_command = main.commands["build-routing-layers"]
-route_characterization = main.commands["route-characterization"]
-layers_to_file = main.commands["layers-to-file"]
-layers_from_file = main.commands["layers-from-file"]
-
 
 if __name__ == "__main__":
     try:
