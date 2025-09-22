@@ -87,9 +87,9 @@ build = [
 
 
 [project.urls]
-# homepage = ""
-# documentation = ""
-# repository = ""
+homepage = "https://github.com/NREL/reVRt"
+documentation = "https://nrel.github.io/reVRt/"
+repository = "https://github.com/NREL/reVRt"
 
 [project.scripts]
 reVRt = "revrt._cli:main"
