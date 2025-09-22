@@ -412,7 +412,6 @@ class DryCostsCreator(BaseLayerCreator):
             )
             mask = iso_layer == iso_code
             base_cost = da.where(mask, cost_per_cell, base_cost)
-            # base_cost[mask] = cost_per_cell
 
         return base_cost
 
