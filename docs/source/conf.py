@@ -221,7 +221,7 @@ def skip_pydantic_methods(app, what, name, obj, skip, options):
         "model_copy",
     ):
         return True
-    return skip
+    return None
 
 
 def setup(app):
