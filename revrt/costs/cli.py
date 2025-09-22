@@ -65,17 +65,17 @@ def build_routing_layers(  # noqa: PLR0917, PLR0913
     masks_dir : path-like, optional
         Directory for storing/finding mask GeoTIFFs (wet, dry, landfall,
         wet+, dry+). By default, ``"."``.
-    layers : list of LayerConfig dicts, optional
+    layers : list of LayerConfig, optional
         Configuration for layers to be built and added to the file.
         At least one of `layers`, `dry_costs`, or
         `merge_friction_and_barriers` must be defined.
         By default, ``None``.
-    dry_costs : DryCosts dict, optional
+    dry_costs : DryCosts, optional
         Configuration for dry cost layers to be built and added to the
         file. At least one of `layers`, `dry_costs`, or
         `merge_friction_and_barriers` must be defined.
         By default, ``None``.
-    merge_friction_and_barriers : MergeFrictionBarriers dict, optional
+    merge_friction_and_barriers : MergeFrictionBarriers, optional
         Configuration for merging friction and barriers and adding to
         the layered costs file. At least one of `layers`, `dry_costs`,
         or `merge_friction_and_barriers` must be defined.
