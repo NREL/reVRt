@@ -48,3 +48,9 @@ If you would like to install and run reVRt from source, we recommend using `pixi
 
 
 For detailed instructions, see the `installation documentation <https://nrel.github.io/reVRt/misc/installation.html>`_.
+
+
+Development
+===========
+Please see the `Development Guidelines <https://nrel.github.io/reVRt/dev/index.html>`_
+if you wish to contribute code to this repository.
