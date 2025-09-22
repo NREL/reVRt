@@ -325,7 +325,7 @@ within. This is extremely useful when updating/modifying/adding tests in the fil
 Rust Benchmarking
 ^^^^^^^^^^^^^^^^^
 To ensure the routing algorithm remains performant, we have set up
-`Rust benchmarks <https://nrel.github.io/reVRt/dev/bench/index.html>`
+`Rust benchmarks <https://nrel.github.io/reVRt/dev/bench/index.html>`_
 that are automatically run on GitHub Actions on the main branch. If
 you are actively developing the Rust-based routing algorithm, you
 should monitor the benchmarks to ensure that your changes do not
