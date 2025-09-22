@@ -39,8 +39,8 @@ class ZonalStats:
             of the members of
             :class:`~revrt.spatial_characterization.stats.Stat` or
             :class:`~revrt.spatial_characterization.stats.FractionalStat`,
-            or must start with the "percentile_" prefix and end with an
-            int or float representing the percentile to compute (e.g.
+            or must start with the ``percentile_`` prefix and end with
+            an int or float representing the percentile to compute (e.g.
             ``percentile_10.5``). If only one statistic is to be
             computed, you can provide it directly as a string.
             Otherwise, provide a list of statistic names or a string
