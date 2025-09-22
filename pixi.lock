@@ -16495,7 +16495,7 @@ packages:
 - pypi: ./
   name: nrel-revrt
   version: 0.1.0
-  sha256: a9b522582e3235322b2484c49fc7d9d5a122e07c242d0bde5af044302d3781bc
+  sha256: f0978e5ddb5ee02de26772d68b95485d86655cb1dd39e4d5c831582ecac76cb2
   requires_dist:
   - affine>=2.4.0,<3
   - dask>=2025.4.1,<2026
@@ -16508,6 +16508,7 @@ packages:
   - rasterio>=1.4.3,<2
   - rioxarray>=0.18.2,<0.19
   - shapely>=2.1.1,<3
+  - xarray>=2025.9.0,<2026
   - zarr>=3.0.7,<4
   - ipython>=9.1.0,<10 ; extra == 'dev'
   - jupyter>=1.1.1,<2 ; extra == 'dev'
