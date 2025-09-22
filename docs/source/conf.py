@@ -292,4 +292,10 @@ napoleon_type_aliases = {
     # objects with abbreviated namespace (from pandas)
     "pd.Index": "~pandas.Index",
     "pd.NaT": "~pandas.NaT",
+    # objects from reVRt
+    "LandUseMultipliers": ":class:`~revrt.models.cost_layers.LandUseMultipliers`",
+    "LayeredFile": "~revrt.utilities.handlers.LayeredFile",
+    "MergeFrictionBarriers": ":class:`~revrt.models.cost_layers.MergeFrictionBarriers`",
+    "DryCosts": ":class:`~revrt.models.cost_layers.DryCosts`",
+    "LayerConfig": ":class:`~revrt.models.cost_layers.LayerConfig`",
 }
