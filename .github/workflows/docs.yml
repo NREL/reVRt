@@ -35,4 +35,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/_build/html
           force_orphan: true
-          full_commit_message: ${{ github.event.head_commit.message || format('Update docs: {0}', github.sha) }}
+          full_commit_message: "${{ github.event.head_commit.message != '' && github.event.head_commit.message || format('Update docs: {0}', github.sha) }}"
