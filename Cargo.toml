@@ -10,7 +10,11 @@ authors = [
   "Paul Pinchuk <Pavlo.Pinchuk@nrel.gov>",
 ]
 edition = "2024"
+license = "BSD-3-Clause"
 rust-version = "1.87.0"
+repository = "https://github.com/NREL/reVRt"
+categories = ["simulation"]
+keywords = ["NREL", "routing", "transmission", "reV", "reVX"]
 
 [workspace.dependencies]
 revrt = { version = "0.0.5", path = "crates/revrt" }
