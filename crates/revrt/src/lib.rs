@@ -14,6 +14,7 @@ use tracing::{debug, trace};
 use cost::CostFunction;
 use error::Result;
 
+#[allow(missing_docs)]
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ArrayIndex {
     i: u64,
@@ -21,6 +22,7 @@ pub struct ArrayIndex {
 }
 
 impl ArrayIndex {
+    #[allow(missing_docs)]
     pub fn new(i: u64, j: u64) -> Self {
         Self { i, j }
     }
@@ -90,6 +92,7 @@ fn unscaled_cost(cost: u64) -> f32 {
     (cost as f32) / Simulation::PRECISION_SCALAR
 }
 
+#[allow(missing_docs)]
 pub fn resolve<P: AsRef<std::path::Path>>(
     store_path: P,
     cost_function: &str,
