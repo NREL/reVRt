@@ -49,7 +49,7 @@ jobs:
           shared-key: "gha"
           save-if: false
 
-  publish-cli:
+  release-cli:
     name: ${{ matrix.target }}
     needs: validate
     # Only publish CLI binaries for tags starting with 'c', e.g. 'c1.2.3'.
