@@ -33,7 +33,7 @@ jobs:
 
   # Only publish the library for tags starting with 'r', e.g. 'r1.0.0'.
   publish-lib:
-    name: Publish library
+    name: Publish core library to crates.io
     needs: validate
     if: startsWith(github.ref, 'refs/tags/r')
     runs-on: ubuntu-latest
