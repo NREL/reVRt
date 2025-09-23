@@ -29,6 +29,7 @@ jobs:
     - name: Make sure we can publish
       run: pixi run cargo publish --workspace --dry-run
 
+  # Only publish the library for tags starting with 'r', e.g. 'r1.0.0'.
   publish-lib:
     name: Publish library
     needs: validate
@@ -52,6 +53,7 @@ jobs:
       - name: Publish to crates.io
         run: pixi run cargo publish -p revrt --locked
 
+  # Build and upload CLI binaries for tags starting with 'c', e.g. 'c1.0.0'.
   release-cli:
     name: Build CLI for ${{ matrix.target }}
     needs: validate
