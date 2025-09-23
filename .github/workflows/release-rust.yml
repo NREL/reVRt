@@ -29,6 +29,7 @@ jobs:
 
   publish-cli:
     name: ${{ matrix.target }}
+    needs: publish-check
     # Only publish CLI binaries for tags starting with 'c', e.g. 'c1.2.3'.
     # This tagging convention distinguishes CLI releases from library releases.
     if: startsWith(github.ref, 'refs/tags/c')
