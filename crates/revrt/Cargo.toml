@@ -39,3 +39,6 @@ criterion = { workspace = true }
 name = "standard"
 path = "benches/standard.rs"
 harness = false
+
+[lints]
+workspace = true

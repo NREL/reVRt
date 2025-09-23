@@ -19,6 +19,9 @@ dhat = { workspace = true }
 [features]
 dhat-heap = []
 
+[lints]
+workspace = true
+
 [profile.release]
 # debug = true
 
