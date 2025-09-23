@@ -1,9 +1,14 @@
 [package]
 name = "revrt"
+description = "A library for optimizing transmission infrastructure for electrical grid."
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [lib]
 path = "src/lib.rs"
@@ -34,3 +39,6 @@ criterion = { workspace = true }
 name = "standard"
 path = "benches/standard.rs"
 harness = false
+
+[lints]
+workspace = true
