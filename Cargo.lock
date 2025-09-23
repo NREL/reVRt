@@ -1491,7 +1491,7 @@ checksum = "caf4aa5b0f434c91fe5c7f1ecb6a5ece2130b02ad2a590589dda5146df959001"
 
 [[package]]
 name = "revrt"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "criterion",
  "derive_builder",
