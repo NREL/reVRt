@@ -49,6 +49,9 @@ jobs:
           shared-key: "gha"
           save-if: false
 
+      - name: Publish to crates.io
+        run: pixi run cargo publish -p revrt --locked
+
   release-cli:
     name: Build CLI for ${{ matrix.target }}
     needs: validate
