@@ -20,10 +20,10 @@ jobs:
         frozen: true
         cache-write: ${{ github.ref == 'refs/heads/main' }}
 
-     - uses: Swatinem/rust-cache@v2
-       with:
-         shared-key: "gha"
-         save-if: false
+    - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: "gha"
+        save-if: false
 
     - name: Make sure we can publish
       run: pixi run cargo publish --workspace --dry-run
