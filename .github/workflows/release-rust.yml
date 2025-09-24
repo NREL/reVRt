@@ -79,7 +79,9 @@ jobs:
           save-if: false
 
       - name: Publish to crates.io
-        run: pixi run cargo publish -p revrt-cli --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: pixi run cargo publish --locked -p revrt-cli
 
   # Build and upload CLI binaries for tags starting with 'c', e.g. 'c1.0.0'.
   release-cli:
