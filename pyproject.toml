@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "NREL-reVRt"
-version = "0.2.0"
+version = "0.2.1"
 description = "National Renewable Energy Laboratory's (NREL's) Transmission for reVX tool"
 readme = "README.rst"
 authors = [
