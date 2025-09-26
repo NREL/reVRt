@@ -22,7 +22,7 @@ jobs:
           - runner: ubuntu-22.04
             target: x86
           # - runner: ubuntu-22.04
-          #     target: aarch64
+          #   target: aarch64
           # - runner: ubuntu-22.04
           #   target: armv7
           # - runner: ubuntu-22.04
@@ -32,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           fetch-tags: true
       - uses: actions/setup-python@v6
         with:
@@ -72,6 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           fetch-tags: true
       - uses: actions/setup-python@v6
         with:
@@ -108,6 +110,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           fetch-tags: true
       - uses: actions/setup-python@v6
         with:
@@ -147,6 +150,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           fetch-tags: true
       - uses: actions/setup-python@v6
         with:
@@ -174,6 +178,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          fetch-depth: 0
           fetch-tags: true
       - name: Build sdist
         uses: PyO3/maturin-action@v1
