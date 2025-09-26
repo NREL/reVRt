@@ -1,0 +1,6 @@
+revrt.constants.DEFAULT\_DTYPE
+==============================
+
+.. currentmodule:: revrt.constants
+
+.. autodata:: DEFAULT_DTYPE

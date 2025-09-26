@@ -1,0 +1,33 @@
+revrt.costs.base.BaseLayerCreator
+=================================
+
+.. currentmodule:: revrt.costs.base
+
+.. autoclass:: BaseLayerCreator
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~BaseLayerCreator.build
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~BaseLayerCreator.cell_size
+      ~BaseLayerCreator.chunks
+      ~BaseLayerCreator.output_tiff_dir
+      ~BaseLayerCreator.shape
+   
+   

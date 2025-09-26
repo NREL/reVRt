@@ -1,0 +1,31 @@
+revrt.utilities.raster
+======================
+
+.. automodule:: revrt.utilities.raster
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      rasterize
+      rasterize_shape_file
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

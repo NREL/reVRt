@@ -1,0 +1,43 @@
+revrt.utilities.handlers.LayeredFile
+====================================
+
+.. currentmodule:: revrt.utilities.handlers
+
+.. autoclass:: LayeredFile
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~LayeredFile.create_new
+      ~LayeredFile.extract_all_layers
+      ~LayeredFile.extract_layers
+      ~LayeredFile.layer_profile
+      ~LayeredFile.layer_to_geotiff
+      ~LayeredFile.layers_to_file
+      ~LayeredFile.write_geotiff_to_file
+      ~LayeredFile.write_layer
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~LayeredFile.LATITUDE
+      ~LayeredFile.LONGITUDE
+      ~LayeredFile.SUPPORTED_FILE_ENDINGS
+      ~LayeredFile.data_layers
+      ~LayeredFile.layers
+      ~LayeredFile.profile
+      ~LayeredFile.shape
+   
+   

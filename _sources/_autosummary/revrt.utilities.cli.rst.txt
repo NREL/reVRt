@@ -1,0 +1,30 @@
+revrt.utilities.cli
+===================
+
+.. automodule:: revrt.utilities.cli
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      layers_from_file
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

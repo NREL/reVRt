@@ -1,0 +1,6 @@
+revrt.costs.dry\_costs\_creator.compute\_land\_use\_multipliers
+===============================================================
+
+.. currentmodule:: revrt.costs.dry_costs_creator
+
+.. autofunction:: compute_land_use_multipliers

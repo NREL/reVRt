@@ -1,0 +1,6 @@
+revrt.utilities.base.expand\_dim\_if\_needed
+============================================
+
+.. currentmodule:: revrt.utilities.base
+
+.. autofunction:: expand_dim_if_needed

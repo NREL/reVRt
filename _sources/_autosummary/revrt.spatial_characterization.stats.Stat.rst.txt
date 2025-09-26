@@ -1,0 +1,88 @@
+revrt.spatial\_characterization.stats.Stat
+==========================================
+
+.. currentmodule:: revrt.spatial_characterization.stats
+
+.. autoclass:: Stat
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Stat.encode
+      ~Stat.replace
+      ~Stat.split
+      ~Stat.rsplit
+      ~Stat.join
+      ~Stat.capitalize
+      ~Stat.casefold
+      ~Stat.title
+      ~Stat.center
+      ~Stat.count
+      ~Stat.expandtabs
+      ~Stat.find
+      ~Stat.partition
+      ~Stat.index
+      ~Stat.ljust
+      ~Stat.lower
+      ~Stat.lstrip
+      ~Stat.rfind
+      ~Stat.rindex
+      ~Stat.rjust
+      ~Stat.rstrip
+      ~Stat.rpartition
+      ~Stat.splitlines
+      ~Stat.strip
+      ~Stat.swapcase
+      ~Stat.translate
+      ~Stat.upper
+      ~Stat.startswith
+      ~Stat.endswith
+      ~Stat.removeprefix
+      ~Stat.removesuffix
+      ~Stat.isascii
+      ~Stat.islower
+      ~Stat.isupper
+      ~Stat.istitle
+      ~Stat.isspace
+      ~Stat.isdecimal
+      ~Stat.isdigit
+      ~Stat.isnumeric
+      ~Stat.isalpha
+      ~Stat.isalnum
+      ~Stat.isidentifier
+      ~Stat.isprintable
+      ~Stat.zfill
+      ~Stat.format
+      ~Stat.format_map
+      ~Stat.maketrans
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Stat.COUNT
+      ~Stat.MIN
+      ~Stat.MAX
+      ~Stat.MEAN
+      ~Stat.SUM
+      ~Stat.STD
+      ~Stat.MEDIAN
+      ~Stat.MAJORITY
+      ~Stat.MINORITY
+      ~Stat.UNIQUE
+      ~Stat.RANGE
+      ~Stat.NODATA
+      ~Stat.PIXEL_COUNT
+   
+   

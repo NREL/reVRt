@@ -1,0 +1,6 @@
+revrt.costs.dry\_costs\_creator.compute\_slope\_multipliers
+===========================================================
+
+.. currentmodule:: revrt.costs.dry_costs_creator
+
+.. autofunction:: compute_slope_multipliers

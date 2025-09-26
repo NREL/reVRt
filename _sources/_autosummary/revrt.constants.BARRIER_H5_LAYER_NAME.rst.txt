@@ -1,0 +1,6 @@
+revrt.constants.BARRIER\_H5\_LAYER\_NAME
+========================================
+
+.. currentmodule:: revrt.constants
+
+.. autodata:: BARRIER_H5_LAYER_NAME

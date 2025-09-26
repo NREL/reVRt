@@ -1,0 +1,30 @@
+revrt.spatial\_characterization.cli
+===================================
+
+.. automodule:: revrt.spatial_characterization.cli
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      buffered_route_characterizations
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

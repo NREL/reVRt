@@ -1,0 +1,6 @@
+revrt.costs.dry\_costs\_creator.DEFAULT\_MTN\_MULTIPLIER
+========================================================
+
+.. currentmodule:: revrt.costs.dry_costs_creator
+
+.. autodata:: DEFAULT_MTN_MULTIPLIER

@@ -1,0 +1,6 @@
+revrt.exceptions.revrtConfigurationError
+========================================
+
+.. currentmodule:: revrt.exceptions
+
+.. autoexception:: revrtConfigurationError

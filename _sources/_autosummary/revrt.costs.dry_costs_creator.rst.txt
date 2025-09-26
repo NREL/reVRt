@@ -1,0 +1,52 @@
+revrt.costs.dry\_costs\_creator
+===============================
+
+.. automodule:: revrt.costs.dry_costs_creator
+
+   
+   
+   .. rubric:: Module attributes
+
+   .. autosummary::
+      :toctree:
+   
+      DEFAULT_HILL_MULTIPLIER
+      DEFAULT_MTN_MULTIPLIER
+      DEFAULT_HILL_SLOPE
+      DEFAULT_MTN_SLOPE
+      NLCD_LAND_USE_CLASSES
+      WATER_NLCD_CODE
+      WATER_MULTIPLIER
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      compute_land_use_multipliers
+      compute_slope_multipliers
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:
+      :template: custom-class-template.rst
+   
+      DryCostsCreator
+   
+   
+
+   
+   
+   
+
+
+

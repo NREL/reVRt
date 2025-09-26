@@ -1,0 +1,6 @@
+revrt.costs.dry\_costs\_creator.NLCD\_LAND\_USE\_CLASSES
+========================================================
+
+.. currentmodule:: revrt.costs.dry_costs_creator
+
+.. autodata:: NLCD_LAND_USE_CLASSES

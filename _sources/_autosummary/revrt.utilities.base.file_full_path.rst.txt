@@ -1,0 +1,6 @@
+revrt.utilities.base.file\_full\_path
+=====================================
+
+.. currentmodule:: revrt.utilities.base
+
+.. autofunction:: file_full_path

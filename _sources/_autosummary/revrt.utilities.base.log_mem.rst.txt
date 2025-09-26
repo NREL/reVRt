@@ -1,0 +1,6 @@
+revrt.utilities.base.log\_mem
+=============================
+
+.. currentmodule:: revrt.utilities.base
+
+.. autofunction:: log_mem

@@ -1,0 +1,6 @@
+revrt.costs.config.config.parse\_cap\_class
+===========================================
+
+.. currentmodule:: revrt.costs.config.config
+
+.. autofunction:: parse_cap_class

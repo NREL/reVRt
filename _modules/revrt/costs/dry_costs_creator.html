@@ -1,0 +1,977 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>revrt.costs.dry_costs_creator &#8212; reVRt 0.2.1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/tabs.css?v=a5c4661c" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=37f418d5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/tabs.js?v=3030b3cb"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/revrt/costs/dry_costs_creator';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.2.1" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">reVRt 0.2.1 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../index.html">
+    Home page
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../misc/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../_autosummary/revrt.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../_cli/cli.html">
+    CLI reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../dev/index.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../index.html">
+    Home page
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../misc/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../_autosummary/revrt.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../_cli/cli.html">
+    CLI reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../dev/index.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">revrt.costs.dry_costs_creator</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for revrt.costs.dry_costs_creator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Module to build and save dry (land) cost raster layers&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">dask.array</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">da</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">revrt.costs.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransmissionConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">revrt.costs.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseLayerCreator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">revrt.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_DTYPE</span><span class="p">,</span> <span class="n">METERS_IN_MILE</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">revrt.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">load_data_using_layer_file_profile</span><span class="p">,</span>
+    <span class="n">save_data_using_layer_file_profile</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">revrt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">revrtValueError</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="n">DRY_MULTIPLIER_TIFF</span> <span class="o">=</span> <span class="s2">&quot;dry_multipliers.tif&quot;</span>
+<span class="n">DEFAULT_HILL_MULTIPLIER</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="sd">&quot;&quot;&quot;1: Default hill slope multiplier value&quot;&quot;&quot;</span>
+<span class="n">DEFAULT_MTN_MULTIPLIER</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="sd">&quot;&quot;&quot;1: Default mountain slope multiplier value&quot;&quot;&quot;</span>
+<span class="n">DEFAULT_HILL_SLOPE</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="sd">&quot;&quot;&quot;2: Default hill slope cutoff value</span>
+
+<span class="sd">Slope values above this (inclusive) are considered hills&quot;&quot;&quot;</span>
+<span class="n">DEFAULT_MTN_SLOPE</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="sd">&quot;&quot;&quot;8: Default mountain slope cutoff value&quot;&quot;&quot;</span>
+<span class="n">NLCD_LAND_USE_CLASSES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;cropland&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">81</span><span class="p">],</span>
+    <span class="s2">&quot;forest&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">41</span><span class="p">,</span> <span class="mi">42</span><span class="p">,</span> <span class="mi">43</span><span class="p">],</span>
+    <span class="s2">&quot;wetland&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">90</span><span class="p">,</span> <span class="mi">95</span><span class="p">],</span>
+    <span class="s2">&quot;suburban&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">21</span><span class="p">,</span> <span class="mi">22</span><span class="p">,</span> <span class="mi">23</span><span class="p">],</span>
+    <span class="s2">&quot;urban&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">24</span><span class="p">],</span>
+<span class="p">}</span>
+<span class="sd">&quot;&quot;&quot;NLCD categories relevant to routing&quot;&quot;&quot;</span>
+<span class="n">WATER_NLCD_CODE</span> <span class="o">=</span> <span class="mi">11</span>
+<span class="sd">&quot;&quot;&quot;11: NLCD category value for water&quot;&quot;&quot;</span>
+<span class="n">WATER_MULTIPLIER</span> <span class="o">=</span> <span class="mf">10.0</span>
+<span class="sd">&quot;&quot;&quot;10: Multiplier value for water cells based on NLCD&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="DryCostsCreator">
+<a class="viewcode-back" href="../../../_autosummary/revrt.costs.dry_costs_creator.DryCostsCreator.html#revrt.costs.dry_costs_creator.DryCostsCreator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DryCostsCreator</span><span class="p">(</span><span class="n">BaseLayerCreator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to create and save dry transmission cost layers&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="DryCostsCreator.build">
+<a class="viewcode-back" href="../../../_autosummary/revrt.costs.dry_costs_creator.DryCostsCreator.html#revrt.costs.dry_costs_creator.DryCostsCreator.build">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913, PLR0917</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">iso_region_tiff</span><span class="p">,</span>
+        <span class="n">nlcd_tiff</span><span class="p">,</span>
+        <span class="n">slope_tiff</span><span class="p">,</span>
+        <span class="n">transmission_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">default_multipliers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">extra_tiffs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tiff_chunks</span><span class="o">=</span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+        <span class="n">descriptions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">nodata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">lock</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">profile_kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build cost rasters using base line costs and multipliers</span>
+
+<span class="sd">        This function also allows you to save to GeoTIFF.</span>
+
+<span class="sd">        Cells without a know ISO region are left with a cost value of 0.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        iso_region_tiff : path-like</span>
+<span class="sd">            Path to the ISO region GeoTIFF.</span>
+<span class="sd">        nlcd_tiff : path-like</span>
+<span class="sd">            Path to the National Land Coverage Database GeoTIFF.</span>
+<span class="sd">        slope_tiff : path-like</span>
+<span class="sd">            Path to the slope GeoTIFF. Slope must be in decimal percent.</span>
+<span class="sd">        transmission_config : dict | path-like, optional</span>
+<span class="sd">            Dictionary or path to JSON file containing dictionary with</span>
+<span class="sd">            transmission cost configuration values. Valid configuration</span>
+<span class="sd">            keys are:</span>
+
+<span class="sd">                - &quot;base_line_costs&quot;</span>
+<span class="sd">                - &quot;iso_lookup&quot;</span>
+<span class="sd">                - &quot;iso_multipliers&quot;</span>
+<span class="sd">                - &quot;land_use_classes&quot;</span>
+<span class="sd">                - &quot;new_substation_costs&quot;</span>
+<span class="sd">                - &quot;power_classes&quot;</span>
+<span class="sd">                - &quot;power_to_voltage&quot;</span>
+<span class="sd">                - &quot;transformer_costs&quot;</span>
+<span class="sd">                - &quot;upgrade_substation_costs&quot;</span>
+
+<span class="sd">            Each of these keys should point to a dictionary or a path to</span>
+<span class="sd">            a separate path-like file containing a dictionary of</span>
+<span class="sd">            configurations for each section. BY default, ``None``, which</span>
+<span class="sd">            uses the default cost configs for all values.</span>
+<span class="sd">        mask : ndarray</span>
+<span class="sd">            Boolean array representing mask where dry cost values should</span>
+<span class="sd">            be applied. BY default, ``None``, which does not apply a</span>
+<span class="sd">            mask to the cost array.</span>
+<span class="sd">        default_multipliers : dict | IsoMultipliers, optional</span>
+<span class="sd">            Multipliers for regions not specified in the</span>
+<span class="sd">            `iso_region_tiff`. Must be a dictionary of the form::</span>
+
+<span class="sd">                &quot;land_use&quot;: {</span>
+<span class="sd">                    &quot;cropland&quot;: 1.03,</span>
+<span class="sd">                    &quot;forest&quot;: 1.2,</span>
+<span class="sd">                    &quot;suburban&quot;: 1.08,</span>
+<span class="sd">                    &quot;urban&quot;: 1.2,</span>
+<span class="sd">                    &quot;wetland&quot;: 1.8</span>
+<span class="sd">                },</span>
+<span class="sd">                &quot;slope&quot;: {</span>
+<span class="sd">                    &quot;hill_mult&quot;: 1.1,</span>
+<span class="sd">                    &quot;hill_slope&quot;: 2,</span>
+<span class="sd">                    &quot;mtn_mult&quot;: 1.21,</span>
+<span class="sd">                    &quot;mtn_slope&quot;: 8</span>
+<span class="sd">                }</span>
+
+<span class="sd">            All keys are optional. By default, ``None``.</span>
+<span class="sd">        extra_tiffs : list, optional</span>
+<span class="sd">            Optional list of extra GeoTIFFs to add to cost layer file</span>
+<span class="sd">            (e.g. a transmission barrier file). By default, ``None``,</span>
+<span class="sd">            which does not add any extra layers.</span>
+<span class="sd">        descriptions : dict, optional</span>
+<span class="sd">            Optional mapping  where keys are layer names and values are</span>
+<span class="sd">            descriptions to add to the layer&#39;s attributes meta</span>
+<span class="sd">            dictionary under the &quot;description&quot; key.</span>
+<span class="sd">            By default, ``None``, which does not add any description.</span>
+<span class="sd">        nodata : dict, optional</span>
+<span class="sd">            Optional mapping where keys are layer names and values are</span>
+<span class="sd">            the nodata value for the output raster of that layer. This</span>
+<span class="sd">            value will be added to the layer&#39;s attributes meta</span>
+<span class="sd">            dictionary under the &quot;nodata&quot; key. By default, ``None``.</span>
+<span class="sd">        lock : bool | `dask.distributed.Lock`, optional</span>
+<span class="sd">            Lock to use to write data to GeoTIFF using dask. If not</span>
+<span class="sd">            supplied, a single process is used for writing data to disk.</span>
+<span class="sd">            By default, ``None``.</span>
+<span class="sd">        **profile_kwargs</span>
+<span class="sd">            Additional keyword arguments to pass into writing output</span>
+<span class="sd">            rasters. The following attributes ar ignored (they are set</span>
+<span class="sd">            using properties of the :class:`LayeredFile`):</span>
+
+<span class="sd">                - nodata</span>
+<span class="sd">                - transform</span>
+<span class="sd">                - crs</span>
+<span class="sd">                - count</span>
+<span class="sd">                - width</span>
+<span class="sd">                - height</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">xc</span> <span class="o">=</span> <span class="n">TransmissionConfig</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">transmission_config</span><span class="p">)</span>
+        <span class="n">nodata</span> <span class="o">=</span> <span class="n">nodata</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="n">layers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_layers</span><span class="p">(</span>
+            <span class="n">iso_region_tiff</span><span class="p">,</span> <span class="n">slope_tiff</span><span class="p">,</span> <span class="n">nlcd_tiff</span><span class="p">,</span> <span class="n">tiff_chunks</span><span class="o">=</span><span class="n">tiff_chunks</span>
+        <span class="p">)</span>
+        <span class="n">multipliers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_multipliers</span><span class="p">(</span>
+            <span class="n">xc</span><span class="p">[</span><span class="s2">&quot;iso_multipliers&quot;</span><span class="p">],</span>
+            <span class="n">layers</span><span class="p">[</span><span class="n">iso_region_tiff</span><span class="p">],</span>
+            <span class="n">layers</span><span class="p">[</span><span class="n">slope_tiff</span><span class="p">],</span>
+            <span class="n">layers</span><span class="p">[</span><span class="n">nlcd_tiff</span><span class="p">],</span>
+            <span class="n">iso_lookup</span><span class="o">=</span><span class="n">xc</span><span class="p">[</span><span class="s2">&quot;iso_lookup&quot;</span><span class="p">],</span>
+            <span class="n">land_use_classes</span><span class="o">=</span><span class="n">xc</span><span class="p">[</span><span class="s2">&quot;land_use_classes&quot;</span><span class="p">],</span>
+            <span class="n">default_multipliers</span><span class="o">=</span><span class="n">default_multipliers</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Saving multipliers array GeoTIFF&quot;</span><span class="p">)</span>
+        <span class="n">multiplier_tiff_fp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_tiff_dir</span> <span class="o">/</span> <span class="n">DRY_MULTIPLIER_TIFF</span>
+        <span class="n">save_data_using_layer_file_profile</span><span class="p">(</span>
+            <span class="n">layer_fp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">fp</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">multipliers</span><span class="p">,</span>
+            <span class="n">geotiff</span><span class="o">=</span><span class="n">multiplier_tiff_fp</span><span class="p">,</span>
+            <span class="n">nodata</span><span class="o">=</span><span class="n">nodata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">multiplier_tiff_fp</span><span class="o">.</span><span class="n">stem</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">lock</span><span class="o">=</span><span class="n">lock</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">profile_kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">layers</span><span class="p">[</span><span class="n">multiplier_tiff_fp</span><span class="o">.</span><span class="n">stem</span><span class="p">]</span> <span class="o">=</span> <span class="n">multipliers</span>
+
+        <span class="k">for</span> <span class="n">tiff_fp</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">layers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_single_layer</span><span class="p">(</span>
+                <span class="n">tiff_fp</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                <span class="n">nodata</span><span class="o">=</span><span class="n">nodata</span><span class="p">,</span>
+                <span class="n">descriptions</span><span class="o">=</span><span class="n">descriptions</span><span class="p">,</span>
+                <span class="n">tiff_chunks</span><span class="o">=</span><span class="n">tiff_chunks</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">tiff_fp</span> <span class="ow">in</span> <span class="n">extra_tiffs</span> <span class="ow">or</span> <span class="p">[]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_single_layer</span><span class="p">(</span>
+                <span class="n">tiff_fp</span><span class="p">,</span>
+                <span class="n">nodata</span><span class="o">=</span><span class="n">nodata</span><span class="p">,</span>
+                <span class="n">descriptions</span><span class="o">=</span><span class="n">descriptions</span><span class="p">,</span>
+                <span class="n">tiff_chunks</span><span class="o">=</span><span class="n">tiff_chunks</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">power_class</span><span class="p">,</span> <span class="n">capacity</span> <span class="ow">in</span> <span class="n">xc</span><span class="p">[</span><span class="s2">&quot;power_classes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;Calculating costs for class </span><span class="si">%s</span><span class="s2"> using a </span><span class="si">%s</span><span class="s2">MW line&quot;</span><span class="p">,</span>
+                <span class="n">power_class</span><span class="p">,</span>
+                <span class="n">capacity</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">blc_arr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_base_line_costs</span><span class="p">(</span>
+                <span class="n">capacity</span><span class="p">,</span>
+                <span class="n">xc</span><span class="p">[</span><span class="s2">&quot;base_line_costs&quot;</span><span class="p">],</span>
+                <span class="n">layers</span><span class="p">[</span><span class="n">iso_region_tiff</span><span class="p">],</span>
+                <span class="n">xc</span><span class="p">[</span><span class="s2">&quot;iso_lookup&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+
+            <span class="n">base_costs_tiff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;base_line_costs_</span><span class="si">{</span><span class="n">capacity</span><span class="si">}</span><span class="s2">MW.tif&quot;</span>
+            <span class="n">out_fp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_tiff_dir</span> <span class="o">/</span> <span class="n">base_costs_tiff</span>
+            <span class="n">save_data_using_layer_file_profile</span><span class="p">(</span>
+                <span class="n">layer_fp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">fp</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">blc_arr</span><span class="p">,</span>
+                <span class="n">geotiff</span><span class="o">=</span><span class="n">out_fp</span><span class="p">,</span>
+                <span class="n">nodata</span><span class="o">=</span><span class="n">nodata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">out_fp</span><span class="o">.</span><span class="n">stem</span><span class="p">),</span>
+                <span class="n">lock</span><span class="o">=</span><span class="n">lock</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">profile_kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">costs_arr</span> <span class="o">=</span> <span class="n">blc_arr</span> <span class="o">*</span> <span class="n">multipliers</span>
+
+            <span class="n">dry_layer_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;tie_line_costs_</span><span class="si">{</span><span class="n">capacity</span><span class="si">}</span><span class="s2">MW&quot;</span>
+            <span class="n">tie_line_costs_tiff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dry_layer_name</span><span class="si">}</span><span class="s2">.tif&quot;</span>
+            <span class="n">out_fp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_tiff_dir</span> <span class="o">/</span> <span class="n">tie_line_costs_tiff</span>
+            <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">costs_arr</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">costs_arr</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">save_data_using_layer_file_profile</span><span class="p">(</span>
+                <span class="n">layer_fp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">fp</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">costs_arr</span><span class="p">,</span>
+                <span class="n">geotiff</span><span class="o">=</span><span class="n">out_fp</span><span class="p">,</span>
+                <span class="n">nodata</span><span class="o">=</span><span class="n">nodata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">out_fp</span><span class="o">.</span><span class="n">stem</span><span class="p">),</span>
+                <span class="n">lock</span><span class="o">=</span><span class="n">lock</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">profile_kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_single_layer</span><span class="p">(</span>
+                <span class="n">out_fp</span><span class="p">,</span>
+                <span class="n">layer_name</span><span class="o">=</span><span class="n">dry_layer_name</span><span class="p">,</span>
+                <span class="n">nodata</span><span class="o">=</span><span class="n">nodata</span><span class="p">,</span>
+                <span class="n">descriptions</span><span class="o">=</span><span class="n">descriptions</span><span class="p">,</span>
+                <span class="n">tiff_chunks</span><span class="o">=</span><span class="n">tiff_chunks</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_layers</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">iso_region_tiff</span><span class="p">,</span> <span class="n">slope_tiff</span><span class="p">,</span> <span class="n">nlcd_tiff</span><span class="p">,</span> <span class="n">tiff_chunks</span><span class="o">=</span><span class="s2">&quot;file&quot;</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load ISO region, slope and land use rasters&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading ISO region, slope and land use rasters&quot;</span><span class="p">)</span>
+        <span class="n">iso_layer</span> <span class="o">=</span> <span class="n">load_data_using_layer_file_profile</span><span class="p">(</span>
+            <span class="n">layer_fp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">fp</span><span class="p">,</span>
+            <span class="n">geotiff</span><span class="o">=</span><span class="n">iso_region_tiff</span><span class="p">,</span>
+            <span class="n">tiff_chunks</span><span class="o">=</span><span class="n">tiff_chunks</span><span class="p">,</span>
+            <span class="n">layer_dirs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">input_layer_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_tiff_dir</span><span class="p">],</span>
+            <span class="n">band_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">slope_layer</span> <span class="o">=</span> <span class="n">load_data_using_layer_file_profile</span><span class="p">(</span>
+            <span class="n">layer_fp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">fp</span><span class="p">,</span>
+            <span class="n">geotiff</span><span class="o">=</span><span class="n">slope_tiff</span><span class="p">,</span>
+            <span class="n">tiff_chunks</span><span class="o">=</span><span class="n">tiff_chunks</span><span class="p">,</span>
+            <span class="n">layer_dirs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">input_layer_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_tiff_dir</span><span class="p">],</span>
+            <span class="n">band_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">nlcd_layer</span> <span class="o">=</span> <span class="n">load_data_using_layer_file_profile</span><span class="p">(</span>
+            <span class="n">layer_fp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">fp</span><span class="p">,</span>
+            <span class="n">geotiff</span><span class="o">=</span><span class="n">nlcd_tiff</span><span class="p">,</span>
+            <span class="n">tiff_chunks</span><span class="o">=</span><span class="n">tiff_chunks</span><span class="p">,</span>
+            <span class="n">layer_dirs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">input_layer_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_tiff_dir</span><span class="p">],</span>
+            <span class="n">band_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading complete&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">iso_region_tiff</span><span class="p">:</span> <span class="n">iso_layer</span><span class="p">,</span>
+            <span class="n">slope_tiff</span><span class="p">:</span> <span class="n">slope_layer</span><span class="p">,</span>
+            <span class="n">nlcd_tiff</span><span class="p">:</span> <span class="n">nlcd_layer</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_single_layer</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tiff_fp</span><span class="p">,</span>
+        <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">layer_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">nodata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">descriptions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tiff_chunks</span><span class="o">=</span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write a single layer to the layered file&quot;&quot;&quot;</span>
+        <span class="n">nodata</span> <span class="o">=</span> <span class="n">nodata</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="n">descriptions</span> <span class="o">=</span> <span class="n">descriptions</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">load_data_using_layer_file_profile</span><span class="p">(</span>
+                <span class="n">layer_fp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">fp</span><span class="p">,</span>
+                <span class="n">geotiff</span><span class="o">=</span><span class="n">tiff_fp</span><span class="p">,</span>
+                <span class="n">tiff_chunks</span><span class="o">=</span><span class="n">tiff_chunks</span><span class="p">,</span>
+                <span class="n">layer_dirs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">input_layer_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_tiff_dir</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">layer_name</span><span class="p">:</span>
+            <span class="n">layer_name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tiff_fp</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Writing </span><span class="si">%s</span><span class="s2"> to layer file: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">layer_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">fp</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_io_handler</span><span class="o">.</span><span class="n">write_layer</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">layer_name</span><span class="p">,</span>
+            <span class="n">nodata</span><span class="o">=</span><span class="n">nodata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">layer_name</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">descriptions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">layer_name</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_multipliers</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">iso_multipliers</span><span class="p">,</span>
+        <span class="n">iso_layer</span><span class="p">,</span>
+        <span class="n">slope_layer</span><span class="p">,</span>
+        <span class="n">land_use_layer</span><span class="p">,</span>
+        <span class="n">iso_lookup</span><span class="p">,</span>
+        <span class="n">land_use_classes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">default_multipliers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create costs multiplier raster&quot;&quot;&quot;</span>
+        <span class="n">multipliers</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunks</span>
+        <span class="p">)</span>
+        <span class="n">regions_mask</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunks</span>
+        <span class="p">)</span>
+        <span class="n">land_use_classes</span> <span class="o">=</span> <span class="n">land_use_classes</span> <span class="ow">or</span> <span class="n">NLCD_LAND_USE_CLASSES</span>
+
+        <span class="k">for</span> <span class="n">r_conf</span> <span class="ow">in</span> <span class="n">iso_multipliers</span><span class="p">:</span>
+            <span class="n">iso_name</span> <span class="o">=</span> <span class="n">r_conf</span><span class="p">[</span><span class="s2">&quot;iso&quot;</span><span class="p">]</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Processing multipliers for region </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">iso_name</span><span class="p">)</span>
+
+            <span class="n">iso</span> <span class="o">=</span> <span class="n">iso_lookup</span><span class="p">[</span><span class="n">iso_name</span><span class="p">]</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;ISO </span><span class="si">%s</span><span class="s2"> has id </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">iso_name</span><span class="p">,</span> <span class="n">iso</span><span class="p">)</span>
+
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">iso_layer</span> <span class="o">==</span> <span class="n">iso</span>
+            <span class="n">regions_mask</span> <span class="o">|=</span> <span class="n">mask</span>
+
+            <span class="k">if</span> <span class="s2">&quot;land_use&quot;</span> <span class="ow">in</span> <span class="n">r_conf</span><span class="p">:</span>
+                <span class="n">r_lu</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">land_use_layer</span><span class="p">,</span> <span class="n">da</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                <span class="n">lum</span> <span class="o">=</span> <span class="n">compute_land_use_multipliers</span><span class="p">(</span>
+                    <span class="n">r_lu</span><span class="p">,</span>
+                    <span class="n">r_conf</span><span class="p">[</span><span class="s2">&quot;land_use&quot;</span><span class="p">],</span>
+                    <span class="n">land_use_classes</span><span class="p">,</span>
+                    <span class="n">chunks</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunks</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">multipliers</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">multipliers</span> <span class="o">*</span> <span class="n">lum</span><span class="p">,</span> <span class="n">multipliers</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s2">&quot;slope&quot;</span> <span class="ow">in</span> <span class="n">r_conf</span><span class="p">:</span>
+                <span class="n">r_slope</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">slope_layer</span><span class="p">,</span> <span class="n">da</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                <span class="n">slope_multipliers</span> <span class="o">=</span> <span class="n">compute_slope_multipliers</span><span class="p">(</span>
+                    <span class="n">r_slope</span><span class="p">,</span>
+                    <span class="n">chunks</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunks</span><span class="p">,</span>
+                    <span class="n">config</span><span class="o">=</span><span class="n">r_conf</span><span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">],</span>
+                <span class="p">)</span>
+                <span class="n">multipliers</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">mask</span><span class="p">,</span> <span class="n">multipliers</span> <span class="o">*</span> <span class="n">slope_multipliers</span><span class="p">,</span> <span class="n">multipliers</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Calculate multipliers for regions not defined in `config`</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Processing default region&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">default_multipliers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">default_mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">regions_mask</span>
+
+            <span class="k">if</span> <span class="s2">&quot;land_use&quot;</span> <span class="ow">in</span> <span class="n">default_multipliers</span><span class="p">:</span>
+                <span class="n">region_land_use</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">default_mask</span><span class="p">,</span> <span class="n">land_use_layer</span><span class="p">,</span> <span class="n">da</span><span class="o">.</span><span class="n">nan</span>
+                <span class="p">)</span>
+                <span class="n">lum_dict</span> <span class="o">=</span> <span class="n">default_multipliers</span><span class="p">[</span><span class="s2">&quot;land_use&quot;</span><span class="p">]</span>
+                <span class="n">lum</span> <span class="o">=</span> <span class="n">compute_land_use_multipliers</span><span class="p">(</span>
+                    <span class="n">region_land_use</span><span class="p">,</span>
+                    <span class="n">lum_dict</span><span class="p">,</span>
+                    <span class="n">land_use_classes</span><span class="p">,</span>
+                    <span class="n">chunks</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunks</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">multipliers</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">default_mask</span><span class="p">,</span> <span class="n">multipliers</span> <span class="o">*</span> <span class="n">lum</span><span class="p">,</span> <span class="n">multipliers</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="s2">&quot;slope&quot;</span> <span class="ow">in</span> <span class="n">default_multipliers</span><span class="p">:</span>
+                <span class="n">region_slope</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">default_mask</span><span class="p">,</span> <span class="n">slope_layer</span><span class="p">,</span> <span class="n">da</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                <span class="n">slope_multipliers</span> <span class="o">=</span> <span class="n">compute_slope_multipliers</span><span class="p">(</span>
+                    <span class="n">region_slope</span><span class="p">,</span>
+                    <span class="n">chunks</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunks</span><span class="p">,</span>
+                    <span class="n">config</span><span class="o">=</span><span class="n">default_multipliers</span><span class="p">[</span><span class="s2">&quot;slope&quot;</span><span class="p">],</span>
+                <span class="p">)</span>
+                <span class="n">multipliers</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">default_mask</span><span class="p">,</span> <span class="n">multipliers</span> <span class="o">*</span> <span class="n">slope_multipliers</span><span class="p">,</span> <span class="n">multipliers</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Set water multiplier last so we don&#39;t get super high</span>
+        <span class="c1"># multipliers at water body boundaries next to steep slopes</span>
+        <span class="k">return</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">land_use_layer</span> <span class="o">==</span> <span class="n">WATER_NLCD_CODE</span><span class="p">,</span> <span class="n">WATER_MULTIPLIER</span><span class="p">,</span> <span class="n">multipliers</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_base_line_costs</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">capacity</span><span class="p">,</span> <span class="n">base_line_costs</span><span class="p">,</span> <span class="n">iso_layer</span><span class="p">,</span> <span class="n">iso_lookup</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get base line cost per cell raster for a given voltage&quot;&quot;&quot;</span>
+        <span class="n">base_cost</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dtype</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunks</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">iso</span> <span class="ow">in</span> <span class="n">base_line_costs</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Processing costs for </span><span class="si">%s</span><span class="s2"> for </span><span class="si">%s</span><span class="s2">MW&quot;</span><span class="p">,</span> <span class="n">iso</span><span class="p">,</span> <span class="n">capacity</span><span class="p">)</span>
+            <span class="n">iso_code</span> <span class="o">=</span> <span class="n">iso_lookup</span><span class="p">[</span><span class="n">iso</span><span class="p">]</span>
+            <span class="n">cost_per_mile</span> <span class="o">=</span> <span class="n">base_line_costs</span><span class="p">[</span><span class="n">iso</span><span class="p">][</span><span class="nb">str</span><span class="p">(</span><span class="n">capacity</span><span class="p">)]</span>
+            <span class="n">cost_per_cell</span> <span class="o">=</span> <span class="n">cost_per_mile</span> <span class="o">/</span> <span class="n">METERS_IN_MILE</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell_size</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;Base line $/mile is </span><span class="si">%s</span><span class="s2">, $/cell is </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">cost_per_mile</span><span class="p">,</span>
+                <span class="n">cost_per_cell</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">iso_layer</span> <span class="o">==</span> <span class="n">iso_code</span>
+            <span class="n">base_cost</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">cost_per_cell</span><span class="p">,</span> <span class="n">base_cost</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">base_cost</span></div>
+
+
+
+<div class="viewcode-block" id="compute_slope_multipliers">
+<a class="viewcode-back" href="../../../_autosummary/revrt.costs.dry_costs_creator.compute_slope_multipliers.html#revrt.costs.dry_costs_creator.compute_slope_multipliers">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_slope_multipliers</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="n">chunks</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create slope multiplier raster for a region</span>
+
+<span class="sd">    Unspecified slopes are left at 1.0</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    slope : array-like</span>
+<span class="sd">        Slope raster clipped to a region - &quot;Terrain slope in % of grade&quot;</span>
+<span class="sd">    chunks : tuple</span>
+<span class="sd">        Dask chunks to use when creating multipliers array. Should be</span>
+<span class="sd">        of the same shape as `slope`.</span>
+<span class="sd">    config : dict | None</span>
+<span class="sd">        Multipliers and slope cut offs for hilly and mountain terrain.</span>
+<span class="sd">        The following keys are allowed:</span>
+
+<span class="sd">            - &#39;hill_mult&#39; : Multiplier for hilly terrain.</span>
+<span class="sd">            - &#39;mtn_slope&#39; : Multiplier for mountainous terrain.</span>
+<span class="sd">            - &#39;hill_slope&#39; : Slope at and above which a cell is</span>
+<span class="sd">                             classified as hilly.</span>
+<span class="sd">            - &#39;mtn_slope&#39; : Slope at and above which a cell is</span>
+<span class="sd">                            classified as mountainous.</span>
+
+<span class="sd">        If ``None``, uses default values. By default, ``None``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    array-like</span>
+<span class="sd">        Slope multiplier raster. Minimum value for any cell is 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="p">{}</span>
+
+    <span class="n">hill_multiplier</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hill_mult&quot;</span><span class="p">,</span> <span class="n">DEFAULT_HILL_MULTIPLIER</span><span class="p">)</span>
+    <span class="n">mtn_multiplier</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mtn_mult&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MTN_MULTIPLIER</span><span class="p">)</span>
+    <span class="n">hill_slope</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hill_slope&quot;</span><span class="p">,</span> <span class="n">DEFAULT_HILL_SLOPE</span><span class="p">)</span>
+    <span class="n">mtn_slope</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mtn_slope&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MTN_SLOPE</span><span class="p">)</span>
+
+    <span class="n">hilly</span> <span class="o">=</span> <span class="p">(</span><span class="n">slope</span> <span class="o">&gt;=</span> <span class="n">hill_slope</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">slope</span> <span class="o">&lt;</span> <span class="n">mtn_slope</span><span class="p">)</span>
+    <span class="n">mountainous</span> <span class="o">=</span> <span class="n">slope</span> <span class="o">&gt;=</span> <span class="n">mtn_slope</span>
+
+    <span class="n">multipliers</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">slope</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DEFAULT_DTYPE</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="n">chunks</span><span class="p">)</span>
+    <span class="n">multipliers</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">hilly</span><span class="p">,</span> <span class="n">hill_multiplier</span><span class="p">,</span> <span class="n">multipliers</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mountainous</span><span class="p">,</span> <span class="n">mtn_multiplier</span><span class="p">,</span> <span class="n">multipliers</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="compute_land_use_multipliers">
+<a class="viewcode-back" href="../../../_autosummary/revrt.costs.dry_costs_creator.compute_land_use_multipliers.html#revrt.costs.dry_costs_creator.compute_land_use_multipliers">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_land_use_multipliers</span><span class="p">(</span>
+    <span class="n">land_use</span><span class="p">,</span> <span class="n">multipliers</span><span class="p">,</span> <span class="n">land_use_classes</span><span class="p">,</span> <span class="n">chunks</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert NLCD raster to land use multiplier raster</span>
+
+<span class="sd">    Land classes without specified multipliers are left at 1.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    land_use : array-like</span>
+<span class="sd">        NLCD land user raster clipped to a region.</span>
+<span class="sd">    multipliers : LandUseMultipliers</span>
+<span class="sd">        Multiplier for for land classes, E.g. {&#39;forest&#39;: 1.5}.</span>
+<span class="sd">    land_use_classes : dict</span>
+<span class="sd">        NLCD land use codes corresponding to use classes for</span>
+<span class="sd">        multipliers.</span>
+<span class="sd">    chunks : tuple</span>
+<span class="sd">        Dask chunks to use when creating multipliers array. Should be</span>
+<span class="sd">        of the same shape as `land_use`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    array-like</span>
+<span class="sd">        Land use multiplier raster. Minimum value for any cell is 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">multiplier_raster</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+        <span class="n">land_use</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DEFAULT_DTYPE</span><span class="p">,</span> <span class="n">chunks</span><span class="o">=</span><span class="n">chunks</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Determine mask arrays for NLCD values and multiplier to apply</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">class_</span><span class="p">,</span> <span class="n">multiplier</span> <span class="ow">in</span> <span class="n">multipliers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">class_</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">land_use_classes</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Class </span><span class="si">{</span><span class="n">class_</span><span class="si">}</span><span class="s2"> not in land_use_classes: </span><span class="si">{</span><span class="n">land_use_classes</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">raise</span> <span class="n">revrtValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">nlcd_values</span> <span class="o">=</span> <span class="n">land_use_classes</span><span class="p">[</span><span class="n">class_</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nlcd_values</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;NLCD values must be in list form; Got: </span><span class="si">{</span><span class="n">nlcd_values</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">raise</span> <span class="n">revrtValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">nlcd_value</span> <span class="ow">in</span> <span class="n">nlcd_values</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">land_use</span> <span class="o">==</span> <span class="n">nlcd_value</span>
+            <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">index</span><span class="p">,</span> <span class="n">multiplier</span><span class="p">,</span> <span class="n">nlcd_value</span><span class="p">))</span>
+
+    <span class="c1"># Apply multipliers to appropriate cells</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+        <span class="n">multiplier_raster</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">multiplier_raster</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">multiplier_raster</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Alliance for Sustainable Energy, LLC.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
