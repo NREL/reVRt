@@ -4,8 +4,7 @@ use crate::error::Result;
 use crate::ArrayIndex;
 
 pub(super) struct Simulation {
-    dataset: crate::dataset::Dataset,
-    // scenario: Scenario,
+    scenario: Scenario,
     // algorithm: Algorithm,
 }
 
@@ -25,11 +24,10 @@ impl Simulation {
         cost_function: crate::cost::CostFunction,
         cache_size: u64,
     ) -> Result<Self> {
-        let dataset = crate::dataset::Dataset::open(store_path, cost_function, cache_size)?;
+        let scenario = Scenario::new(store_path, cost_function, cache_size)?;
 
         Ok(Self {
-            dataset,
-            // scenario,
+            scenario,
             // algorithm,
         })
     }
@@ -46,7 +44,7 @@ impl Simulation {
     ///   the center pixel to all successor cost values
     fn successors(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, u64)> {
         trace!("Position {:?}", position);
-        let neighbors = self.dataset.get_3x3(position);
+        let neighbors = self.scenario.dataset.get_3x3(position);
         let neighbors = neighbors
             .into_iter()
             .map(|(p, c)| (p, cost_as_u64(c))) // ToDo: Maybe it's better to have get_3x3 return a u64 - then we can skip this map altogether
@@ -84,8 +82,26 @@ fn unscaled_cost(cost: u64) -> f32 {
 struct Solution {}
 
 struct Scenario {
-    features: Features,
-    cost_function: CostFunction,
+    dataset: crate::dataset::Dataset,
+    // features: Features,
+    // cost_function: CostFunction,
+}
+
+impl Scenario {
+    fn new<P: AsRef<std::path::Path>>(
+        store_path: P,
+        cost_function: crate::cost::CostFunction,
+        cache_size: u64,
+        // features: Features,
+        // cost_function: CostFunction,
+    ) -> Result<Self> {
+        let dataset = crate::dataset::Dataset::open(store_path, cost_function, cache_size)?;
+        Ok(Self {
+            dataset,
+            // features,
+            // cost_function,
+        })
+    }
 }
 
 struct Features {}
