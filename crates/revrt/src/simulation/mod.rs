@@ -1,7 +1,7 @@
 use tracing::{debug, trace};
 
-use crate::error::Result;
 use crate::ArrayIndex;
+use crate::error::Result;
 
 pub(super) struct Simulation {
     scenario: Scenario,
@@ -84,7 +84,7 @@ struct Solution {}
 struct Scenario {
     dataset: crate::dataset::Dataset,
     // features: Features,
-    // cost_function: CostFunction,
+    cost_function: crate::CostFunction,
 }
 
 impl Scenario {
@@ -95,11 +95,12 @@ impl Scenario {
         // features: Features,
         // cost_function: CostFunction,
     ) -> Result<Self> {
-        let dataset = crate::dataset::Dataset::open(store_path, cost_function, cache_size)?;
+        let dataset = crate::dataset::Dataset::open(store_path, cost_function.clone(), cache_size)?;
+
         Ok(Self {
             dataset,
             // features,
-            // cost_function,
+            cost_function,
         })
     }
 
@@ -109,6 +110,5 @@ impl Scenario {
 }
 
 struct Features {}
-struct CostFunction {}
 
 struct Algorithm {}
