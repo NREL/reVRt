@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759683585606,
+  "lastUpdate": 1759693052657,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -215,6 +215,78 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 277286620,
             "range": "± 3073761",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64f228270b7c01d8fd46e0c4e2db10b9e182872f",
+          "message": "Minimalist benchmark functions' doc (#148)\n\n* doc: Minimalist benchmark functions\n\n* Update crates/revrt/benches/standard.rs\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>",
+          "timestamp": "2025-10-05T13:29:09-06:00",
+          "tree_id": "c4478c7bda2ccf4eefda35b66d3ebc75efc7cb94",
+          "url": "https://github.com/NREL/reVRt/commit/64f228270b7c01d8fd46e0c4e2db10b9e182872f"
+        },
+        "date": 1759693051823,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 69882176,
+            "range": "± 1086796",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 86629128,
+            "range": "± 1355088",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 414352456,
+            "range": "± 17246662",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 134677393,
+            "range": "± 2008136",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 138147049,
+            "range": "± 1427734",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 147119661,
+            "range": "± 811442",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 175373120,
+            "range": "± 1103499",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 271060983,
+            "range": "± 2009177",
             "unit": "ns/iter"
           }
         ]
