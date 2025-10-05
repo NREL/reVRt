@@ -6,6 +6,7 @@ mod cost;
 mod dataset;
 mod error;
 mod ffi;
+mod simulation;
 
 use pathfinding::prelude::dijkstra;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
