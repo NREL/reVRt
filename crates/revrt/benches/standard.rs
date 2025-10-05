@@ -118,7 +118,7 @@ fn standard_random(c: &mut Criterion) {
     });
 }
 
-/// Benchmark with feature all equal to one in a single chunk
+/// Benchmark with features all equal to one in a single chunk
 fn single_chunk(c: &mut Criterion) {
     let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
 
