@@ -44,7 +44,7 @@ impl Simulation {
     ///   the center pixel to all successor cost values
     fn successors(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, u64)> {
         trace!("Position {:?}", position);
-        let neighbors = self.scenario.dataset.get_3x3(position);
+        let neighbors = self.scenario.get_3x3(position);
         let neighbors = neighbors
             .into_iter()
             .map(|(p, c)| (p, cost_as_u64(c))) // ToDo: Maybe it's better to have get_3x3 return a u64 - then we can skip this map altogether
@@ -101,6 +101,10 @@ impl Scenario {
             // features,
             // cost_function,
         })
+    }
+
+    fn get_3x3(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, f32)> {
+        self.dataset.get_3x3(position)
     }
 }
 
