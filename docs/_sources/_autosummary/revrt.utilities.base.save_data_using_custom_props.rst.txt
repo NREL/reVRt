@@ -1,6 +1,0 @@
-revrt.utilities.base.save\_data\_using\_custom\_props
-=====================================================
-
-.. currentmodule:: revrt.utilities.base
-
-.. autofunction:: save_data_using_custom_props

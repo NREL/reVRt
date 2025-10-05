@@ -1,6 +1,0 @@
-revrt.utilities.base.buffer\_routes
-===================================
-
-.. currentmodule:: revrt.utilities.base
-
-.. autofunction:: buffer_routes

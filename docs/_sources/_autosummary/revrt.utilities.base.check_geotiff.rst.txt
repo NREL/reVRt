@@ -1,6 +1,0 @@
-revrt.utilities.base.check\_geotiff
-===================================
-
-.. currentmodule:: revrt.utilities.base
-
-.. autofunction:: check_geotiff

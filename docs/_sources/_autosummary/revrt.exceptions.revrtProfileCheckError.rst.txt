@@ -1,6 +1,0 @@
-revrt.exceptions.revrtProfileCheckError
-=======================================
-
-.. currentmodule:: revrt.exceptions
-
-.. autoexception:: revrtProfileCheckError

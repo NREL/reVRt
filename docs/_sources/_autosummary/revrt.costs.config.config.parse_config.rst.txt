@@ -1,6 +1,0 @@
-revrt.costs.config.config.parse\_config
-=======================================
-
-.. currentmodule:: revrt.costs.config.config
-
-.. autofunction:: parse_config

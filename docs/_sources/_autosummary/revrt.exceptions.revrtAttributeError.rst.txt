@@ -1,6 +1,0 @@
-revrt.exceptions.revrtAttributeError
-====================================
-
-.. currentmodule:: revrt.exceptions
-
-.. autoexception:: revrtAttributeError

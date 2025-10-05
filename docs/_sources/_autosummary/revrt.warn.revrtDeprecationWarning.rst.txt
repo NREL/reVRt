@@ -1,6 +1,0 @@
-revrt.warn.revrtDeprecationWarning
-==================================
-
-.. currentmodule:: revrt.warn
-
-.. autoexception:: revrtDeprecationWarning

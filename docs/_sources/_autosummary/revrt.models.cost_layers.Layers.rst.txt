@@ -1,6 +1,0 @@
-revrt.models.cost\_layers.Layers
-================================
-
-.. currentmodule:: revrt.models.cost_layers
-
-.. autodata:: Layers

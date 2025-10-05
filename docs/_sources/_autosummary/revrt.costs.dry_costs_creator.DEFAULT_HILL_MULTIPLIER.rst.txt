@@ -1,6 +1,0 @@
-revrt.costs.dry\_costs\_creator.DEFAULT\_HILL\_MULTIPLIER
-=========================================================
-
-.. currentmodule:: revrt.costs.dry_costs_creator
-
-.. autodata:: DEFAULT_HILL_MULTIPLIER

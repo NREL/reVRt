@@ -1,6 +1,0 @@
-revrt.utilities.base.TRANSFORM\_ATOL
-====================================
-
-.. currentmodule:: revrt.utilities.base
-
-.. autodata:: TRANSFORM_ATOL
