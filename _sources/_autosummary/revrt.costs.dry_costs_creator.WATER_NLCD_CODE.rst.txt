@@ -1,0 +1,6 @@
+revrt.costs.dry\_costs\_creator.WATER\_NLCD\_CODE
+=================================================
+
+.. currentmodule:: revrt.costs.dry_costs_creator
+
+.. autodata:: WATER_NLCD_CODE

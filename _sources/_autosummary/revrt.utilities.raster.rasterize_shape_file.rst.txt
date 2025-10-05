@@ -1,0 +1,6 @@
+revrt.utilities.raster.rasterize\_shape\_file
+=============================================
+
+.. currentmodule:: revrt.utilities.raster
+
+.. autofunction:: rasterize_shape_file

@@ -1,0 +1,6 @@
+revrt.exceptions.revrtValueError
+================================
+
+.. currentmodule:: revrt.exceptions
+
+.. autoexception:: revrtValueError

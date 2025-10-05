@@ -1,0 +1,6 @@
+revrt.utilities.raster.rasterize
+================================
+
+.. currentmodule:: revrt.utilities.raster
+
+.. autofunction:: rasterize

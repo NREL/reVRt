@@ -1,0 +1,6 @@
+revrt.exceptions.revrtNotImplementedError
+=========================================
+
+.. currentmodule:: revrt.exceptions
+
+.. autoexception:: revrtNotImplementedError
