@@ -44,7 +44,7 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     tracing::trace!("Cost function: {:?}", cost_function);
     let mut simulation: Simulation =
         Simulation::new(store_path, cost_function, cache_size).unwrap();
-    let result = simulation.scout(start, end);
+    let result = simulation.compute(start, end).collect();
     Ok(result)
 }
 

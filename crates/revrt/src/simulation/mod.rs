@@ -10,7 +10,13 @@ pub(super) struct Simulation {
 }
 
 impl Simulation {
-    fn compute(&self) {}
+    pub(super) fn compute(
+        &mut self,
+        start: &[ArrayIndex],
+        end: Vec<ArrayIndex>,
+    ) -> impl Iterator<Item = (Vec<ArrayIndex>, f32)> {
+        self.scout(start, end).into_iter()
+    }
 
     const PRECISION_SCALAR: f32 = 1e4;
 
