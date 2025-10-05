@@ -1,0 +1,6 @@
+revrt.constants.METERS\_IN\_MILE
+================================
+
+.. currentmodule:: revrt.constants
+
+.. autodata:: METERS_IN_MILE

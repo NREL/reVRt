@@ -1,0 +1,31 @@
+revrt.warn
+==========
+
+.. automodule:: revrt.warn
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+      :toctree:
+   
+      revrtDeprecationWarning
+      revrtWarning
+   
+   
+
+
+

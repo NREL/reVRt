@@ -1,0 +1,33 @@
+revrt.spatial\_characterization.stats
+=====================================
+
+.. automodule:: revrt.spatial_characterization.stats
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:
+      :template: custom-class-template.rst
+   
+      ComputableStats
+      FractionalStat
+      Stat
+   
+   
+
+   
+   
+   
+
+
+

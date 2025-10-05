@@ -1,0 +1,78 @@
+revrt.spatial\_characterization.stats.FractionalStat
+====================================================
+
+.. currentmodule:: revrt.spatial_characterization.stats
+
+.. autoclass:: FractionalStat
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~FractionalStat.encode
+      ~FractionalStat.replace
+      ~FractionalStat.split
+      ~FractionalStat.rsplit
+      ~FractionalStat.join
+      ~FractionalStat.capitalize
+      ~FractionalStat.casefold
+      ~FractionalStat.title
+      ~FractionalStat.center
+      ~FractionalStat.count
+      ~FractionalStat.expandtabs
+      ~FractionalStat.find
+      ~FractionalStat.partition
+      ~FractionalStat.index
+      ~FractionalStat.ljust
+      ~FractionalStat.lower
+      ~FractionalStat.lstrip
+      ~FractionalStat.rfind
+      ~FractionalStat.rindex
+      ~FractionalStat.rjust
+      ~FractionalStat.rstrip
+      ~FractionalStat.rpartition
+      ~FractionalStat.splitlines
+      ~FractionalStat.strip
+      ~FractionalStat.swapcase
+      ~FractionalStat.translate
+      ~FractionalStat.upper
+      ~FractionalStat.startswith
+      ~FractionalStat.endswith
+      ~FractionalStat.removeprefix
+      ~FractionalStat.removesuffix
+      ~FractionalStat.isascii
+      ~FractionalStat.islower
+      ~FractionalStat.isupper
+      ~FractionalStat.istitle
+      ~FractionalStat.isspace
+      ~FractionalStat.isdecimal
+      ~FractionalStat.isdigit
+      ~FractionalStat.isnumeric
+      ~FractionalStat.isalpha
+      ~FractionalStat.isalnum
+      ~FractionalStat.isidentifier
+      ~FractionalStat.isprintable
+      ~FractionalStat.zfill
+      ~FractionalStat.format
+      ~FractionalStat.format_map
+      ~FractionalStat.maketrans
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~FractionalStat.FRACTIONAL_PIXEL_COUNT
+      ~FractionalStat.FRACTIONAL_AREA
+      ~FractionalStat.VALUE_MULTIPLIED_BY_FRACTIONAL_AREA
+   
+   

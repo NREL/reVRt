@@ -1,0 +1,6 @@
+revrt.utilities.base.delete\_data\_file
+=======================================
+
+.. currentmodule:: revrt.utilities.base
+
+.. autofunction:: delete_data_file

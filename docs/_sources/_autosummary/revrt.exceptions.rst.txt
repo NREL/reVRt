@@ -1,0 +1,40 @@
+revrt.exceptions
+================
+
+.. automodule:: revrt.exceptions
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+      :toctree:
+   
+      revrtAttributeError
+      revrtConfigurationError
+      revrtError
+      revrtFileExistsError
+      revrtFileNotFoundError
+      revrtKeyError
+      revrtNotImplementedError
+      revrtProfileCheckError
+      revrtRuntimeError
+      revrtTypeError
+      revrtValueError
+   
+   
+
+
+

@@ -1,0 +1,6 @@
+revrt.utilities.cli.layers\_from\_file
+======================================
+
+.. currentmodule:: revrt.utilities.cli
+
+.. autofunction:: layers_from_file

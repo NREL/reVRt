@@ -1,0 +1,6 @@
+revrt.spatial\_characterization.cli.buffered\_route\_characterizations
+======================================================================
+
+.. currentmodule:: revrt.spatial_characterization.cli
+
+.. autofunction:: buffered_route_characterizations

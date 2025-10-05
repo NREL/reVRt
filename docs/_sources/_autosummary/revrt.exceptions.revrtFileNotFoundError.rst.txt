@@ -1,0 +1,6 @@
+revrt.exceptions.revrtFileNotFoundError
+=======================================
+
+.. currentmodule:: revrt.exceptions
+
+.. autoexception:: revrtFileNotFoundError
