@@ -6,7 +6,8 @@ use std::iter;
 use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
-use zarrs::array::ArrayChunkCacheExt;
+// use zarrs::array::ArrayChunkCacheExt;
+use zarrs::array::ChunkGrid;
 use zarrs::storage::{
     ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
 };
@@ -36,8 +37,8 @@ pub(super) struct Dataset {
     cost_chunk_idx: RwLock<ndarray::Array2<bool>>,
     /// Custom cost function definition
     cost_function: CostFunction,
-    /// Cache for the cost
-    cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
+    // Cache for the cost
+    // cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
 
 impl Dataset {
@@ -107,7 +108,7 @@ impl Dataset {
             warn!("Cache size smaller than 1MB");
         }
         trace!("Creating cache with size {}MB", cache_size / 1_000_000);
-        let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
+        // let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
 
         trace!("Dataset opened successfully");
         Ok(Self {
@@ -116,7 +117,7 @@ impl Dataset {
             swap,
             cost_chunk_idx,
             cost_function,
-            cache,
+            // cache,
         })
     }
 
@@ -228,8 +229,9 @@ impl Dataset {
 
         // Retrieve the 3x3 neighborhood values
         let value: Vec<f32> = cost
-            .retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(
-                &self.cache,
+            //.retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(
+            .retrieve_array_subset_elements_opt::<f32>(
+                // &self.cache,
                 &subset,
                 &zarrs::array::codec::CodecOptions::default(),
             )
