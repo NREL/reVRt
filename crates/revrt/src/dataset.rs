@@ -80,9 +80,9 @@ impl Dataset {
         // ----
 
         trace!("Creating an empty cost array");
-        let array = zarrs::array::ArrayBuilder::new(
-            cost_shape.into(),
-            chunk_shape.into(),
+        let array = zarrs::array::ArrayBuilder::new_with_chunk_grid(
+            // cost_shape,
+            chunk_shape,
             zarrs::array::DataType::Float32,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
