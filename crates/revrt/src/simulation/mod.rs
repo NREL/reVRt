@@ -1,3 +1,4 @@
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, trace};
 
 use crate::ArrayIndex;
@@ -61,7 +62,7 @@ impl Simulation {
         debug!("Starting scout with {} start points", start.len());
 
         start
-            .into_iter()
+            .into_par_iter()
             .filter_map(|s| {
                 pathfinding::prelude::dijkstra(s, |p| self.successors(p), |p| end.contains(p))
             })
