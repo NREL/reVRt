@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759693052657,
+  "lastUpdate": 1759776869223,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -287,6 +287,78 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 271060983,
             "range": "± 2009177",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c09deb468b3c2c190251d5708af158d299c95e58",
+          "message": "Fix benchmark for new zarrs-0.22 syntax (#151)\n\n* cfg: Trigger benches on some PRs\n\nThe Zarrs upgrade to 0.22 was an example of broken migration missed by\nthe benchmark procedure. It was specifically related on the creation of\ntest cases.\n\nThe benchmark workflow is a heavy one, so we shall minimize the use of\nit, but let's re-activate it on `pull_request` if there are changes on\nthe Rust side.\n\n* fix: Conforming bench with new (Zarrs) ArrayBuilder's syntax\n\n* cfg: Save benchmark only when push to main\n\nOtherwise, it would save all the intermediate states during a PR\ndevelopment.",
+          "timestamp": "2025-10-06T12:45:46-06:00",
+          "tree_id": "7caff85fc14535720b9f31b9448285f58767c907",
+          "url": "https://github.com/NREL/reVRt/commit/c09deb468b3c2c190251d5708af158d299c95e58"
+        },
+        "date": 1759776868656,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 75187691,
+            "range": "± 1246184",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 82793204,
+            "range": "± 1023375",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 437604329,
+            "range": "± 19961157",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 143534640,
+            "range": "± 826777",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 146389516,
+            "range": "± 579913",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 155111583,
+            "range": "± 1262414",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 182934300,
+            "range": "± 1471250",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 283389825,
+            "range": "± 3018575",
             "unit": "ns/iter"
           }
         ]
