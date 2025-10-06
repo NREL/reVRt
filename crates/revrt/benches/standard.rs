@@ -48,8 +48,8 @@ fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::pat
     for array_path in ["/A", "/B", "/C", "/cost"].iter() {
         let array = zarrs::array::ArrayBuilder::new(
             vec![ni, nj], // array shape
+            vec![ci, cj], // regular chunk shape
             zarrs::array::DataType::Float32,
-            vec![ci, cj].try_into().unwrap(), // regular chunk shape
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         // .bytes_to_bytes_codecs(vec![]) // uncompressed
