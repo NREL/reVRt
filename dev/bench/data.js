@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759776869223,
+  "lastUpdate": 1759782051308,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -359,6 +359,78 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 283389825,
             "range": "± 3018575",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9735b0a52bec35ed99d27b570f76afb41a296434",
+          "message": "fix: Deactivating wheel for linux x86 32bits (#152)\n\nAfter the latest Zarrs update, it started failing linux 32bits. Since we\nprobably don't have many systems with 32bits, let's stop producing this\nwheel for now and return to that later.",
+          "timestamp": "2025-10-06T14:08:20-06:00",
+          "tree_id": "62573d0bdce1a96b57241de58727f9761a400405",
+          "url": "https://github.com/NREL/reVRt/commit/9735b0a52bec35ed99d27b570f76afb41a296434"
+        },
+        "date": 1759782050054,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 75333159,
+            "range": "± 1330484",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 97222872,
+            "range": "± 1433363",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 440892035,
+            "range": "± 11481990",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 141822131,
+            "range": "± 2430533",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 143369506,
+            "range": "± 1070891",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 152138263,
+            "range": "± 1492302",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 182037783,
+            "range": "± 3325482",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 282483573,
+            "range": "± 7185674",
             "unit": "ns/iter"
           }
         ]
