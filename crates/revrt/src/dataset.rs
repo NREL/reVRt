@@ -7,7 +7,7 @@ use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
 // use zarrs::array::ArrayChunkCacheExt;
-use zarrs::array::ChunkGrid;
+// use zarrs::array::ChunkGrid;
 use zarrs::storage::{
     ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
 };
@@ -76,7 +76,7 @@ impl Dataset {
         let varname = source.list().unwrap()[0].to_string();
         let varname = varname.split("/").collect::<Vec<_>>()[0];
         let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
-        let cost_shape = tmp.shape();
+        // let cost_shape = tmp.shape();
         let chunk_shape = tmp.chunk_grid().clone();
         // ----
 
