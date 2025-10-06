@@ -348,9 +348,9 @@ mod tests {
             .unwrap();
 
         let array = zarrs::array::ArrayBuilder::new(
-            vec![ni, nj], // array shape
-            zarrs::array::DataType::Float32,
+            vec![ni, nj],                     // array shape
             vec![ci, cj].try_into().unwrap(), // regular chunk shape
+            zarrs::array::DataType::Float32,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         .dimension_names(["y", "x"].into())
