@@ -90,10 +90,9 @@ struct Scenario {
 impl Scenario {
     fn new<P: AsRef<std::path::Path>>(
         store_path: P,
+        // features: Features,
         cost_function: crate::cost::CostFunction,
         cache_size: u64,
-        // features: Features,
-        // cost_function: CostFunction,
     ) -> Result<Self> {
         let dataset = crate::dataset::Dataset::open(store_path, cost_function.clone(), cache_size)?;
 
