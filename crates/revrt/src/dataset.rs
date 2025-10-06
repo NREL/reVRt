@@ -96,8 +96,8 @@ impl Dataset {
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
-                array.chunk_grid_shape().unwrap()[0] as usize,
-                array.chunk_grid_shape().unwrap()[1] as usize,
+                array.chunk_grid_shape()[0] as usize,
+                array.chunk_grid_shape()[1] as usize,
             ),
             false,
         )
