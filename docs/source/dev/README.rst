@@ -333,6 +333,21 @@ This allows the (single) file to be executed, running only the tests contained
 within. This is extremely useful when updating/modifying/adding tests in the file.
 
 
+Versioning
+^^^^^^^^^^
+This repository uses `Semantic Versioning <https://semver.org/>`_ for its three
+main components:
+
+* ``rX.X.X``: Rust crate version
+* ``cX.X.X``: Rust command-line interface (CLI) version
+* ``vX.X.X``: Python package version
+
+These version numbers should match the major changes in each software release.
+For example, if you make a change to the Rust crate that does not affect the CLI,
+you would increment the ``rX.X.X`` version number, but not the ``cX.X.X`` or
+``vX.X.X`` version numbers.
+
+
 Rust Benchmarking
 ^^^^^^^^^^^^^^^^^
 To ensure the routing algorithm remains performant, we have set up
