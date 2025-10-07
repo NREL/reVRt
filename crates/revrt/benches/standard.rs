@@ -126,11 +126,11 @@ fn multiple_routes(c: &mut Criterion) {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
-                black_box(vec![
+                black_box(
                     (19..=21)
                         .flat_map(|row| (48..=52).map(move |col| ArrayIndex::new(row, col)))
                         .collect::<Vec<_>>(),
-                ]),
+                ),
                 black_box(vec![ArrayIndex::new(10, 50)]),
             )
         })
