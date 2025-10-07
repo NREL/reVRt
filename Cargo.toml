@@ -4,7 +4,7 @@ default-members = ["crates/revrt"]
 resolver = "3"
 
 [workspace.package]
-version = "0.0.7"
+version = "0.0.8"
 authors = [
   "Guilherme Castelão <gpimenta@nrel.gov>",
   "Paul Pinchuk <Pavlo.Pinchuk@nrel.gov>",
@@ -17,7 +17,7 @@ categories = ["simulation"]
 keywords = ["NREL", "routing", "transmission", "reV", "reVX"]
 
 [workspace.dependencies]
-revrt = { version = "0.0.7", path = "crates/revrt" }
+revrt = { version = "0.0.8", path = "crates/revrt" }
 clap = { version = "4.5.48", features = ["derive", "cargo"] }
 criterion = { version = "0.7.0", features = ["html_reports"] }
 derive_builder = "0.20.2"
