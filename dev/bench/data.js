@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759782051308,
+  "lastUpdate": 1759852666415,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -431,6 +431,78 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 282483573,
             "range": "± 7185674",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0241d2a13787b626a07790a211c62a7f42199a41",
+          "message": "Reactivating wheels for linux 32bits (#154)\n\n* Reactivating wheels for linux 32bits\n\n* cfg: Updating Zarrs (fix linux 32bits)\n\n* cfg: Updating Cargo.lock\n\n* cfg: Bump core library to 0.0.8",
+          "timestamp": "2025-10-07T09:49:09-06:00",
+          "tree_id": "80a26ca20371c88853676422686fe3e074941064",
+          "url": "https://github.com/NREL/reVRt/commit/0241d2a13787b626a07790a211c62a7f42199a41"
+        },
+        "date": 1759852665802,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74964972,
+            "range": "± 1193885",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 42671232,
+            "range": "± 701490",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 438813893,
+            "range": "± 12127635",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 140486406,
+            "range": "± 1180580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 144272254,
+            "range": "± 686193",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 153322265,
+            "range": "± 1007867",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 181774872,
+            "range": "± 2000751",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 283569098,
+            "range": "± 6558635",
             "unit": "ns/iter"
           }
         ]
