@@ -118,6 +118,31 @@ fn standard_random(c: &mut Criterion) {
     });
 }
 
+/// Multiple paths in the same area, to test efficiency of reusing cost.
+fn multiple_routes(c: &mut Criterion) {
+    let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
+
+    c.bench_function("multiple_paths", |b| {
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                black_box(vec![
+                    ArrayIndex::new(21, 49),
+                    ArrayIndex::new(21, 50),
+                    ArrayIndex::new(21, 51),
+                    ArrayIndex::new(20, 49),
+                    ArrayIndex::new(20, 50),
+                    ArrayIndex::new(20, 51),
+                    ArrayIndex::new(19, 49),
+                    ArrayIndex::new(19, 50),
+                    ArrayIndex::new(19, 51),
+                ]),
+                black_box(vec![ArrayIndex::new(10, 50)]),
+            )
+        })
+    });
+}
+
 /// Benchmark with features all equal to one in a single chunk
 fn single_chunk(c: &mut Criterion) {
     let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
@@ -162,6 +187,6 @@ fn range_distance(c: &mut Criterion) {
 criterion_group!(
     name = benches;
     config = Criterion::default().measurement_time(Duration::from_secs(25));
-    targets = standard_ones, standard_random, single_chunk, range_distance
+    targets = standard_ones, standard_random, multiple_routes, single_chunk, range_distance
 );
 criterion_main!(benches);
