@@ -529,9 +529,9 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>io_handler</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">LayeredFile</span></code>) – Transmission layer IO handler</p></li>
-<li><p><strong>input_layer_dir</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directory to search for input layers in, if not found in
+<li><p><strong>input_layer_dir</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directory to search for input layers in, if not found in
 current directory. By default, <code class="docutils literal notranslate"><span class="pre">'.'</span></code>.</p></li>
-<li><p><strong>output_tiff_dir</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directory where cost layers should be saved as GeoTIFF.
+<li><p><strong>output_tiff_dir</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directory where cost layers should be saved as GeoTIFF.
 By default, <code class="docutils literal notranslate"><span class="pre">&quot;.&quot;</span></code>.</p></li>
 <li><p><strong>dtype</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">np.dtype</span></code>, <em>optional</em>) – Data type for final dataset. By default, <code class="docutils literal notranslate"><span class="pre">float32</span></code>.</p></li>
 </ul>
@@ -573,9 +573,9 @@ By default, <code class="docutils literal notranslate"><span class="pre">&quot;.
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul>
-<li><p><strong>iso_region_tiff</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>) – Path to the ISO region GeoTIFF.</p></li>
-<li><p><strong>nlcd_tiff</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>) – Path to the National Land Coverage Database GeoTIFF.</p></li>
-<li><p><strong>slope_tiff</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>) – Path to the slope GeoTIFF. Slope must be in decimal percent.</p></li>
+<li><p><strong>iso_region_tiff</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>) – Path to the ISO region GeoTIFF.</p></li>
+<li><p><strong>nlcd_tiff</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>) – Path to the National Land Coverage Database GeoTIFF.</p></li>
+<li><p><strong>slope_tiff</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>) – Path to the slope GeoTIFF. Slope must be in decimal percent.</p></li>
 <li><p><strong>transmission_config</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span> <span class="pre">|</span> <span class="pre">path-like</span></code>, <em>optional</em>) – Dictionary or path to JSON file containing dictionary with
 transmission cost configuration values. Valid configuration
 keys are:</p>
@@ -619,14 +619,14 @@ mask to the cost array.</p></li>
 </div>
 <p>All keys are optional. By default, <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
 </li>
-<li><p><strong>extra_tiffs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <em>optional</em>) – Optional list of extra GeoTIFFs to add to cost layer file
+<li><p><strong>extra_tiffs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <em>optional</em>) – Optional list of extra GeoTIFFs to add to cost layer file
 (e.g. a transmission barrier file). By default, <code class="docutils literal notranslate"><span class="pre">None</span></code>,
 which does not add any extra layers.</p></li>
-<li><p><strong>descriptions</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>, <em>optional</em>) – Optional mapping  where keys are layer names and values are
+<li><p><strong>descriptions</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>, <em>optional</em>) – Optional mapping  where keys are layer names and values are
 descriptions to add to the layer’s attributes meta
 dictionary under the “description” key.
 By default, <code class="docutils literal notranslate"><span class="pre">None</span></code>, which does not add any description.</p></li>
-<li><p><strong>nodata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>, <em>optional</em>) – Optional mapping where keys are layer names and values are
+<li><p><strong>nodata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>, <em>optional</em>) – Optional mapping where keys are layer names and values are
 the nodata value for the output raster of that layer. This
 value will be added to the layer’s attributes meta
 dictionary under the “nodata” key. By default, <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
@@ -658,7 +658,7 @@ using properties of the <code class="xref py py-class docutils literal notransla
 <dd><p>Size of cell in layer file</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -669,7 +669,7 @@ using properties of the <code class="xref py py-class docutils literal notransla
 <dd><p>Layer chunks (no band dimension)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)">tuple</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -691,7 +691,7 @@ using properties of the <code class="xref py py-class docutils literal notransla
 <dd><p>Layer shape</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)">tuple</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>

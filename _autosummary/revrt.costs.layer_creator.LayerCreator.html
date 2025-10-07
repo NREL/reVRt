@@ -531,9 +531,9 @@
 <li><p><strong>io_handler</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">LayeredFile</span></code>) – Layered file IO handler.</p></li>
 <li><p><strong>masks</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Masks</span></code>) – Masks instance that can be used to retrieve multiple types
 of masks.</p></li>
-<li><p><strong>input_layer_dir</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directory to search for input layers in, if not found in
+<li><p><strong>input_layer_dir</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directory to search for input layers in, if not found in
 current directory. By default, <code class="docutils literal notranslate"><span class="pre">'.'</span></code>.</p></li>
-<li><p><strong>output_tiff_dir</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directory where cost layers should be saved as GeoTIFF.
+<li><p><strong>output_tiff_dir</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directory where cost layers should be saved as GeoTIFF.
 By default, <code class="docutils literal notranslate"><span class="pre">&quot;.&quot;</span></code>.</p></li>
 <li><p><strong>dtype</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">np.dtype</span></code>, <em>optional</em>) – Data type for final dataset. By default, <code class="docutils literal notranslate"><span class="pre">float32</span></code>.</p></li>
 </ul>
@@ -573,12 +573,12 @@ By default, <code class="docutils literal notranslate"><span class="pre">&quot;.
 <dl class="field-list">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul>
-<li><p><strong>layer_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – Name of layer to use in H5 and for output tiff.</p></li>
+<li><p><strong>layer_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – Name of layer to use in H5 and for output tiff.</p></li>
 <li><p><strong>build_config</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">LayerBuildComponents</span></code>) – Dict of LayerBuildConfig keyed by GeoTIFF/vector filenames.</p></li>
-<li><p><strong>values_are_costs_per_mile</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">False</span></code></a>) – Option to convert values into costs per cell under the
+<li><p><strong>values_are_costs_per_mile</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/library/constants.html#False" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">False</span></code></a>) – Option to convert values into costs per cell under the
 assumption that the resulting values are costs in $/mile.
 By default, <code class="docutils literal notranslate"><span class="pre">False</span></code>, which writes raw values to TIFF/H5.</p></li>
-<li><p><strong>write_to_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/library/constants.html#True" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>) – Option to write the layer to file after creation.</p>
+<li><p><strong>write_to_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>, <em>default</em> <a class="reference external" href="https://docs.python.org/3/library/constants.html#True" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code></a>) – Option to write the layer to file after creation.</p>
 <dl class="simple">
 <dt>..IMPORTANT::</dt><dd><p>This will overwrite existing layers with the same name
 already in the file.</p>
@@ -586,7 +586,7 @@ already in the file.</p>
 </dl>
 <p>By default, <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
 </li>
-<li><p><strong>description</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>optional</em>) – Optional description to store with this layer in the H5
+<li><p><strong>description</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <em>optional</em>) – Optional description to store with this layer in the H5
 file. By default, <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
 <li><p><strong>tiff_chunks</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span> <span class="pre">|</span> <span class="pre">str</span></code>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;file&quot;</span></code>) – Chunk size to use when reading the GeoTIFF file. This will
 be passed down as the <code class="docutils literal notranslate"><span class="pre">chunks</span></code> argument to
@@ -622,7 +622,7 @@ using properties of the <code class="xref py py-class docutils literal notransla
 <dd><p>Size of cell in layer file</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)">float</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -633,7 +633,7 @@ using properties of the <code class="xref py py-class docutils literal notransla
 <dd><p>Layer chunks (no band dimension)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)">tuple</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -655,7 +655,7 @@ using properties of the <code class="xref py py-class docutils literal notransla
 <dd><p>Layer shape</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)">tuple</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>

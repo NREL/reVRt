@@ -527,15 +527,15 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>layer_fp</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>) – Path to layered file on disk. This file must already exist.</p></li>
-<li><p><strong>geotiff</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>) – Path to GeoTIFF from which data should be read.</p></li>
+<li><p><strong>layer_fp</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>) – Path to layered file on disk. This file must already exist.</p></li>
+<li><p><strong>geotiff</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>) – Path to GeoTIFF from which data should be read.</p></li>
 <li><p><strong>tiff_chunks</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span> <span class="pre">|</span> <span class="pre">str</span></code>, <em>default</em> <code class="docutils literal notranslate"><span class="pre">&quot;file&quot;</span></code>) – Chunk size to use when reading the GeoTIFF file. This will be
 passed down as the <code class="docutils literal notranslate"><span class="pre">chunks</span></code> argument to
 <code class="xref py py-meth docutils literal notranslate"><span class="pre">rioxarray.open_rasterio()</span></code>. By default, <code class="docutils literal notranslate"><span class="pre">&quot;file&quot;</span></code>.</p></li>
-<li><p><strong>layer_dirs</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-iterable" title="(in Python v3.13)"><span class="xref std std-term">iterable</span></a> of <a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.13)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directories to search for <cite>geotiff</cite> in, if not found in current
+<li><p><strong>layer_dirs</strong> (<a class="reference external" href="https://docs.python.org/3/glossary.html#term-iterable" title="(in Python v3.14)"><span class="xref std std-term">iterable</span></a> of <a class="reference external" href="https://docs.python.org/3/glossary.html#term-path-like-object" title="(in Python v3.14)"><span class="xref std std-term">path-like</span></a>, <em>optional</em>) – Directories to search for <cite>geotiff</cite> in, if not found in current
 directory. By default, <code class="docutils literal notranslate"><span class="pre">None</span></code>, which means only the current
 directory is searched.</p></li>
-<li><p><strong>band_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <em>optional</em>) – Optional index of band to load from the GeoTIFF. If provided,
+<li><p><strong>band_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <em>optional</em>) – Optional index of band to load from the GeoTIFF. If provided,
 only that band will be returned. By default, <code class="docutils literal notranslate"><span class="pre">None</span></code>, which
 means all bands will be returned.</p></li>
 </ul>
