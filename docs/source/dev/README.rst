@@ -96,7 +96,7 @@ maintainability, and consistency that is extremely fast.
 
 You can use the `Ruff VSCode extension <https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff>`_
 if you are developing using VSCode. If you do so, make sure to set the path to the ``ruff``
-executable in your VSCode settings to point to the ``ruff`` installed in the ``pdev`` environment.
+executable in your VSCode settings to point to the ``ruff`` installed in the ``dev`` environment.
 You can do this by adding the following to your ``settings.json`` file:
 
 .. code-block:: json
