@@ -52,6 +52,8 @@ jobs:
           # regression
           # Benchmarking with GA is noisy, so only alert significant
           # regressions.
+          # TODO: This elevated threshold is temporary (see PR for details).
+          #       Lower this value once the cache refactor restores performance.
           alert-threshold: '250%'
           comment-on-alert: true
           fail-on-alert: true
