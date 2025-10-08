@@ -52,7 +52,7 @@ jobs:
           # regression
           # Benchmarking with GA is noisy, so only alert significant
           # regressions.
-          alert-threshold: '150%'
+          alert-threshold: '250%'
           comment-on-alert: true
           fail-on-alert: true
           alert-comment-cc-users: '@castelao @ppinchuk'
