@@ -338,12 +338,12 @@ Versioning
 This repository uses `Semantic Versioning <https://semver.org/>`_ for its three
 main components:
 
-* ``rX.X.X``: Rust crate version
+* ``rX.X.X``: Rust core library version
 * ``cX.X.X``: Rust command-line interface (CLI) version
 * ``vX.X.X``: Python package version
 
 These version numbers should match the major changes in each software release.
-For example, if you make a change to the Rust crate that does not affect the CLI,
+For example, if you make a change to the Rust core library that does not affect the CLI,
 you would increment the ``rX.X.X`` version number, but not the ``cX.X.X`` or
 ``vX.X.X`` version numbers.
 
