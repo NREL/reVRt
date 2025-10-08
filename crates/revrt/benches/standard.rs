@@ -119,19 +119,43 @@ fn standard_random(c: &mut Criterion) {
 }
 
 /// Multiple paths in the same area, to test efficiency of reusing cost.
-fn multiple_routes(c: &mut Criterion) {
+fn multiple_near_routes(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
 
-    c.bench_function("multiple_paths", |b| {
+    c.bench_function("multiple_near_routes", |b| {
         b.iter(|| {
             bench_minimalist(
                 black_box(features_path.clone()),
                 black_box(
-                    (19..=21)
-                        .flat_map(|row| (48..=52).map(move |col| ArrayIndex::new(row, col)))
+                    (19..=22)
+                        .flat_map(|row| (48..=51).map(move |col| ArrayIndex::new(row, col)))
                         .collect::<Vec<_>>(),
                 ),
                 black_box(vec![ArrayIndex::new(10, 50)]),
+            )
+        })
+    });
+}
+
+/// Multiple spread, to test efficiency of accessing multiple chunks.
+fn multiple_spread_routes(c: &mut Criterion) {
+    let features_path = features(100, 100, 5, 5, FeaturesType::AllOnes);
+
+    c.bench_function("multiple_spread_routes", |b| {
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                black_box(
+                    (40..=60)
+                        .step_by(5)
+                        .flat_map(|row| {
+                            (40..=60)
+                                .step_by(5)
+                                .map(move |col| ArrayIndex::new(row, col))
+                        })
+                        .collect::<Vec<_>>(),
+                ),
+                black_box(vec![ArrayIndex::new(50, 50)]),
             )
         })
     });
@@ -181,6 +205,6 @@ fn range_distance(c: &mut Criterion) {
 criterion_group!(
     name = benches;
     config = Criterion::default().measurement_time(Duration::from_secs(25));
-    targets = standard_ones, standard_random, multiple_routes, single_chunk, range_distance
+    targets = standard_ones, standard_random, multiple_near_routes, multiple_spread_routes, single_chunk, range_distance
 );
 criterion_main!(benches);
