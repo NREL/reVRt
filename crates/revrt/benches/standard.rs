@@ -140,7 +140,7 @@ fn multiple_near_routes(c: &mut Criterion) {
     });
 }
 
-/// Multiple spread, to test efficiency of accessing multiple chunks.
+/// Multiple spread routes, to test efficiency of accessing multiple chunks.
 fn multiple_spread_routes(c: &mut Criterion) {
     let features_path = features(100, 100, 5, 5, FeaturesType::AllOnes);
 
