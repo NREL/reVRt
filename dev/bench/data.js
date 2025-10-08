@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759901928630,
+  "lastUpdate": 1759953478384,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -755,6 +755,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 285216553,
             "range": "± 3140909",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "efacdb326ae0c645b96816ec1abc0b8f181322c9",
+          "message": "Minor updates (#156)\n\n* updates\n\n* Update Ruff version\n\n* Add text about Ruff extension\n\n* Add info about version tags\n\n* Update badges\n\n* Update docs/source/dev/README.rst\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>\n\n* PR Review updates\n\n---------\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>",
+          "timestamp": "2025-10-08T13:46:17-06:00",
+          "tree_id": "66bfecc41395119dcb259e393184fdcf028fc660",
+          "url": "https://github.com/NREL/reVRt/commit/efacdb326ae0c645b96816ec1abc0b8f181322c9"
+        },
+        "date": 1759953476960,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 73861952,
+            "range": "± 1133385",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 66972062,
+            "range": "± 549652",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 116582537,
+            "range": "± 3637212",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 159202087,
+            "range": "± 4967076",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 429136915,
+            "range": "± 14613467",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 141197649,
+            "range": "± 2376433",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 144155097,
+            "range": "± 1038191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 152685028,
+            "range": "± 668687",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 180133190,
+            "range": "± 1228991",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 279285112,
+            "range": "± 3728654",
             "unit": "ns/iter"
           }
         ]
