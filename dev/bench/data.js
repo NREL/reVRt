@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759895109040,
+  "lastUpdate": 1759901928630,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -671,6 +671,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 287279267,
             "range": "± 5283686",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3dd2be3c337304ca7f69bd5809a13ff4008356f0",
+          "message": "fix: Temporarily increasing benchmark tolerance (#157)\n\n* fix: Temporarily increasing benchmark tolerance\n\nWith the update to Zarr-0.22, I had to temporarily switch off the use of\nthe cache layer for cost access, thus increasing the times. I'm\nincreasing the benchmark tolerance for warning to allow moving on. The\nfull features and cost access are in the process of refactoring.\n\n* Update .github/workflows/bench.yml\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>",
+          "timestamp": "2025-10-07T23:28:38-06:00",
+          "tree_id": "40bfe2986e6e0a44dc2a08120cd37b5216a7d5ee",
+          "url": "https://github.com/NREL/reVRt/commit/3dd2be3c337304ca7f69bd5809a13ff4008356f0"
+        },
+        "date": 1759901927345,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 77754646,
+            "range": "± 4650863",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 68716134,
+            "range": "± 855827",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 118510577,
+            "range": "± 4300860",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 162289135,
+            "range": "± 5972828",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 446176040,
+            "range": "± 14192552",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 142423166,
+            "range": "± 2365166",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 145328904,
+            "range": "± 1661531",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 154512631,
+            "range": "± 1612445",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 183761056,
+            "range": "± 5578611",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 285216553,
+            "range": "± 3140909",
             "unit": "ns/iter"
           }
         ]
