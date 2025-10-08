@@ -442,9 +442,17 @@ adherence to coding standards, we employ the use <a class="reference external" h
 Ruff is an “opinionated” formatter and linter designed to enhance code readability,
 maintainability, and consistency that is extremely fast.</p>
 <p>You can use the <a class="reference external" href="https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff">Ruff VSCode extension</a>
-if you are developing using VSCode. Alternatively, you can set a pre-commit hook to run Ruff.
-This would perform automatic code formatting before any code is committed to the repository.
-Both of these tools ensure that all code contributions meet the established quality standards,
+if you are developing using VSCode. If you do so, make sure to set the path to the <code class="docutils literal notranslate"><span class="pre">ruff</span></code>
+executable in your VSCode settings to point to the <code class="docutils literal notranslate"><span class="pre">ruff</span></code> installed in the <code class="docutils literal notranslate"><span class="pre">dev</span></code> environment.
+You can do this by adding the following to your <code class="docutils literal notranslate"><span class="pre">settings.json</span></code> file:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;ruff.path&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;${workspaceFolder}/.pixi/envs/dev/bin/ruff&quot;</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Alternatively, you can set a pre-commit hook to run Ruff. This would perform automatic code formatting
+before any code is committed to the repository.</p>
+<p>Both of these tools ensure that all code contributions meet the established quality standards,
 minimizing the chances of introducing formatting inconsistencies or potential issues.</p>
 </section>
 <section id="imports">
@@ -694,6 +702,20 @@ logging call shown above, internally, every time.</p>
 <p>This allows the (single) file to be executed, running only the tests contained
 within. This is extremely useful when updating/modifying/adding tests in the file.</p>
 </section>
+<section id="versioning">
+<h3>Versioning<a class="headerlink" href="#versioning" title="Link to this heading">#</a></h3>
+<p>This repository uses <a class="reference external" href="https://semver.org/">Semantic Versioning</a> for its three
+main components:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">rX.X.X</span></code>: Rust core library version</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cX.X.X</span></code>: Rust command-line interface (CLI) version</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">vX.X.X</span></code>: Python package version</p></li>
+</ul>
+<p>These version numbers should match the major changes in each software release.
+For example, if you make a change to the Rust core library that does not affect the CLI,
+you would increment the <code class="docutils literal notranslate"><span class="pre">rX.X.X</span></code> version number, but not the <code class="docutils literal notranslate"><span class="pre">cX.X.X</span></code> or
+<code class="docutils literal notranslate"><span class="pre">vX.X.X</span></code> version numbers.</p>
+</section>
 <section id="rust-benchmarking">
 <h3>Rust Benchmarking<a class="headerlink" href="#rust-benchmarking" title="Link to this heading">#</a></h3>
 <p>To ensure the routing algorithm remains performant, we have set up
@@ -761,6 +783,7 @@ introduce performance regressions.</p>
 </li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#error-handling">Error Handling</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#test-file-structure">Test File Structure</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#versioning">Versioning</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rust-benchmarking">Rust Benchmarking</a></li>
 </ul>
 </li>
