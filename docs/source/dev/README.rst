@@ -95,8 +95,19 @@ Ruff is an "opinionated" formatter and linter designed to enhance code readabili
 maintainability, and consistency that is extremely fast.
 
 You can use the `Ruff VSCode extension <https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff>`_
-if you are developing using VSCode. Alternatively, you can set a pre-commit hook to run Ruff.
-This would perform automatic code formatting before any code is committed to the repository.
+if you are developing using VSCode. If you do so, make sure to set the path to the ``ruff``
+executable in your VSCode settings to point to the ``ruff`` installed in the ``dev`` environment.
+You can do this by adding the following to your ``settings.json`` file:
+
+.. code-block:: json
+
+    "ruff.path": [
+        "${workspaceFolder}/.pixi/envs/dev/bin/ruff"
+    ]
+
+Alternatively, you can set a pre-commit hook to run Ruff. This would perform automatic code formatting
+before any code is committed to the repository.
+
 Both of these tools ensure that all code contributions meet the established quality standards,
 minimizing the chances of introducing formatting inconsistencies or potential issues.
 
@@ -320,6 +331,21 @@ All test files (e.g. ``test_scenario.py``) should start/end with the following b
 
 This allows the (single) file to be executed, running only the tests contained
 within. This is extremely useful when updating/modifying/adding tests in the file.
+
+
+Versioning
+^^^^^^^^^^
+This repository uses `Semantic Versioning <https://semver.org/>`_ for its three
+main components:
+
+* ``rX.X.X``: Rust core library version
+* ``cX.X.X``: Rust command-line interface (CLI) version
+* ``vX.X.X``: Python package version
+
+These version numbers should match the major changes in each software release.
+For example, if you make a change to the Rust core library that does not affect the CLI,
+you would increment the ``rX.X.X`` version number, but not the ``cX.X.X`` or
+``vX.X.X`` version numbers.
 
 
 Rust Benchmarking
