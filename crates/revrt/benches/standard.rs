@@ -1,6 +1,9 @@
 //! Benchmarking reVRt
 //!
-//! Compare reVRt's performance to guide development and avoid regressions.
+//! Monitor reVRt's performance to guide development and avoid regressions.
+//!
+//! This benchmarking suite is meant to be run in CI/CD pipelines, so
+//! it should not be too long.
 //!
 //! Cases to consider:
 //! - All ones: So we guarantee always the same solution
