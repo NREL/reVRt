@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759894134686,
+  "lastUpdate": 1759895109040,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -587,6 +587,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 285976495,
             "range": "± 3483107",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b9f550bf3bf0d70240abc94a2617bf42c59807fb",
+          "message": "Benchmark multiple routes (#155)\n\n* New benchmark on multiple routes\n\nVerify efficiency of running multiple rountes over the same region, thus\nhwne it is possible to re-use estimated costs.\n\n* Adding more routes to emphasize concurrency effect\n\n* Update crates/revrt/benches/standard.rs\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>\n\n* fix: Co-pilot suggestion was almost correct\n\n* Split benchmarking on near and spread routes\n\nThose two cases monitor for different things. Nearby routes evaluate how\nwe re-use the cost field, while the nearby evaluate how we handle I/O\naccessing different chunks.\n\n* doc: A little bit more information on the benchmark.\n\n* Update crates/revrt/benches/standard.rs\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>",
+          "timestamp": "2025-10-07T21:10:36-06:00",
+          "tree_id": "d8d098bf1773f94848a14ebaf4495893a842f5c5",
+          "url": "https://github.com/NREL/reVRt/commit/b9f550bf3bf0d70240abc94a2617bf42c59807fb"
+        },
+        "date": 1759895107805,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 75390555,
+            "range": "± 1416457",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 103847024,
+            "range": "± 1610940",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 116917558,
+            "range": "± 4181942",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 161307418,
+            "range": "± 6030455",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 440947295,
+            "range": "± 20939269",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 141805259,
+            "range": "± 806745",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 145426813,
+            "range": "± 965200",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 154880522,
+            "range": "± 1973007",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 183109531,
+            "range": "± 1419963",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 287279267,
+            "range": "± 5283686",
             "unit": "ns/iter"
           }
         ]
