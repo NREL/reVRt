@@ -1,8 +1,11 @@
+mod features;
+
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, trace};
 
 use crate::ArrayIndex;
 use crate::error::Result;
+use features::Features;
 
 pub(super) struct Routing {
     scenario: Scenario,
