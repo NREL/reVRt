@@ -87,22 +87,24 @@ struct Solution {}
 
 struct Scenario {
     dataset: crate::dataset::Dataset,
-    // features: Features,
+    #[allow(dead_code)]
+    features: Features,
+    #[allow(dead_code)]
     cost_function: crate::CostFunction,
 }
 
 impl Scenario {
     fn new<P: AsRef<std::path::Path>>(
         store_path: P,
-        // features: Features,
         cost_function: crate::cost::CostFunction,
         cache_size: u64,
     ) -> Result<Self> {
+        let features = Features::new(&store_path)?;
         let dataset = crate::dataset::Dataset::open(store_path, cost_function.clone(), cache_size)?;
 
         Ok(Self {
             dataset,
-            // features,
+            features,
             cost_function,
         })
     }
@@ -111,7 +113,5 @@ impl Scenario {
         self.dataset.get_3x3(position)
     }
 }
-
-struct Features {}
 
 struct Algorithm {}
