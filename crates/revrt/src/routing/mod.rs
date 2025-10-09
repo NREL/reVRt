@@ -83,7 +83,7 @@ fn unscaled_cost(cost: u64) -> f32 {
     (cost as f32) / Routing::PRECISION_SCALAR
 }
 
-struct Solution {}
+// struct Solution {}
 
 struct Scenario {
     dataset: crate::dataset::Dataset,
@@ -114,4 +114,4 @@ impl Scenario {
     }
 }
 
-struct Algorithm {}
+// struct Algorithm {}
