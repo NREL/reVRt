@@ -34,7 +34,6 @@ impl Features {
 mod test {
     use super::*;
     use crate::dataset::samples::multi_variable_zarr;
-    use tokio;
 
     #[tokio::test]
     async fn dev() {
