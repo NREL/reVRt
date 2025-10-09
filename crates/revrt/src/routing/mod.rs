@@ -4,12 +4,12 @@ use tracing::{debug, trace};
 use crate::ArrayIndex;
 use crate::error::Result;
 
-pub(super) struct Simulation {
+pub(super) struct Routing {
     scenario: Scenario,
     // algorithm: Algorithm,
 }
 
-impl Simulation {
+impl Routing {
     pub(super) fn compute(
         &mut self,
         start: &[ArrayIndex],
@@ -72,12 +72,12 @@ impl Simulation {
 }
 
 fn cost_as_u64(cost: f32) -> u64 {
-    let cost = cost * Simulation::PRECISION_SCALAR;
+    let cost = cost * Routing::PRECISION_SCALAR;
     cost as u64
 }
 
 fn unscaled_cost(cost: u64) -> f32 {
-    (cost as f32) / Simulation::PRECISION_SCALAR
+    (cost as f32) / Routing::PRECISION_SCALAR
 }
 
 struct Solution {}
