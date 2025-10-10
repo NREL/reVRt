@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759953478384,
+  "lastUpdate": 1760120032867,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -839,6 +839,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 279285112,
             "range": "± 3728654",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7a410007f4bd6714fcd5778d4495ff3bcbd50abc",
+          "message": "Refactoring Simulation concept (#149)\n\n* Defining high level signature of the new Simulation concept\n\n* refact: Moving Simulation into its own module\n\n* refact: Retruning an iterator\n\nPreparing to route async, that will iterate on the solutions found.\n\n* refact: Using dataset as a scenario\n\n* refact: Hiding dataset behind scenario\n\nIn preparation to refact away from the legacy dataset.\n\n* feat: Adding CostFunction to Scenario\n\n* clean:\n\n* Back to parallel iteration on start/end combination\n\n* refact: Renaming Simulation struct to Routing\n\n* Renaming Simmulation struct to Routing\n\n* feat: (input) Features\n\n* cfg: Adding dependencies required by async Features\n\n* feat: Scenario with Features\n\n* Remminder on new planned structs\n\n* clean:\n\n* fix: Routing offers compute() instead of scout()\n\n* typo:\n\n* style:",
+          "timestamp": "2025-10-10T12:03:35-06:00",
+          "tree_id": "51839fe471f6bd1538f2461b0080b08ae99fe8a8",
+          "url": "https://github.com/NREL/reVRt/commit/7a410007f4bd6714fcd5778d4495ff3bcbd50abc"
+        },
+        "date": 1760120032287,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 73950879,
+            "range": "± 7486548",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 104444598,
+            "range": "± 5197955",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 115720943,
+            "range": "± 12569137",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 160982210,
+            "range": "± 34158697",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 437771642,
+            "range": "± 78381231",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 142783541,
+            "range": "± 3222195",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 143621753,
+            "range": "± 3910888",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 154298338,
+            "range": "± 6456760",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 183857206,
+            "range": "± 14955559",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 283653134,
+            "range": "± 31702153",
             "unit": "ns/iter"
           }
         ]
