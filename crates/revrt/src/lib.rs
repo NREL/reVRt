@@ -76,7 +76,7 @@ pub fn bench_minimalist(
     let cost_function = CostFunction::from_json(&cost_json).unwrap();
 
     let mut simulation: Routing = Routing::new(&features_path, cost_function, 250_000_000).unwrap();
-    let solutions: Vec<(Vec<ArrayIndex>, f32)> = simulation.scout(&start, end);
+    let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
     assert!(!solutions.is_empty(), "No solutions found");
 }
 
@@ -115,7 +115,7 @@ mod tests {
         let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: 2, j: 3 }];
         let end = vec![ArrayIndex { i: 6, j: 6 }];
-        let solutions = simulation.scout(&start, end);
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
@@ -142,7 +142,7 @@ mod tests {
         let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = vec![ArrayIndex { i: ei, j: ej }];
-        let solutions = simulation.scout(&start, end);
+        let solutions: = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
@@ -168,7 +168,7 @@ mod tests {
             .into_iter()
             .map(|(i, j)| ArrayIndex { i, j })
             .collect();
-        let solutions = simulation.scout(&start, end);
+        let solutions= simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
@@ -199,7 +199,7 @@ mod tests {
             .into_iter()
             .map(|(i, j)| ArrayIndex { i, j })
             .collect();
-        let mut solutions = simulation.scout(&start, end);
+        let mut solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
 
@@ -230,7 +230,7 @@ mod tests {
             ArrayIndex { i: 4, j: 4 },
             ArrayIndex { i: 7, j: 7 },
         ];
-        let solutions = simulation.scout(&start, end);
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 3);
 
@@ -254,7 +254,7 @@ mod tests {
         let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: 1, j: 1 }, ArrayIndex { i: 5, j: 5 }];
         let end = vec![ArrayIndex { i: 3, j: 3 }];
-        let solutions = simulation.scout(&start, end);
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 2);
 
@@ -321,7 +321,7 @@ mod tests {
 
         let start = vec![ArrayIndex { i: 0, j: 0 }];
         let end = vec![ArrayIndex { i: 0, j: 2 }];
-        let mut solutions = simulation.scout(&start, end);
+        let mut solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         assert_eq!(solutions.len(), 1);
 
         let (track, cost) = solutions.swap_remove(0);
