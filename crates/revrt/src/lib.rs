@@ -168,7 +168,7 @@ mod tests {
             .into_iter()
             .map(|(i, j)| ArrayIndex { i, j })
             .collect();
-        let solutions= simulation.compute(&start, end).collect::<Vec<_>>();
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
