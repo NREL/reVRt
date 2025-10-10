@@ -17,6 +17,7 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 derive_builder = { workspace = true }
 ndarray = { workspace = true }
+object_store = { workspace = true }
 pathfinding = { workspace = true }
 pyo3 = { workspace = true }
 rand = { workspace = true }
@@ -25,8 +26,10 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tempfile = { workspace = true }
 thiserror = { workspace = true }
+tokio = { workspace = true }
 tracing = { workspace = true }
 zarrs = { workspace = true }
+zarrs_object_store = { workspace = true }
 
 [build-dependencies]
 pyo3-build-config = { workspace = true }

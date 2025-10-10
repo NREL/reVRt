@@ -23,6 +23,7 @@ criterion = { version = "0.7.0", features = ["html_reports"] }
 derive_builder = "0.20.2"
 dhat = "0.3.3"
 ndarray = { version = "0.16.1", features = ["rayon"] }
+object_store = "0.12.4"
 pathfinding = "4.14.0"
 pyo3 = { version = "0.26.0", features = [
     "abi3-py311",
@@ -38,9 +39,11 @@ serde = { version = "1.0.226", features = ["derive"] }
 serde_json = { version = "1.0.143" }
 tempfile = "3.23.0"
 thiserror = "2.0.16"
+tokio = { version = "1.47.1", features = ["fs"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.20"
 zarrs = { version = "0.22.2", features = ["async", "filesystem"] }
+zarrs_object_store = { version = "0.5.0", features = ["fs"] }
 
 [workspace.lints.rust]
 # cargo criterion::criterion_group doesn't allow missing docs

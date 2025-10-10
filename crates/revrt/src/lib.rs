@@ -6,13 +6,11 @@ mod cost;
 mod dataset;
 mod error;
 mod ffi;
-
-use pathfinding::prelude::dijkstra;
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::{debug, trace};
+mod routing;
 
 use cost::CostFunction;
 use error::Result;
+use routing::Routing;
 
 #[allow(missing_docs)]
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -34,64 +32,6 @@ impl From<ArrayIndex> for (u64, u64) {
     }
 }
 
-struct Simulation {
-    dataset: dataset::Dataset,
-}
-
-impl Simulation {
-    const PRECISION_SCALAR: f32 = 1e4;
-
-    fn new<P: AsRef<std::path::Path>>(
-        store_path: P,
-        cost_function: CostFunction,
-        cache_size: u64,
-    ) -> Result<Self> {
-        let dataset = dataset::Dataset::open(store_path, cost_function, cache_size)?;
-
-        Ok(Self { dataset })
-    }
-
-    /// Determine the successors of a position.
-    ///
-    /// ToDo:
-    /// - Handle the edges of the array.
-    /// - Weight the cost. Remember that the cost is for a side,
-    ///   thus a diagonal move has to calculate consider the longer
-    ///   distance.
-    /// - Add starting cell cost by adding a is_start parameter and
-    ///   passing it down to the get_3x3 function so that it can add
-    ///   the center pixel to all successor cost values
-    fn successors(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, u64)> {
-        trace!("Position {:?}", position);
-        let neighbors = self.dataset.get_3x3(position);
-        let neighbors = neighbors
-            .into_iter()
-            .map(|(p, c)| (p, cost_as_u64(c))) // ToDo: Maybe it's better to have get_3x3 return a u64 - then we can skip this map altogether
-            .collect();
-        trace!("Adjusting neighbors' types: {:?}", neighbors);
-        neighbors
-    }
-
-    fn scout(&mut self, start: &[ArrayIndex], end: Vec<ArrayIndex>) -> Vec<(Vec<ArrayIndex>, f32)> {
-        debug!("Starting scout with {} start points", start.len());
-
-        start
-            .into_par_iter()
-            .filter_map(|s| dijkstra(s, |p| self.successors(p), |p| end.contains(p)))
-            .map(|(path, final_cost)| (path, unscaled_cost(final_cost)))
-            .collect()
-    }
-}
-
-fn cost_as_u64(cost: f32) -> u64 {
-    let cost = cost * Simulation::PRECISION_SCALAR;
-    cost as u64
-}
-
-fn unscaled_cost(cost: u64) -> f32 {
-    (cost as f32) / Simulation::PRECISION_SCALAR
-}
-
 #[allow(missing_docs)]
 pub fn resolve<P: AsRef<std::path::Path>>(
     store_path: P,
@@ -102,9 +42,8 @@ pub fn resolve<P: AsRef<std::path::Path>>(
 ) -> Result<Vec<(Vec<ArrayIndex>, f32)>> {
     let cost_function = CostFunction::from_json(cost_function)?;
     tracing::trace!("Cost function: {:?}", cost_function);
-    let mut simulation: Simulation =
-        Simulation::new(store_path, cost_function, cache_size).unwrap();
-    let result = simulation.scout(start, end);
+    let mut simulation: Routing = Routing::new(store_path, cost_function, cache_size).unwrap();
+    let result = simulation.compute(start, end).collect();
     Ok(result)
 }
 
@@ -136,9 +75,8 @@ pub fn bench_minimalist(
     .to_string();
     let cost_function = CostFunction::from_json(&cost_json).unwrap();
 
-    let mut simulation: Simulation =
-        Simulation::new(&features_path, cost_function, 250_000_000).unwrap();
-    let solutions: Vec<(Vec<ArrayIndex>, f32)> = simulation.scout(&start, end);
+    let mut simulation: Routing = Routing::new(&features_path, cost_function, 250_000_000).unwrap();
+    let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
     assert!(!solutions.is_empty(), "No solutions found");
 }
 
@@ -174,10 +112,10 @@ mod tests {
     fn minimalist() {
         let store_path = dataset::samples::multi_variable_zarr();
         let cost_function = cost::sample::cost_function();
-        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: 2, j: 3 }];
         let end = vec![ArrayIndex { i: 6, j: 6 }];
-        let solutions = simulation.scout(&start, end);
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
@@ -201,10 +139,10 @@ mod tests {
         let store_path = dataset::samples::constant_value_cost_zarr(1.0);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = vec![ArrayIndex { i: ei, j: ej }];
-        let solutions = simulation.scout(&start, end);
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
@@ -223,14 +161,14 @@ mod tests {
         let store_path = dataset::samples::constant_value_cost_zarr(1.0);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = endpoints
             .clone()
             .into_iter()
             .map(|(i, j)| ArrayIndex { i, j })
             .collect();
-        let solutions = simulation.scout(&start, end);
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         let (track, cost) = &solutions[0];
@@ -254,14 +192,14 @@ mod tests {
         let store_path = dataset::samples::constant_value_cost_zarr(cost_array_fill);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = endpoints
             .clone()
             .into_iter()
             .map(|(i, j)| ArrayIndex { i, j })
             .collect();
-        let mut solutions = simulation.scout(&start, end);
+        let mut solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
 
@@ -281,7 +219,7 @@ mod tests {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![
             ArrayIndex { i: 1, j: 1 },
             ArrayIndex { i: 3, j: 3 },
@@ -292,7 +230,7 @@ mod tests {
             ArrayIndex { i: 4, j: 4 },
             ArrayIndex { i: 7, j: 7 },
         ];
-        let solutions = simulation.scout(&start, end);
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 3);
 
@@ -313,10 +251,10 @@ mod tests {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
         let start = vec![ArrayIndex { i: 1, j: 1 }, ArrayIndex { i: 5, j: 5 }];
         let end = vec![ArrayIndex { i: 3, j: 3 }];
-        let solutions = simulation.scout(&start, end);
+        let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 2);
 
@@ -379,11 +317,11 @@ mod tests {
 
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let mut simulation = Simulation::new(&store_path, cost_function, 250_000_000).unwrap();
+        let mut simulation = Routing::new(&store_path, cost_function, 250_000_000).unwrap();
 
         let start = vec![ArrayIndex { i: 0, j: 0 }];
         let end = vec![ArrayIndex { i: 0, j: 2 }];
-        let mut solutions = simulation.scout(&start, end);
+        let mut solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         assert_eq!(solutions.len(), 1);
 
         let (track, cost) = solutions.swap_remove(0);
