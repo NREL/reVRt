@@ -1,6 +1,6 @@
 //! A scenario for routing
 //!
-//! A `Scenario` encapsulates the cost surface and eveything required to
+//! A `Scenario` encapsulates the cost surface and everything required to
 //! define that, such as the input features and the cost function.
 //!
 //! A typical scenario uses a cost function that weights several
