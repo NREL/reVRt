@@ -2,7 +2,7 @@ mod features;
 mod scenario;
 
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::ArrayIndex;
 use crate::Solution;
