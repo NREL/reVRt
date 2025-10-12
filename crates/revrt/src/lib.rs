@@ -151,7 +151,7 @@ mod tests {
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         assert_eq!(solutions[0].route().len(), expected_num_steps);
-        assert_eq!(solutions[0].total_cost().clone(), expected_cost);
+        assert_eq!(solutions[0].total_cost(), &expected_cost);
     }
 
     #[test_case((1, 1), vec![(1, 4), (3, 1), (4, 4)], (3, 1), 3, 2.; "different cost endpoints")]
@@ -176,7 +176,7 @@ mod tests {
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
         assert_eq!(solutions[0].route().len(), expected_num_steps);
-        assert_eq!(solutions[0].total_cost().clone(), expected_cost);
+        assert_eq!(solutions[0].total_cost(), &expected_cost);
         assert_eq!(solutions[0].route()[0], start[0]);
 
         let &ArrayIndex { i: ei, j: ej } = solutions[0].route().last().unwrap();
@@ -208,7 +208,7 @@ mod tests {
 
         let s = solutions.swap_remove(0);
         assert_eq!(s.route().len(), 3);
-        assert_eq!(s.total_cost().clone(), 2. * cost_array_fill);
+        assert_eq!(s.total_cost(), &(2. * cost_array_fill));
         assert_eq!(s.route()[0], start[0]);
 
         let &ArrayIndex { i: ei, j: ej } = s.route().last().unwrap();
@@ -329,7 +329,7 @@ mod tests {
 
         let s = solutions.swap_remove(0);
         // 4 straight moves + 3 diagonal moves
-        assert_eq!(s.total_cost().clone(), 8.2426);
+        assert_eq!(s.total_cost(), &8.2426);
 
         let expected_track = vec![
             ArrayIndex { i: 0, j: 0 },
@@ -341,6 +341,6 @@ mod tests {
             ArrayIndex { i: 1, j: 3 },
             ArrayIndex { i: 0, j: 2 },
         ];
-        assert_eq!(s.route().clone(), expected_track);
+        assert_eq!(s.route(), &expected_track);
     }
 }
