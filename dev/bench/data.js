@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760120032867,
+  "lastUpdate": 1760232397639,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -923,6 +923,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 283653134,
             "range": "± 31702153",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d343855f8ad1d0397634dcf742835fc20acedc3a",
+          "message": "Solution to manage routing answers (#158)\n\n* feat: A struct to store the routing solution\n\n* refact: Hiding routing solution behind `Solution`\n\n* style:\n\n* style: Routing now returns an iterator\n\n* style:",
+          "timestamp": "2025-10-11T19:16:31-06:00",
+          "tree_id": "e024aec1b8a828f5a825499db52bd5ff1da9cceb",
+          "url": "https://github.com/NREL/reVRt/commit/d343855f8ad1d0397634dcf742835fc20acedc3a"
+        },
+        "date": 1760232397106,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 73992542,
+            "range": "± 2161207",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 100290158,
+            "range": "± 1594861",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 115290178,
+            "range": "± 4205835",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 155801330,
+            "range": "± 5937228",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 430735964,
+            "range": "± 20117523",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 142020839,
+            "range": "± 1014362",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 144963624,
+            "range": "± 524624",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 153055285,
+            "range": "± 1313397",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 181089389,
+            "range": "± 2334601",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 280483604,
+            "range": "± 5251462",
             "unit": "ns/iter"
           }
         ]
