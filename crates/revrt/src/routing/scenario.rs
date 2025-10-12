@@ -14,20 +14,8 @@
 
 use tracing::trace;
 
-use super::Features;
+use super::{Features, cost_as_u64};
 use crate::{ArrayIndex, Result};
-
-const PRECISION_SCALAR: f32 = 1e4;
-
-fn cost_as_u64(cost: f32) -> u64 {
-    let cost = cost * PRECISION_SCALAR;
-    cost as u64
-}
-
-#[allow(dead_code)]
-fn unscaled_cost(cost: u64) -> f32 {
-    (cost as f32) / PRECISION_SCALAR
-}
 
 pub(super) struct Scenario {
     pub dataset: crate::dataset::Dataset,
