@@ -47,7 +47,6 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     let mut simulation: Routing = Routing::new(store_path, cost_function, cache_size).unwrap();
     let result = simulation
         .compute(start, end)
-        .into_iter()
         .map(|solution| (solution.route().clone(), solution.total_cost().clone()))
         .collect();
     Ok(result)
