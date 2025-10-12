@@ -4,9 +4,7 @@ mod scenario;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::debug;
 
-use crate::ArrayIndex;
-use crate::Solution;
-use crate::error::Result;
+use crate::{ArrayIndex, Solution, error::Result};
 use features::Features;
 use scenario::Scenario;
 
