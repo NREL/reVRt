@@ -1,4 +1,5 @@
 mod features;
+mod scenario;
 
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, trace};
@@ -7,6 +8,7 @@ use crate::ArrayIndex;
 use crate::Solution;
 use crate::error::Result;
 use features::Features;
+use scenario::Scenario;
 
 pub(super) struct Routing {
     scenario: Scenario,
@@ -82,35 +84,6 @@ fn cost_as_u64(cost: f32) -> u64 {
 
 fn unscaled_cost(cost: u64) -> f32 {
     (cost as f32) / Routing::PRECISION_SCALAR
-}
-
-struct Scenario {
-    dataset: crate::dataset::Dataset,
-    #[allow(dead_code)]
-    features: Features,
-    #[allow(dead_code)]
-    cost_function: crate::CostFunction,
-}
-
-impl Scenario {
-    fn new<P: AsRef<std::path::Path>>(
-        store_path: P,
-        cost_function: crate::cost::CostFunction,
-        cache_size: u64,
-    ) -> Result<Self> {
-        let features = Features::new(&store_path)?;
-        let dataset = crate::dataset::Dataset::open(store_path, cost_function.clone(), cache_size)?;
-
-        Ok(Self {
-            dataset,
-            features,
-            cost_function,
-        })
-    }
-
-    fn get_3x3(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, f32)> {
-        self.dataset.get_3x3(position)
-    }
 }
 
 // struct Algorithm {}
