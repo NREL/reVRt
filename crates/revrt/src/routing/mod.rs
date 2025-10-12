@@ -4,6 +4,7 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, trace};
 
 use crate::ArrayIndex;
+use crate::Solution;
 use crate::error::Result;
 use features::Features;
 
@@ -17,7 +18,7 @@ impl Routing {
         &mut self,
         start: &[ArrayIndex],
         end: Vec<ArrayIndex>,
-    ) -> impl Iterator<Item = (Vec<ArrayIndex>, f32)> {
+    ) -> impl Iterator<Item = Solution<ArrayIndex, f32>> {
         self.scout(start, end).into_iter()
     }
 
@@ -61,7 +62,7 @@ impl Routing {
         &mut self,
         start: &[ArrayIndex],
         end: Vec<ArrayIndex>,
-    ) -> Vec<(Vec<ArrayIndex>, f32)> {
+    ) -> Vec<Solution<ArrayIndex, f32>> {
         debug!("Starting scout with {} start points", start.len());
 
         start
@@ -69,7 +70,7 @@ impl Routing {
             .filter_map(|s| {
                 pathfinding::prelude::dijkstra(s, |p| self.successors(p), |p| end.contains(p))
             })
-            .map(|(path, final_cost)| (path, unscaled_cost(final_cost)))
+            .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
             .collect()
     }
 }
@@ -82,8 +83,6 @@ fn cost_as_u64(cost: f32) -> u64 {
 fn unscaled_cost(cost: u64) -> f32 {
     (cost as f32) / Routing::PRECISION_SCALAR
 }
-
-// struct Solution {}
 
 struct Scenario {
     dataset: crate::dataset::Dataset,
