@@ -24,6 +24,7 @@ fn cost_as_u64(cost: f32) -> u64 {
     cost as u64
 }
 
+#[allow(dead_code)]
 fn unscaled_cost(cost: u64) -> f32 {
     (cost as f32) / PRECISION_SCALAR
 }
