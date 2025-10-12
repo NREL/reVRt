@@ -1,7 +1,10 @@
 //! A scenario for routing
 //!
-//! A `Scenario` encapsulates the input features and the cost function
-//! which defines how the input features affect the cost.
+//! A `Scenario` encapsulates the cost surface and eveything required to
+//! define that, such as the input features and the cost function.
+//!
+//! A typical scenario uses a cost function that weights several
+//! features to determine the cost per grid point.
 //!
 //! Given the relatively high resolution and the desire on routing long
 //! distances, the data involved can be relatively large. A major
