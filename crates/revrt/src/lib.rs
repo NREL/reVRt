@@ -7,10 +7,12 @@ mod dataset;
 mod error;
 mod ffi;
 mod routing;
+mod solution;
 
 use cost::CostFunction;
 use error::Result;
 use routing::Routing;
+use solution::Solution;
 
 #[allow(missing_docs)]
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -43,7 +45,11 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     let cost_function = CostFunction::from_json(cost_function)?;
     tracing::trace!("Cost function: {:?}", cost_function);
     let mut simulation: Routing = Routing::new(store_path, cost_function, cache_size).unwrap();
-    let result = simulation.compute(start, end).collect();
+    let result = simulation
+        .compute(start, end)
+        .into_iter()
+        .map(|solution| (solution.route().clone(), solution.total_cost().clone()))
+        .collect();
     Ok(result)
 }
 
@@ -118,9 +124,8 @@ mod tests {
         let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
-        let (track, cost) = &solutions[0];
-        assert!(track.len() > 1);
-        assert!(cost > &0.);
+        assert!(solutions[0].route().len() > 1);
+        assert!(solutions[0].total_cost() > &0.);
     }
 
     // Due to truncation solution to handle f32 costs.
@@ -145,9 +150,8 @@ mod tests {
         let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
-        let (track, cost) = &solutions[0];
-        assert_eq!(track.len(), expected_num_steps);
-        assert_eq!(cost, &expected_cost);
+        assert_eq!(solutions[0].route().len(), expected_num_steps);
+        assert_eq!(solutions[0].total_cost().clone(), expected_cost);
     }
 
     #[test_case((1, 1), vec![(1, 4), (3, 1), (4, 4)], (3, 1), 3, 2.; "different cost endpoints")]
@@ -171,12 +175,11 @@ mod tests {
         let solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
-        let (track, cost) = &solutions[0];
-        assert_eq!(track.len(), expected_num_steps);
-        assert_eq!(cost, &expected_cost);
-        assert_eq!(track[0], start[0]);
+        assert_eq!(solutions[0].route().len(), expected_num_steps);
+        assert_eq!(solutions[0].total_cost().clone(), expected_cost);
+        assert_eq!(solutions[0].route()[0], start[0]);
 
-        let &ArrayIndex { i: ei, j: ej } = track.last().unwrap();
+        let &ArrayIndex { i: ei, j: ej } = solutions[0].route().last().unwrap();
         assert_eq!((ei, ej), expected_endpoint);
     }
 
@@ -203,12 +206,12 @@ mod tests {
         dbg!(&solutions);
         assert_eq!(solutions.len(), 1);
 
-        let (track, cost) = solutions.swap_remove(0);
-        assert_eq!(track.len(), 3);
-        assert_eq!(cost, 2. * cost_array_fill);
-        assert_eq!(track[0], start[0]);
+        let s = solutions.swap_remove(0);
+        assert_eq!(s.route().len(), 3);
+        assert_eq!(s.total_cost().clone(), 2. * cost_array_fill);
+        assert_eq!(s.route()[0], start[0]);
 
-        let &ArrayIndex { i: ei, j: ej } = track.last().unwrap();
+        let &ArrayIndex { i: ei, j: ej } = s.route().last().unwrap();
         assert!(endpoints.contains(&(ei, ej)));
     }
 
@@ -239,10 +242,10 @@ mod tests {
             (ArrayIndex { i: 4, j: 4 }, 1.4142),
             (ArrayIndex { i: 4, j: 4 }, 1.4142),
         ];
-        for ((track, cost), eep) in solutions.into_iter().zip(expected_solution) {
-            assert_eq!(track.len(), 2);
-            assert_eq!(*track.last().unwrap(), eep.0);
-            assert_eq!(cost, eep.1);
+        for (s, eep) in solutions.into_iter().zip(expected_solution) {
+            assert_eq!(s.route().len(), 2);
+            assert_eq!(*s.route().last().unwrap(), eep.0);
+            assert_eq!(s.total_cost(), &eep.1);
         }
     }
 
@@ -258,10 +261,10 @@ mod tests {
         dbg!(&solutions);
         assert_eq!(solutions.len(), 2);
 
-        for (track, cost) in solutions {
-            assert_eq!(track.len(), 3);
-            assert_eq!(cost, 2.8284);
-            assert_eq!(*track.last().unwrap(), ArrayIndex { i: 3, j: 3 });
+        for s in solutions {
+            assert_eq!(s.route().len(), 3);
+            assert_eq!(s.total_cost(), &2.8284);
+            assert_eq!(*s.route().last().unwrap(), ArrayIndex { i: 3, j: 3 });
         }
     }
 
@@ -324,9 +327,9 @@ mod tests {
         let mut solutions = simulation.compute(&start, end).collect::<Vec<_>>();
         assert_eq!(solutions.len(), 1);
 
-        let (track, cost) = solutions.swap_remove(0);
+        let s = solutions.swap_remove(0);
         // 4 straight moves + 3 diagonal moves
-        assert_eq!(cost, 8.2426);
+        assert_eq!(s.total_cost().clone(), 8.2426);
 
         let expected_track = vec![
             ArrayIndex { i: 0, j: 0 },
@@ -338,6 +341,6 @@ mod tests {
             ArrayIndex { i: 1, j: 3 },
             ArrayIndex { i: 0, j: 2 },
         ];
-        assert_eq!(track, expected_track);
+        assert_eq!(s.route().clone(), expected_track);
     }
 }
