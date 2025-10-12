@@ -24,8 +24,6 @@ impl Routing {
         self.scout(start, end).into_iter()
     }
 
-    const PRECISION_SCALAR: f32 = 1e4;
-
     pub(super) fn new<P: AsRef<std::path::Path>>(
         store_path: P,
         cost_function: crate::cost::CostFunction,
@@ -60,8 +58,9 @@ impl Routing {
     }
 }
 
+const PRECISION_SCALAR: f32 = 1e4;
 fn unscaled_cost(cost: u64) -> f32 {
-    (cost as f32) / Routing::PRECISION_SCALAR
+    (cost as f32) / PRECISION_SCALAR
 }
 
 // struct Algorithm {}
