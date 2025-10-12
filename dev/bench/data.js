@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760232397639,
+  "lastUpdate": 1760305122251,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -1007,6 +1007,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 280483604,
             "range": "± 5251462",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ce78b21c009c1aec27efbf31649c2d56169038d3",
+          "message": "Scenario (#159)\n\n* feat: Module scenario to host `Scenario`\n\n* refact: Moving .successors() to `Scenario`\n\n* clean:\n\n* doc: Module scenario\n\n* Allowing dead_code for now\n\n* doc, typo:\n\n* fix: Constant moved to Scenario\n\nThis is a transition state. The data type conversion should happen\nwithin the Scenario scope and arrive ready at Routing.\n\n* refact: Moving cost_as_u64 back to routing\n\nActually, it is the routing algorithm that requires uint in this version.\n\n* style:\n\n* log:",
+          "timestamp": "2025-10-12T15:28:26-06:00",
+          "tree_id": "2d85beb109815be6cb67e37f02e0bf14e11bc057",
+          "url": "https://github.com/NREL/reVRt/commit/ce78b21c009c1aec27efbf31649c2d56169038d3"
+        },
+        "date": 1760305121569,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 75640881,
+            "range": "± 1287374",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 74972325,
+            "range": "± 845412",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 117621519,
+            "range": "± 3514934",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 161590719,
+            "range": "± 5157037",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 447210220,
+            "range": "± 18480248",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 142424762,
+            "range": "± 1556773",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 145899140,
+            "range": "± 764947",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 155582234,
+            "range": "± 1325300",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 185713039,
+            "range": "± 2022484",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 289638575,
+            "range": "± 6540117",
             "unit": "ns/iter"
           }
         ]
