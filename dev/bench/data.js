@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760305122251,
+  "lastUpdate": 1760626837695,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -1091,6 +1091,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 289638575,
             "range": "± 6540117",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b398910d9b79570059b917ad2a73ac23035b3ea",
+          "message": "Updating pixi.lock (#161)\n\nThe main reason to update was `propcache-0.4.0` was yanked, which is an\nindirect dependency of nrel-revrt through nrel-gaps.",
+          "timestamp": "2025-10-16T08:37:48-06:00",
+          "tree_id": "ec4b5c1d6cd3ccb15759dc7d17ab244faedd43f5",
+          "url": "https://github.com/NREL/reVRt/commit/8b398910d9b79570059b917ad2a73ac23035b3ea"
+        },
+        "date": 1760626836264,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 75953711,
+            "range": "± 2632505",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 112637243,
+            "range": "± 2008826",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 117233681,
+            "range": "± 3852961",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 161888038,
+            "range": "± 5706548",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 451455540,
+            "range": "± 24057380",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 143156418,
+            "range": "± 1993723",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 145918277,
+            "range": "± 1004715",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 155310669,
+            "range": "± 1303513",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 185017104,
+            "range": "± 2744315",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 291915349,
+            "range": "± 9729834",
             "unit": "ns/iter"
           }
         ]
