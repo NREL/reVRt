@@ -262,6 +262,7 @@ ruff-lsp = ">=0.0.62,<0.0.63"
 rust-src = ">=1.90.0,<2"
 
 [tool.pixi.feature.test.dependencies]
+hypothesis = ">=6.140.4,<7"
 pytest = ">=8.3.5,<9"
 pytest-cases = ">=3.8.6,<4"
 pytest-cov = ">=6.1.1,<7"
