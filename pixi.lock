@@ -16790,7 +16790,7 @@ packages:
 - pypi: ./
   name: nrel-revrt
   version: 0.2.1
-  sha256: 9ada658b200850f07c7b87b3c59863a684229da47a402077641943c12a0a5902
+  sha256: f6f77557293913216bec91a888b4767a09d89158c6f2e945c711fcc3cbd4f74b
   requires_dist:
   - affine>=2.4.0,<3
   - dask>=2025.4.1,<2026
@@ -16811,6 +16811,7 @@ packages:
   - pipreqs>=0.4.13,<0.5 ; extra == 'dev'
   - ruff>=0.14.0,<0.15 ; extra == 'dev'
   - ruff-lsp>=0.0.62,<0.0.63 ; extra == 'dev'
+  - hypothesis>=6.0,<7 ; extra == 'test'
   - pytest>=8.3.5,<9 ; extra == 'test'
   - pytest-cases>=3.8.6,<4 ; extra == 'test'
   - pytest-cov>=6.1.1,<7 ; extra == 'test'
