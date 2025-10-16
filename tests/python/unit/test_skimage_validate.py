@@ -14,6 +14,9 @@ import xarray as xr
 
 from revrt import find_paths
 
+# Maximum value for input features used to calculate cost
+# The test never ends for large values, such as 1e10.
+MAX_COST = 1e6
 
 def validate_single_var(data, start, end):
     """Validate reVRt against skimage for a given feature array
@@ -54,7 +57,7 @@ def validate_single_var(data, start, end):
         np.float32,
         array_shapes(min_dims=2, max_dims=2, min_side=7, max_side=32),
         elements=hypothesis.strategies.integers(
-            min_value=1, max_value=1_000_000
+            min_value=1, max_value=MAX_COST
         ),
         unique=True,
     ),
