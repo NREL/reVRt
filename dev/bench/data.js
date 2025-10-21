@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1760626837695,
+  "lastUpdate": 1761021018340,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -1175,6 +1175,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 291915349,
             "range": "± 9729834",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ecf5c5ecb31b23a8362dc58ba5c24653e298cb84",
+          "message": "Build(deps): Bump prefix-dev/setup-pixi from 0.9.1 to 0.9.2 (#162)\n\nBumps [prefix-dev/setup-pixi](https://github.com/prefix-dev/setup-pixi) from 0.9.1 to 0.9.2.\n- [Release notes](https://github.com/prefix-dev/setup-pixi/releases)\n- [Commits](https://github.com/prefix-dev/setup-pixi/compare/v0.9.1...v0.9.2)\n\n---\nupdated-dependencies:\n- dependency-name: prefix-dev/setup-pixi\n  dependency-version: 0.9.2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-10-20T17:06:10-06:00",
+          "tree_id": "babdd9ba6c3492c1acb99f4e6d8569782d022104",
+          "url": "https://github.com/NREL/reVRt/commit/ecf5c5ecb31b23a8362dc58ba5c24653e298cb84"
+        },
+        "date": 1761021017715,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 76254308,
+            "range": "± 2043202",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 73395195,
+            "range": "± 1943519",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 115402770,
+            "range": "± 3856970",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 158074332,
+            "range": "± 7001875",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 439108945,
+            "range": "± 17702213",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 141945343,
+            "range": "± 1172861",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 145170330,
+            "range": "± 1503385",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 153951109,
+            "range": "± 1392122",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 183731158,
+            "range": "± 2024722",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 288339140,
+            "range": "± 7217241",
             "unit": "ns/iter"
           }
         ]
