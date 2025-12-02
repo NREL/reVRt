@@ -17,12 +17,14 @@ def layers_from_file(fp, _out_layer_dir, layers=None, profile_kwargs=None):
     layers : list, optional
         List of layer names to extract. Layer names must match layers in
         the `fp`, otherwise an error will be raised. If ``None``,
-        extracts all layers from the :class:`LayeredFile`.
+        extracts all layers from the
+        :class:`~revrt.utilities.handlers.LayeredFile`.
         By default, ``None``.
     profile_kwargs : dict, optional
         Additional keyword arguments to pass into writing each raster.
         The following attributes ar ignored (they are set using
-        properties of the source :class:`LayeredFile`):
+        properties of the source
+        :class:`~revrt.utilities.handlers.LayeredFile`):
 
                 - nodata
                 - transform

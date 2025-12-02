@@ -2,7 +2,14 @@
 Welcome to reV Routing (reVRt)!
 *******************************
 
-|Zenodo| |License| |Ruff| |Pixi| |SWR|
+|License| |Zenodo| |PythonV| |PyPi| |Ruff| |Pixi| |SWR|
+
+
+.. |PythonV| image:: https://badge.fury.io/py/nrel-revrt.svg
+    :target: https://pypi.org/project/nrel-revrt/
+
+.. |PyPi| image:: https://img.shields.io/pypi/pyversions/nrel-revrt.svg
+    :target: https://pypi.org/project/nrel-revrt/
 
 .. |Ruff| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
     :target: https://github.com/astral-sh/ruff

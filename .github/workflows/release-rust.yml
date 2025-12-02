@@ -1,0 +1,162 @@
+name: Release Rust
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'c*.*.*'
+      - 'r*.*.*'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Verify publish
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+
+    - uses: prefix-dev/setup-pixi@v0.9.3
+      with:
+        pixi-version: v0.59.0
+        cache: true
+        frozen: true
+        cache-write: ${{ github.ref == 'refs/heads/main' }}
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: "gha"
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
+    - name: Make sure we can publish
+      run: pixi run cargo publish --workspace --dry-run
+
+  # Only publish the library for tags starting with 'r', e.g. 'r1.0.0'.
+  publish-lib:
+    name: Publish core library to crates.io
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/r')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          pixi-version: v0.59.0
+          cache: true
+          frozen: true
+          cache-write: ${{ github.ref == 'refs/heads/main' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "gha"
+          save-if: false
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: pixi run cargo publish --locked -p revrt
+
+  # Only publish the CLI for tags starting with 'c', e.g. 'c1.0.0'.
+  publish-cli:
+    name: Publish CLI to crates.io
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/c')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          pixi-version: v0.59.0
+          cache: true
+          frozen: true
+          cache-write: ${{ github.ref == 'refs/heads/main' }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "gha"
+          save-if: false
+
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: pixi run cargo publish --locked -p revrt-cli
+
+  # Build and upload CLI binaries for tags starting with 'c', e.g. 'c1.0.0'.
+  release-cli:
+    name: Build CLI for ${{ matrix.target }}
+    needs: validate
+    # Only publish CLI binaries for tags starting with 'c', e.g. 'c1.2.3'.
+    # This tagging convention distinguishes CLI releases from library releases.
+    if: startsWith(github.ref, 'refs/tags/c')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            use-cross: false
+            strip: strip
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use-cross: false
+            binary_ext: '.exe'
+
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            use-cross: false
+            strip: strip
+
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            use-cross: false
+            strip: strip
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+        target: ${{ matrix.target }}
+
+    - name: Install required dependencies
+      shell: bash
+      run: |
+        if [[ ${{ matrix.target }} == x86_64-unknown-linux-musl ]]; then
+            sudo apt-get update
+            sudo apt-get install -y musl-tools
+        fi
+        if [[ ${{ matrix.target }} == aarch64-unknown-linux-gnu ]]; then
+            sudo apt-get update
+            sudo apt-get install -y binutils-aarch64-linux-gnu
+        fi
+        if [[ ${{ matrix.target }} == arm-unknown-linux-gnueabihf ]]; then
+            sudo apt-get update
+            sudo apt-get install -y binutils-arm-linux-gnueabihf
+        fi
+
+    - name: Build
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: ${{ matrix.use-cross }}
+        command: build
+        args: --target ${{ matrix.target }} --release --locked -p revrt-cli
+
+    - name: Strip binary
+      if: matrix.strip
+      run: ${{ matrix.strip }} target/${{ matrix.target }}/release/revrt-cli${{ matrix.binary_ext }}
+
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: target/${{ matrix.target }}/release/revrt-cli${{ matrix.binary_ext }}
+        asset_name: revrt-cli-${{ matrix.target }}${{ matrix.binary_ext }}
+        tag: ${{ github.ref }}

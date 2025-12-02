@@ -34,13 +34,13 @@ class ZonalStats:
 
         Parameters
         ----------
-        stats : str | iterable of str, optional
+        stats : str or iterable of str, optional
             Names of all statistics to compute. Statistics must be one
             of the members of
             :class:`~revrt.spatial_characterization.stats.Stat` or
             :class:`~revrt.spatial_characterization.stats.FractionalStat`,
-            or must start with the "percentile_" prefix and end with an
-            int or float representing the percentile to compute (e.g.
+            or must start with the ``percentile_`` prefix and end with
+            an int or float representing the percentile to compute (e.g.
             ``percentile_10.5``). If only one statistic is to be
             computed, you can provide it directly as a string.
             Otherwise, provide a list of statistic names or a string
@@ -61,7 +61,7 @@ class ZonalStats:
                 - ``stats=["min", "max", "percentile_10.5"]``
 
             By default, ``None``.
-        nodata : int | float, optional
+        nodata : int or float, optional
             Value in the raster that represents `nodata`. This value
             will not show up in any statistics except for the `nodata`
             statistic itself, which computes the number of `nodata`

@@ -22,7 +22,7 @@ class BaseLayerCreator(ABC):
         """
         Parameters
         ----------
-        io_handler : :class:`LayeredFile`
+        io_handler : LayeredFile
             Transmission layer IO handler
         input_layer_dir : path-like, optional
             Directory to search for input layers in, if not found in
@@ -50,7 +50,7 @@ class BaseLayerCreator(ABC):
 
     @cached_property
     def output_tiff_dir(self):
-        """path-like: Directory to store output GeoTIFFs in"""
+        """:term:`path-like <path-like object>` GeoTIFFs output dir"""
         self._output_tiff_dir.mkdir(exist_ok=True, parents=True)
         return self._output_tiff_dir
 

@@ -13,7 +13,7 @@ jobs:
     name: Lint Python Code Base with Ruff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: astral-sh/ruff-action@v3
         with:
           version: "latest"
@@ -24,6 +24,32 @@ jobs:
           version: "latest"
           args: "format --check"
           src: "./revrt"
+
+  locked-tests:
+    needs: lint
+    name: Pixi-Locked Test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - uses: prefix-dev/setup-pixi@v0.9.3
+      with:
+        pixi-version: v0.59.0
+        locked: true
+        cache: true
+        cache-write: false
+        environments: dev
+
+    - run: |
+        pixi reinstall -e dev --locked NREL-reVRt
 
   unit-tests:
     needs: lint
@@ -37,13 +63,14 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
+        fetch-tags: true
 
-    - uses: prefix-dev/setup-pixi@v0.9.0
+    - uses: prefix-dev/setup-pixi@v0.9.3
       with:
-        pixi-version: v0.50.2
+        pixi-version: v0.59.0
         locked: true
         cache: true
         cache-write: ${{ github.ref == 'refs/heads/main' }}
@@ -51,7 +78,7 @@ jobs:
 
     - run: |
         pixi reinstall -e dev NREL-reVRt
-        pixi run -e dev --frozen tests-u
+        pixi run -e dev tests-u
 
   integration-tests:
     needs: lint
@@ -65,13 +92,14 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
+        fetch-tags: true
 
-    - uses: prefix-dev/setup-pixi@v0.9.0
+    - uses: prefix-dev/setup-pixi@v0.9.3
       with:
-        pixi-version: v0.50.2
+        pixi-version: v0.59.0
         locked: true
         cache: true
         cache-write: ${{ github.ref == 'refs/heads/main' }}
@@ -79,7 +107,7 @@ jobs:
 
     - run: |
         pixi reinstall -e dev NREL-reVRt
-        pixi run -e dev --frozen tests-i
+        pixi run -e dev tests-i
 
   tox-tests:
     needs: lint
@@ -93,9 +121,10 @@ jobs:
         python-version: ['3.13', '3.12', '3.11']
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
+        fetch-tags: true
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6

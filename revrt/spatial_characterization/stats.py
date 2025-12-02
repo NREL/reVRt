@@ -224,7 +224,7 @@ class ComputableStats:
         percentiles : dict, optional
             Dictionary mapping the percentile stat name to the int or
             float representing the percentile that can be passed to
-            :func:`np.percentile`. By default, ``None``.
+            :func:`numpy.percentile`. By default, ``None``.
         fractional_stats : iterable of str, optional
             One or mre stats from the :class:`FractionalStat` enum to
             compute. By default, ``None``.
@@ -347,7 +347,7 @@ class ComputableStats:
 
         Parameters
         ----------
-        zone : shapely.geometry
+        zone : shapely.GeometryType
             Geometry object representing the zone to compute statistics
             over.
         processed_raster : array-like
@@ -359,7 +359,7 @@ class ComputableStats:
             transformation. This is used to compute the raster shapes
             for statistics computations as well as the pixel area
             for each pixel value in the raster.
-        nodata : int | float, optional
+        nodata : int or float, optional
             Value representing "nodata" in the array. These values in
             the raster will be ignored and will not contribute to the
             statistics and will not be reported. By default, ``None``.
@@ -397,7 +397,7 @@ class ComputableStats:
         ------
         str
             Name of percentile stat
-        int | float
+        int or float
             Value representing that percentile in the array.
         """
         return {
@@ -411,11 +411,11 @@ class ComputableStats:
 
         Parameters
         ----------
-        stats : str | iterable of str, optional
+        stats : str or iterable of str, optional
             Names of all statistics to compute. Statistics must be one
             of the members of :class:`Stat` or :class:`FractionalStat`,
-            or must start with the "percentile_" prefix and end with an
-            int or float representing the percentile to compute (e.g.
+            or must start with the ``percentile_`` prefix and end with
+            an int or float representing the percentile to compute (e.g.
             ``percentile_10.5``). If only one statistic is to be
             computed, you can provide it directly as a string.
             Otherwise, provide a list of statistic names or a string

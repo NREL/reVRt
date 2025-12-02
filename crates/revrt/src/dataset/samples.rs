@@ -32,8 +32,8 @@ pub(crate) fn multi_variable_zarr() -> std::path::PathBuf {
     for array_path in ["/A", "/B", "/C", "/cost"] {
         let array = zarrs::array::ArrayBuilder::new(
             vec![ni, nj], // array shape
+            vec![ci, cj], // regular chunk shape
             zarrs::array::DataType::Float32,
-            vec![ci, cj].try_into().unwrap(), // regular chunk shape
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         // .bytes_to_bytes_codecs(vec![]) // uncompressed
@@ -85,8 +85,8 @@ pub(crate) fn constant_value_cost_zarr(cost_value: f32) -> std::path::PathBuf {
 
     let array = zarrs::array::ArrayBuilder::new(
         vec![ni, nj], // array shape
+        vec![ci, cj], // regular chunk shape
         zarrs::array::DataType::Float32,
-        vec![ci, cj].try_into().unwrap(), // regular chunk shape
         zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
     )
     .dimension_names(["y", "x"].into())
@@ -127,8 +127,8 @@ pub(crate) fn cost_as_index_zarr((ni, nj): (u64, u64), (ci, cj): (u64, u64)) -> 
 
     let array = zarrs::array::ArrayBuilder::new(
         vec![ni, nj], // array shape
+        vec![ci, cj], // regular chunk shape
         zarrs::array::DataType::Float32,
-        vec![ci, cj].try_into().unwrap(), // regular chunk shape
         zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
     )
     .dimension_names(["y", "x"].into())

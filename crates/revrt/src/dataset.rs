@@ -6,7 +6,8 @@ use std::iter;
 use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
-use zarrs::array::ArrayChunkCacheExt;
+// use zarrs::array::ArrayChunkCacheExt;
+// use zarrs::array::ChunkGrid;
 use zarrs::storage::{
     ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
 };
@@ -36,8 +37,8 @@ pub(super) struct Dataset {
     cost_chunk_idx: RwLock<ndarray::Array2<bool>>,
     /// Custom cost function definition
     cost_function: CostFunction,
-    /// Cache for the cost
-    cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
+    // Cache for the cost
+    // cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
 }
 
 impl Dataset {
@@ -75,15 +76,15 @@ impl Dataset {
         let varname = source.list().unwrap()[0].to_string();
         let varname = varname.split("/").collect::<Vec<_>>()[0];
         let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
-        let cost_shape = tmp.shape();
+        // let cost_shape = tmp.shape();
         let chunk_shape = tmp.chunk_grid().clone();
         // ----
 
         trace!("Creating an empty cost array");
-        let array = zarrs::array::ArrayBuilder::new(
-            cost_shape.into(),
-            zarrs::array::DataType::Float32,
+        let array = zarrs::array::ArrayBuilder::new_with_chunk_grid(
+            // cost_shape,
             chunk_shape,
+            zarrs::array::DataType::Float32,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         .build(swap.clone(), "/cost")
@@ -96,8 +97,8 @@ impl Dataset {
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
-                array.chunk_grid_shape().unwrap()[0] as usize,
-                array.chunk_grid_shape().unwrap()[1] as usize,
+                array.chunk_grid_shape()[0] as usize,
+                array.chunk_grid_shape()[1] as usize,
             ),
             false,
         )
@@ -107,7 +108,7 @@ impl Dataset {
             warn!("Cache size smaller than 1MB");
         }
         trace!("Creating cache with size {}MB", cache_size / 1_000_000);
-        let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
+        // let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
 
         trace!("Dataset opened successfully");
         Ok(Self {
@@ -116,7 +117,7 @@ impl Dataset {
             swap,
             cost_chunk_idx,
             cost_function,
-            cache,
+            // cache,
         })
     }
 
@@ -228,8 +229,9 @@ impl Dataset {
 
         // Retrieve the 3x3 neighborhood values
         let value: Vec<f32> = cost
-            .retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(
-                &self.cache,
+            //.retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(
+            .retrieve_array_subset_elements_opt::<f32>(
+                // &self.cache,
                 &subset,
                 &zarrs::array::codec::CodecOptions::default(),
             )

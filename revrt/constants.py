@@ -9,4 +9,4 @@ DEFAULT_DTYPE = "float32"
 """Default dtype used across cost layers"""
 
 METERS_IN_MILE = 1609.344
-"""1609.344m: Meters in a mile - useful for conversions"""
+"""Total meters in a mile (1609.344) - useful for conversions"""

@@ -7,7 +7,7 @@ use tracing::{debug, trace};
 use crate::dataset::LazySubset;
 use crate::error::Result;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 /// A cost function definition
 ///
 /// `cost_layers`: A collection of cost layers with equal weight.

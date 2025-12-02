@@ -1,6 +1,9 @@
 //! Benchmarking reVRt
 //!
-//! Compare reVRt's performance to guide development and avoid regressions.
+//! Monitor reVRt's performance to guide development and avoid regressions.
+//!
+//! This benchmarking suite is meant to be run in CI/CD pipelines, so
+//! it should not be too long.
 //!
 //! Cases to consider:
 //! - All ones: So we guarantee always the same solution
@@ -28,6 +31,7 @@ enum FeaturesType {
     Random,
 }
 
+/// Create temporary features to support benchmarking
 fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::path::PathBuf {
     let tmp_path = tempfile::TempDir::new().unwrap();
 
@@ -47,8 +51,8 @@ fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::pat
     for array_path in ["/A", "/B", "/C", "/cost"].iter() {
         let array = zarrs::array::ArrayBuilder::new(
             vec![ni, nj], // array shape
+            vec![ci, cj], // regular chunk shape
             zarrs::array::DataType::Float32,
-            vec![ci, cj].try_into().unwrap(), // regular chunk shape
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         // .bytes_to_bytes_codecs(vec![]) // uncompressed
@@ -87,6 +91,7 @@ fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::pat
     tmp_path.keep()
 }
 
+/// Standard benchmark with input features all equal to one
 fn standard_ones(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
 
@@ -101,6 +106,7 @@ fn standard_ones(c: &mut Criterion) {
     });
 }
 
+/// Standard benchmark with random input features
 fn standard_random(c: &mut Criterion) {
     let features_path = features(100, 100, 4, 4, FeaturesType::Random);
 
@@ -115,6 +121,50 @@ fn standard_random(c: &mut Criterion) {
     });
 }
 
+/// Multiple paths in the same area, to test efficiency of reusing cost.
+fn multiple_near_routes(c: &mut Criterion) {
+    let features_path = features(100, 100, 4, 4, FeaturesType::AllOnes);
+
+    c.bench_function("multiple_near_routes", |b| {
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                black_box(
+                    (19..=22)
+                        .flat_map(|row| (48..=51).map(move |col| ArrayIndex::new(row, col)))
+                        .collect::<Vec<_>>(),
+                ),
+                black_box(vec![ArrayIndex::new(10, 50)]),
+            )
+        })
+    });
+}
+
+/// Multiple spread routes, to test efficiency of accessing multiple chunks.
+fn multiple_spread_routes(c: &mut Criterion) {
+    let features_path = features(100, 100, 5, 5, FeaturesType::AllOnes);
+
+    c.bench_function("multiple_spread_routes", |b| {
+        b.iter(|| {
+            bench_minimalist(
+                black_box(features_path.clone()),
+                black_box(
+                    (40..=60)
+                        .step_by(5)
+                        .flat_map(|row| {
+                            (40..=60)
+                                .step_by(5)
+                                .map(move |col| ArrayIndex::new(row, col))
+                        })
+                        .collect::<Vec<_>>(),
+                ),
+                black_box(vec![ArrayIndex::new(50, 50)]),
+            )
+        })
+    });
+}
+
+/// Benchmark with features all equal to one in a single chunk
 fn single_chunk(c: &mut Criterion) {
     let features_path = features(100, 100, 1, 1, FeaturesType::AllOnes);
 
@@ -129,6 +179,7 @@ fn single_chunk(c: &mut Criterion) {
     });
 }
 
+/// Benchmark multiple distances with features all equal to one
 fn range_distance(c: &mut Criterion) {
     // Away from the border to progressively increas the search radius.
     static X0: u64 = 30;
@@ -157,6 +208,6 @@ fn range_distance(c: &mut Criterion) {
 criterion_group!(
     name = benches;
     config = Criterion::default().measurement_time(Duration::from_secs(25));
-    targets = standard_ones, standard_random, single_chunk, range_distance
+    targets = standard_ones, standard_random, multiple_near_routes, multiple_spread_routes, single_chunk, range_distance
 );
 criterion_main!(benches);

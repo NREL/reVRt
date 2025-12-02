@@ -75,6 +75,8 @@ intersphinx_mapping = {
     "rioxarray": ("https://corteva.github.io/rioxarray/stable/", None),
     "shapely": ("https://shapely.readthedocs.io/en/stable/", None),
     "xarray": ("https://docs.xarray.dev/en/stable/", None),
+    "affine": ("https://affine.readthedocs.io/en/latest/", None),
+    "pyproj": ("https://pyproj4.github.io/pyproj/stable/", None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -113,6 +115,9 @@ pygments_style = "sphinx"
 
 # Avoid errors with self-signed certificates
 tls_verify = False
+
+# Avoid warning about api.rst not in TOC
+suppress_warnings = ["toc.not_included"]
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -212,20 +217,65 @@ texinfo_documents = [
 ]
 
 
-def skip_pydantic_methods(app, what, name, obj, skip, options):
-    if name in (
+def skip_external_methods(app, what, name, obj, skip, options):
+    mapping_methods = {
+        "clear",
+        "pop",
+        "popitem",
+        "setdefault",
+        "update",
+    }
+
+    if name in mapping_methods and (
+        "MutableMapping" in str(obj)
+        or "TypedDict" in str(obj)
+        or getattr(obj, "__doc__", "").startswith("D.")
+    ):
+        return True
+
+    if name in {"copy", "fromkeys"} and "TransmissionConfig" in str(obj):
+        return True
+
+    if name in {"items", "keys", "values"} and "Mapping" in str(obj):
+        return True
+
+    if name in {"copy", "get"} and "UserDict" in str(obj):
+        return True
+
+    if name in {
         "model_dump_json",
         "model_json_schema",
         "model_dump",
         "model_construct",
         "model_copy",
-    ):
+        "model_fields",
+        "model_computed_fields",
+        "model_rebuild",
+        "model_parametrized_name",
+        "model_post_init",
+        "model_validate",
+        "model_validate_json",
+        "model_validate_strings",
+        "copy",
+        "construct",
+        "dict",
+        "from_orm",
+        "json",
+        "parse_file",
+        "parse_obj",
+        "parse_raw",
+        "schema",
+        "schema_json",
+        "update_forward_refs",
+        "validate",
+    } and "BaseModel" in str(obj):
         return True
+
     return None
 
 
 def setup(app):
-    app.connect("autodoc-skip-member", skip_pydantic_methods)
+    app.connect("autodoc-skip-member", skip_external_methods)
 
 
 # -- Extension configuration -------------------------------------------------
@@ -240,14 +290,14 @@ html_show_sourcelink = False
 mermaid_version = "11.6.0"
 numpy_show_class_member = True
 napoleon_google_docstring = False
-napoleon_use_param = False
 napoleon_use_ivar = False
 napoleon_use_rtype = False
 napoleon_preprocess_types = True
+napoleon_use_param = True
 napoleon_type_aliases = {
     # general terms
     "sequence": ":term:`sequence`",
-    "iterable": ":term:`iterable`",
+    "iterable": ":class:`~collections.abc.Iterable`",
     "callable": ":py:func:`callable`",
     "dict_like": ":term:`dict-like <mapping>`",
     "dict-like": ":term:`dict-like <mapping>`",
@@ -288,14 +338,39 @@ napoleon_type_aliases = {
     "Series": "~pandas.Series",
     "DataFrame": "~pandas.DataFrame",
     "Categorical": "~pandas.Categorical",
-    "Path": "~~pathlib.Path",
-    # objects with abbreviated namespace (from pandas)
+    "Path": "~pathlib.Path",
+    # objects with abbreviated namespace (from numpy and pandas)
     "pd.Index": "~pandas.Index",
     "pd.NaT": "~pandas.NaT",
+    "np.dtype": "~numpy.dtype",
     # objects from reVRt
     "LandUseMultipliers": ":class:`~revrt.models.cost_layers.LandUseMultipliers`",
-    "LayeredFile": "~revrt.utilities.handlers.LayeredFile",
+    "Masks": ":class:`~revrt.costs.masks.Masks`",
+    "LayeredFile": ":class:`~revrt.utilities.handlers.LayeredFile`",
     "MergeFrictionBarriers": ":class:`~revrt.models.cost_layers.MergeFrictionBarriers`",
     "DryCosts": ":class:`~revrt.models.cost_layers.DryCosts`",
     "LayerConfig": ":class:`~revrt.models.cost_layers.LayerConfig`",
+    "IsoMultipliers": ":class:`~revrt.models.cost_layers.IsoMultipliers`",
+    "LayerBuildComponents": ":class:`~revrt.models.cost_layers.LayerBuildComponents`",
 }
+
+nitpick_ignore = [
+    ("py:class", "pydantic.types.PathType"),
+    ("py:class", "pydantic.main.BaseModel"),
+    ("py:class", "file"),
+    ("py:class", "dir"),
+    ("py:class", "ConfigDict"),
+    ("py:class", "typing_extensions.TypedDict"),
+] + [
+    ("py:obj", f"revrt.models.cost_layers.{cl}.{meth}")
+    for cl in [
+        "DryCosts",
+        "RangeConfig",
+        "Rasterize",
+        "TransmissionLayerCreationConfig",
+        "MergeFrictionBarriers",
+        "LayerBuildConfig",
+        "LayerConfig",
+    ]
+    for meth in ["model_computed_fields", "model_fields"]
+]
