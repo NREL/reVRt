@@ -78,7 +78,7 @@ jobs:
 
     - run: |
         pixi reinstall -e dev NREL-reVRt
-        pixi run -e dev --frozen tests-u
+        pixi run -e dev tests-u
 
   integration-tests:
     needs: lint
@@ -107,7 +107,7 @@ jobs:
 
     - run: |
         pixi reinstall -e dev NREL-reVRt
-        pixi run -e dev --frozen tests-i
+        pixi run -e dev tests-i
 
   tox-tests:
     needs: lint

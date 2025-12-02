@@ -32,7 +32,7 @@ jobs:
 
       - name: Run cargo check
         run: |
-          pixi run -e dev --frozen cargo check --workspace --locked
+          pixi run -e dev cargo check --workspace --locked
 
   lints:
     # Only run tests if code looks OK
@@ -96,4 +96,4 @@ jobs:
           shared-key: "gha"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - run: pixi run --frozen tests-r
+      - run: pixi run tests-r
