@@ -154,7 +154,7 @@ class TransmissionConfig(UserDict):
         ----------
         region : int
             Region code used to extract ISO.
-        tie_line_voltage : int or  str
+        tie_line_voltage : int or str
             Tie-line voltage class in kV.
 
         Returns

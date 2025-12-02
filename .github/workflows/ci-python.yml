@@ -46,7 +46,7 @@ jobs:
         locked: true
         cache: true
         cache-write: false
-        environments: pdev
+        environments: dev
 
     - run: |
         pixi reinstall -e dev --locked NREL-reVRt

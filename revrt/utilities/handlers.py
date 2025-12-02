@@ -149,7 +149,8 @@ class LayeredFile:
                 - "crs": :class:`pyproj.crs.CRS` object for layer
                 - "count": number of bands in layer
                 - "dtype": data type of layer
-                - "transform": :class:`affine.Affine` transform for layer
+                - "transform": :class:`affine.Affine` transform for
+                               layer
 
         """
         with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
@@ -272,7 +273,8 @@ class LayeredFile:
         Raises
         ------
         revrtFileNotFoundError
-            If :class:`~revrt.utilities.handlers.LayeredFile` does not exist.
+            If :class:`~revrt.utilities.handlers.LayeredFile` does not
+            exist.
         revrtKeyError
             If layer with the same name already exists and
             ``overwrite=False``.

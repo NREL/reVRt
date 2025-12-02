@@ -61,7 +61,7 @@ pixi run -e dev tests-r
 pixi run -e dev cargo test --locked --workspace --no-fail-fast
 
 # Build documentation (fails on warnings)
-pixi run -e doc make-html
+pixi run -e dev python-docs
 
 # Build wheels / extension
 pixi run -e build build-wheel
@@ -148,7 +148,7 @@ Example: Add a new CLI subcommand that dumps routing metadata.
 ## 12. CI/Release Lifecycle
 - CI runs Ruff, Pytest (unit + integration), Cargo checks/tests, Criterion
   benchmarks, and docs. Fix lint/test issues locally before pushing.
-- Docs must build without warnings (`pixi run -e doc make-html`).
+- Docs must build without warnings (`pixi run -e dev python-docs`).
 - Publishing wheels uses `pixi run -e build build-wheel`; coordinate version
   bumps across Python and Rust artifacts per the dev guide.
 
