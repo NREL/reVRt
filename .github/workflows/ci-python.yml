@@ -25,6 +25,32 @@ jobs:
           args: "format --check"
           src: "./revrt"
 
+  locked-tests:
+    needs: lint
+    name: Pixi-Locked Test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - uses: prefix-dev/setup-pixi@v0.9.3
+      with:
+        pixi-version: v0.59.0
+        locked: true
+        cache: true
+        cache-write: false
+        environments: pdev
+
+    - run: |
+        pixi reinstall -e pdev --locked NREL-COMPASS
+
   unit-tests:
     needs: lint
     name: Python Unit Tests (Pixi)
@@ -43,7 +69,7 @@ jobs:
 
     - uses: prefix-dev/setup-pixi@v0.9.3
       with:
-        pixi-version: v0.50.2
+        pixi-version: v0.59.0
         locked: true
         cache: true
         cache-write: ${{ github.ref == 'refs/heads/main' }}
@@ -71,7 +97,7 @@ jobs:
 
     - uses: prefix-dev/setup-pixi@v0.9.3
       with:
-        pixi-version: v0.50.2
+        pixi-version: v0.59.0
         locked: true
         cache: true
         cache-write: ${{ github.ref == 'refs/heads/main' }}
