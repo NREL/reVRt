@@ -75,6 +75,8 @@ intersphinx_mapping = {
     "rioxarray": ("https://corteva.github.io/rioxarray/stable/", None),
     "shapely": ("https://shapely.readthedocs.io/en/stable/", None),
     "xarray": ("https://docs.xarray.dev/en/stable/", None),
+    "affine": ("https://affine.readthedocs.io/en/latest/", None),
+    "pyproj": ("https://pyproj4.github.io/pyproj/stable/", None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -216,16 +218,22 @@ texinfo_documents = [
 
 
 def skip_external_methods(app, what, name, obj, skip, options):
-    if name in {
+    mapping_methods = {
         "clear",
         "pop",
         "popitem",
         "setdefault",
         "update",
-    } and "MutableMapping" in str(obj):
+    }
+
+    if name in mapping_methods and (
+        "MutableMapping" in str(obj)
+        or "TypedDict" in str(obj)
+        or getattr(obj, "__doc__", "").startswith("D.")
+    ):
         return True
 
-    if name in {"copy", "fromkeys"} and "UsageTracker" in str(obj):
+    if name in {"copy", "fromkeys"} and "TransmissionConfig" in str(obj):
         return True
 
     if name in {"items", "keys", "values"} and "Mapping" in str(obj):
@@ -331,13 +339,38 @@ napoleon_type_aliases = {
     "DataFrame": "~pandas.DataFrame",
     "Categorical": "~pandas.Categorical",
     "Path": "~pathlib.Path",
-    # objects with abbreviated namespace (from pandas)
+    # objects with abbreviated namespace (from numpy and pandas)
     "pd.Index": "~pandas.Index",
     "pd.NaT": "~pandas.NaT",
+    "np.dtype": "~numpy.dtype",
     # objects from reVRt
     "LandUseMultipliers": ":class:`~revrt.models.cost_layers.LandUseMultipliers`",
-    "LayeredFile": "~revrt.utilities.handlers.LayeredFile",
+    "Masks": ":class:`~revrt.costs.masks.Masks`",
+    "LayeredFile": ":class:`~revrt.utilities.handlers.LayeredFile`",
     "MergeFrictionBarriers": ":class:`~revrt.models.cost_layers.MergeFrictionBarriers`",
     "DryCosts": ":class:`~revrt.models.cost_layers.DryCosts`",
     "LayerConfig": ":class:`~revrt.models.cost_layers.LayerConfig`",
+    "IsoMultipliers": ":class:`~revrt.models.cost_layers.IsoMultipliers`",
+    "LayerBuildComponents": ":class:`~revrt.models.cost_layers.LayerBuildComponents`",
 }
+
+nitpick_ignore = [
+    ("py:class", "pydantic.types.PathType"),
+    ("py:class", "pydantic.main.BaseModel"),
+    ("py:class", "file"),
+    ("py:class", "dir"),
+    ("py:class", "ConfigDict"),
+    ("py:class", "typing_extensions.TypedDict"),
+] + [
+    ("py:obj", f"revrt.models.cost_layers.{cl}.{meth}")
+    for cl in [
+        "DryCosts",
+        "RangeConfig",
+        "Rasterize",
+        "TransmissionLayerCreationConfig",
+        "MergeFrictionBarriers",
+        "LayerBuildConfig",
+        "LayerConfig",
+    ]
+    for meth in ["model_computed_fields", "model_fields"]
+]

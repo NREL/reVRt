@@ -94,9 +94,9 @@ def build_routing_layers(  # noqa: PLR0917, PLR0913
         number of bytes is used *per worker*. By default, ``"auto"``
     create_kwargs : dict, optional
         Additional keyword arguments to pass to
-        :meth:`LayeredFile.create_new` when creating a new layered file.
-        Do not include ``template_file``; it will be ignored.
-        By default, ``None``.
+        :meth:`~revrt.utilities.handlers.LayeredFile.create_new` when
+        creating a new layered file. Do not include ``template_file``;
+        it will be ignored. By default, ``None``.
     """
     config = _validated_config(
         routing_file=routing_file,

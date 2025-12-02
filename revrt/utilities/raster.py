@@ -51,7 +51,7 @@ def rasterize_shape_file(
     reproject_vector : bool, default=True
         Reproject CRS of vector to match template raster if ``True``.
         By default, ``True``.
-    burn_value : int | float, default=1
+    burn_value : int or float, default=1
         Value used to burn vectors into raster. By default, ``1``.
     boundary_only : bool, default=False
         If ``True``, rasterize boundary of vector.
@@ -99,7 +99,7 @@ def rasterize(
 
     Parameters
     ----------
-    gdf : geopandas.DataFrame
+    gdf : DataFrame
         Geopandas DataFrame contains shapes to rasterize.
     width : int
         Width of output raster.
@@ -113,7 +113,7 @@ def rasterize(
     all_touched : bool, default=False
         Set all cells touched by vector to 1. False results in less
         cells being set to 1. By default, ``False``.
-    burn_value : int | float, default=1
+    burn_value : int or float, default=1
         Value used to burn vectors into raster. By default, ``1``.
     boundary_only : bool, default=False
         If ``True``, rasterize boundary of vector.
@@ -123,7 +123,7 @@ def rasterize(
 
     Returns
     -------
-    numpy.nd_array
+    array-like
         Rasterized vector data
     """
 

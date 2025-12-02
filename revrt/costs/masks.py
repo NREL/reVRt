@@ -40,7 +40,7 @@ class Masks:
         ----------
         shape : tuple
             Shape of mask rasters (height, width).
-        crs : str | dict
+        crs : str or dict
             Coordinate reference system of mask rasters.
         transform : affine.Affine
             Affine transform of mask rasters.
@@ -63,28 +63,28 @@ class Masks:
 
     @property
     def landfall_mask(self):
-        """array-like: Landfalls cells boolean mask; one cell wide"""
+        """:term:`array_like`: Landfalls cells bool mask; 1 cell wide"""
         if self._landfall_mask is None:
             raise revrtAttributeError(_MASK_MSG)
         return self._landfall_mask
 
     @property
     def wet_mask(self):
-        """array-like: Wet cells boolean mask; no landfall cells"""
+        """:term:`array_like`: Wet cells bool mask; no landfall cells"""
         if self._wet_mask is None:
             raise revrtAttributeError(_MASK_MSG)
         return self._wet_mask
 
     @property
     def dry_mask(self):
-        """array-like: Dry cells boolean mask; no landfall cells"""
+        """:term:`array_like`: Dry cells bool mask; no landfall cells"""
         if self._dry_mask is None:
             raise revrtAttributeError(_MASK_MSG)
         return self._dry_mask
 
     @property
     def dry_plus_mask(self):
-        """array-like: Dry cells boolean mask; *with* landfall cells"""
+        """:term:`array_like`: Dry cells bool mask; *with* landfall"""
         if self._dry_plus_mask is None:
             self._dry_plus_mask = np.logical_or(
                 self.dry_mask, self.landfall_mask
@@ -93,7 +93,7 @@ class Masks:
 
     @property
     def wet_plus_mask(self):
-        """array-like: Wet cells mask, *with* landfall cells"""
+        """:term:`array_like`: Wet cells mask, *with* landfall cells"""
         if self._wet_plus_mask is None:
             self._wet_plus_mask = np.logical_or(
                 self.wet_mask, self.landfall_mask
@@ -118,7 +118,7 @@ class Masks:
         reproject_vector : bool, optional
             Reproject CRS of vector to match template raster if True.
             By default, ``True``.
-        lock : bool | `dask.distributed.Lock`, optional
+        lock : bool or `dask.distributed.Lock`, optional
             Lock to use to write data using dask. If not supplied, a
             single process is used for writing data to the mask
             GeoTIFFs.
@@ -191,10 +191,12 @@ class Masks:
         Parameters
         ----------
         layer_fp : path-like
-            Path to LayeredFile on disk for which masks were created.
-            The masks will be of the same shape/crs/transform as this
-            file.
+            Path to :class:`~revrt.utilities.handlers.LayeredFile` on
+            disk for which masks were created. The masks will be of the
+            same shape/crs/transform as this file.
 
+        Notes
+        -----
         This does not need to be called if :meth:`Masks.create()`
         was run previously. Mask files must be in the current directory.
         """

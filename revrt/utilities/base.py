@@ -152,7 +152,8 @@ def check_geotiff(layer_file_fp, geotiff, transform_atol=0.01):
     Parameters
     ----------
     layer_file_fp : path-like
-        Path to data representing a :class:`LayeredFile` instance.
+        Path to data representing a
+        :class:`~revrt.utilities.handlers.LayeredFile` instance.
     geotiff : path-like
         Path to GeoTIFF file.
     transform_atol : float, default=0.01
@@ -253,10 +254,10 @@ def load_data_using_layer_file_profile(
         Path to layered file on disk. This file must already exist.
     geotiff : path-like
         Path to GeoTIFF from which data should be read.
-    tiff_chunks : int | str, default="file"
+    tiff_chunks : int or str, default="file"
         Chunk size to use when reading the GeoTIFF file. This will be
         passed down as the ``chunks`` argument to
-        :meth:`rioxarray.open_rasterio`. By default, ``"file"``.
+        :func:`rioxarray.open_rasterio`. By default, ``"file"``.
     layer_dirs : iterable of path-like, optional
         Directories to search for `geotiff` in, if not found in current
         directory. By default, ``None``, which means only the current
@@ -322,20 +323,22 @@ def save_data_using_layer_file_profile(
     layer_fp : path-like
         Path to layered file on disk. This file must already exist.
     data : array-like
-        Data to write to GeoTIFF using ``LayeredFile`` profile.
+        Data to write to GeoTIFF using
+        :class:`~revrt.utilities.handlers.LayeredFile` profile.
     geotiff : path-like
         Path to output GeoTIFF file.
-    nodata : int | float, optional
+    nodata : int or float, optional
         Optional nodata value for the raster layer. By default,
         ``None``, which does not add a "nodata" value.
-    lock : bool | `dask.distributed.Lock`, optional
+    lock : bool or `dask.distributed.Lock`, optional
         Lock to use to write data using dask. If not supplied, a single
         process is used for writing data to the GeoTIFF.
         By default, ``None``.
     **profile_kwargs
         Additional keyword arguments to pass into writing the
         raster. The following attributes ar ignored (they are set
-        using properties of the source :class:`LayeredFile`):
+        using properties of the source
+        :class:`~revrt.utilities.handlers.LayeredFile`):
 
             - nodata
             - transform
@@ -348,7 +351,7 @@ def save_data_using_layer_file_profile(
     ------
     revrtValueError
         If shape of provided data does not match shape of
-        :class:`LayeredFile`.
+        :class:`~revrt.utilities.handlers.LayeredFile`.
     """
     with xr.open_dataset(layer_fp, consolidated=False, engine="zarr") as ds:
         crs = ds.rio.crs
@@ -382,26 +385,28 @@ def save_data_using_custom_props(
     Parameters
     ----------
     data : array-like
-        Data to write to GeoTIFF using ``LayeredFile`` profile.
+        Data to write to GeoTIFF using
+        :class:`~revrt.utilities.handlers.LayeredFile` profile.
     geotiff : path-like
         Path to output GeoTIFF file.
     shape : tuple
         Shape of output raster (height, width).
-    crs : str | dict
+    crs : str or dict
         Coordinate reference system of output raster.
     transform : affine.Affine
         Affine transform of output raster.
-    nodata : int | float, optional
+    nodata : int or float, optional
         Optional nodata value for the raster layer. By default,
         ``None``, which does not add a "nodata" value.
-    lock : bool | `dask.distributed.Lock`, optional
+    lock : bool or `dask.distributed.Lock`, optional
         Lock to use to write data using dask. If not supplied, a single
         process is used for writing data to the GeoTIFF.
         By default, ``None``.
     **profile_kwargs
         Additional keyword arguments to pass into writing the
         raster. The following attributes ar ignored (they are set
-        using properties of the source :class:`LayeredFile`):
+        using properties of the source
+        :class:`~revrt.utilities.handlers.LayeredFile`):
 
             - nodata
             - transform
@@ -414,7 +419,7 @@ def save_data_using_custom_props(
     ------
     revrtValueError
         If shape of provided data does not match shape of
-        :class:`LayeredFile`.
+        :class:`~revrt.utilities.handlers.LayeredFile`.
     """
     data = expand_dim_if_needed(data)
 

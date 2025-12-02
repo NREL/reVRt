@@ -47,10 +47,10 @@ class LayeredFile:
     """Supported template file endings"""
 
     LATITUDE = "latitude"
-    """Name of latitude values layer in :class:`LayeredFile`"""
+    """Name of latitude values layer in LayeredFile"""
 
     LONGITUDE = "longitude"
-    """Name of longitude values layer in :class:`LayeredFile`"""
+    """Name of longitude values layer in LayeredFile"""
 
     def __init__(self, fp):
         """
@@ -149,7 +149,7 @@ class LayeredFile:
                 - "crs": :class:`pyproj.crs.CRS` object for layer
                 - "count": number of bands in layer
                 - "dtype": data type of layer
-                - "transform": :class:`Affine` transform for layer
+                - "transform": :class:`affine.Affine` transform for layer
 
         """
         with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
@@ -177,17 +177,18 @@ class LayeredFile:
         chunk_x, chunk_y : int, default=2048
             Chunk size of x and y dimension for newly-created layered
             file. By default, ``2048``.
-        read_chunks : int | str, default="auto"
+        read_chunks : int or str, default="auto"
             Chunk size to use when reading the template file. This will
             be passed down as the ``chunks`` argument to
-            :meth:`rioxarray.open_rasterio` or
-            :meth:`xarray.open_dataset`, depending on what template file
+            :func:`rioxarray.open_rasterio` or
+            :func:`xarray.open_dataset`, depending on what template file
             is passed in. By default, ``"auto"``.
 
         Returns
         -------
         LayeredFile
-            This `LayeredFile` object with a corresponding file on disk.
+            This :class:`~revrt.utilities.handlers.LayeredFile` object
+            with a corresponding file on disk.
         """
         if self.fp.exists() and not overwrite:
             msg = f"File {self.fp!r} exits and overwrite=False"
@@ -242,7 +243,7 @@ class LayeredFile:
             Description of layer being added. By default, ``None``.
         overwrite : bool, default=False
             Option to overwrite layer data if layer already exists in
-            :class:`LayeredFile`.
+            :class:`~revrt.utilities.handlers.LayeredFile`.
 
             .. IMPORTANT::
               When overwriting data, the encoding (and therefore things
@@ -251,7 +252,7 @@ class LayeredFile:
               new type of data, manually remove it from the file first.
 
             By default, ``False``.
-        nodata : int | float, optional
+        nodata : int or float, optional
             Optional nodata value for the raster layer. This value will
             be added to the layer's attributes meta dictionary under the
             "nodata" key.
@@ -260,7 +261,8 @@ class LayeredFile:
                ``rioxarray`` does not recognize the "nodata" value when
                reading from a zarr file (because zarr uses the
                ``_FillValue`` encoding internally). To get the correct
-               "nodata" value back when reading a :class:`LayeredFile`,
+               "nodata" value back when reading a
+               :class:`~revrt.utilities.handlers.LayeredFile`,
                you can either 1) read from ``da.rio.encoded_nodata`` or
                2) check the layer's attributes for the ``"nodata"`` key,
                and if present, use ``da.rio.write_nodata`` to write the
@@ -270,7 +272,7 @@ class LayeredFile:
         Raises
         ------
         revrtFileNotFoundError
-            If :class:`LayeredFile` does not exist.
+            If :class:`~revrt.utilities.handlers.LayeredFile` does not exist.
         revrtKeyError
             If layer with the same name already exists and
             ``overwrite=False``.
@@ -393,7 +395,7 @@ class LayeredFile:
             Description of layer being added. By default, ``None``.
         overwrite : bool, default=False
             Option to overwrite layer data if layer already exists in
-            :class:`LayeredFile`.
+            :class:`~revrt.utilities.handlers.LayeredFile`.
 
             .. IMPORTANT::
               When overwriting data, the encoding (and therefore things
@@ -402,7 +404,7 @@ class LayeredFile:
               new type of data, manually remove it from the file first.
 
             By default, ``False``.
-        nodata : int | float, optional
+        nodata : int or float, optional
             Optional nodata value for the raster layer. This value will
             be added to the layer's attributes meta dictionary under the
             "nodata" key.
@@ -411,17 +413,18 @@ class LayeredFile:
                ``rioxarray`` does not recognize the "nodata" value when
                reading from a zarr file (because zarr uses the
                ``_FillValue`` encoding internally). To get the correct
-               "nodata" value back when reading a :class:`LayeredFile`,
+               "nodata" value back when reading a
+               :class:`~revrt.utilities.handlers.LayeredFile`,
                you can either 1) read from ``da.rio.encoded_nodata`` or
                2) check the layer's attributes for the ``"nodata"`` key,
                and if present, use ``da.rio.write_nodata`` to write the
                nodata value so that ``da.rio.nodata`` gives the right
                value.
 
-        tiff_chunks : int | str, default="auto"
+        tiff_chunks : int or str, default="auto"
             Chunk size to use when reading the GeoTIFF file. This will
             be passed down as the ``chunks`` argument to
-            :meth:`rioxarray.open_rasterio`. By default, ``"auto"``.
+            :func:`rioxarray.open_rasterio`. By default, ``"auto"``.
         """
         if not self.fp.exists():
             logger.info("%s not found - creating from %s...", self.fp, geotiff)
@@ -466,18 +469,20 @@ class LayeredFile:
             Layer to extract,
         geotiff : path-like
             Path to output GeoTIFF file.
-        ds_chunks : int | str, default="auto"
-            Chunk size to use when reading the :class:`LayeredFile`.
+        ds_chunks : int or str, default="auto"
+            Chunk size to use when reading the
+            :class:`~revrt.utilities.handlers.LayeredFile`.
             This will be passed down as the ``chunks`` argument to
-            :meth:`xarray.open_dataset`. By default, ``"auto"``.
-        lock : bool | `dask.distributed.Lock`, optional
+            :func:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool or `dask.distributed.Lock`, optional
             Lock to use to write data using dask. If not supplied, a
             single process is used for writing data to the GeoTIFF.
             By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
-            using properties of the source :class:`LayeredFile`):
+            using properties of the source
+            :class:`~revrt.utilities.handlers.LayeredFile`):
 
                 - nodata
                 - transform
@@ -509,9 +514,10 @@ class LayeredFile:
 
         Parameters
         ----------
-        layers : list | dict
+        layers : list or dict
             Dictionary mapping layer names to GeoTIFFs filepaths. Each
-            GeoTIFF will be loaded into the :class:`LayeredFile` user
+            GeoTIFF will be loaded into the
+            :class:`~revrt.utilities.handlers.LayeredFile` user
             the layer name. If a list of GeoTIFFs filepaths is provided,
             the file name stems are used as the layer names.
         check_tiff : bool, optional
@@ -522,7 +528,7 @@ class LayeredFile:
             By default, ``None``, which does not store any descriptions.
         overwrite : bool, default=False
             Option to overwrite layer data if layer already exists in
-            :class:`LayeredFile`.
+            :class:`~revrt.utilities.handlers.LayeredFile`.
 
             .. IMPORTANT::
               When overwriting data, the encoding (and therefore things
@@ -531,7 +537,7 @@ class LayeredFile:
               new type of data, manually remove it from the file first.
 
             By default, ``False``.
-        nodata : int | float, optional
+        nodata : int or float, optional
             Optional nodata value for the raster layer. This value will
             be added to the layer's attributes meta dictionary under the
             "nodata" key.
@@ -540,7 +546,8 @@ class LayeredFile:
                ``rioxarray`` does not recognize the "nodata" value when
                reading from a zarr file (because zarr uses the
                ``_FillValue`` encoding internally). To get the correct
-               "nodata" value back when reading a :class:`LayeredFile`,
+               "nodata" value back when reading a
+               :class:`~revrt.utilities.handlers.LayeredFile`,
                you can either 1) read from ``da.rio.encoded_nodata`` or
                2) check the layer's attributes for the ``"nodata"`` key,
                and if present, use ``da.rio.write_nodata`` to write the
@@ -583,18 +590,20 @@ class LayeredFile:
         ----------
         layers : dict
             Dictionary mapping layer names to GeoTIFF files to create.
-        ds_chunks : int | str, default="auto"
-            Chunk size to use when reading the :class:`LayeredFile`.
+        ds_chunks : int or str, default="auto"
+            Chunk size to use when reading the
+            :class:`~revrt.utilities.handlers.LayeredFile`.
             This will be passed down as the ``chunks`` argument to
-            :meth:`xarray.open_dataset`. By default, ``"auto"``.
-        lock : bool | `dask.distributed.Lock`, optional
+            :func:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool or `dask.distributed.Lock`, optional
             Lock to use to write data using dask. If not supplied, a
             single process is used for writing data to the GeoTIFFs.
             By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
-            using properties of the source :class:`LayeredFile`):
+            using properties of the source
+            :class:`~revrt.utilities.handlers.LayeredFile`):
 
                 - nodata
                 - transform
@@ -625,18 +634,19 @@ class LayeredFile:
             Path to output directory into which layers should be saved
             as GeoTIFFs. This directory will be created if it does not
             already exist.
-        ds_chunks : int | str, default="auto"
+        ds_chunks : int or str, default="auto"
             Chunk size to use when reading the :class:`LayeredFile`.
             This will be passed down as the ``chunks`` argument to
-            :meth:`xarray.open_dataset`. By default, ``"auto"``.
-        lock : bool | `dask.distributed.Lock`, optional
+            :func:`xarray.open_dataset`. By default, ``"auto"``.
+        lock : bool or `dask.distributed.Lock`, optional
             Lock to use to write data using dask. If not supplied, a
             single process is used for writing data to the GeoTIFFs.
             By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing the
             raster. The following attributes ar ignored (they are set
-            using properties of the source :class:`LayeredFile`):
+            using properties of the source
+            :class:`~revrt.utilities.handlers.LayeredFile`):
 
                 - nodata
                 - transform

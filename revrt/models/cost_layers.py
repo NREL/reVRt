@@ -241,7 +241,7 @@ class MergeFrictionBarriers(BaseModel, extra="forbid"):
     output_layer_name: str | None = BARRIER_H5_LAYER_NAME
     """Name of combined output layer
 
-    By default, :obj:`BARRIER_H5_LAYER_NAME`.
+    By default, :obj:`~revrt.constants.BARRIER_H5_LAYER_NAME`.
     """
 
     barrier_multiplier: float = 1e6
@@ -275,7 +275,7 @@ class LayerConfig(BaseModel):
     values_are_costs_per_mile: bool | None = False
     """Option to specify that the values given represent $/mile
 
-    If ``True``, the values will be converted to $/:obj:`CELL_DIST`,
+    If ``True``, the values will be converted to $/cell_size,
     which is what is ultimately used for routing.
     """
 
