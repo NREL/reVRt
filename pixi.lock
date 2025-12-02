@@ -16773,7 +16773,7 @@ packages:
 - pypi: ./
   name: nrel-revrt
   version: 0.2.1
-  sha256: 1b5cfc81c804fc54deb34f96ebdb3c91993286f8b6fe25151e5507d8d2860d4e
+  sha256: 3b87700cdb0252e6e6ec1e1db20e19cf4076618062b0854fb1062394f5c1db7d
   requires_dist:
   - affine>=2.4.0,<3
   - dask>=2025.4.1,<2026

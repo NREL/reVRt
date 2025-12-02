@@ -197,7 +197,7 @@ max-args = 10
 max-positional-args = 10
 
 
-[tool.pixi.project]
+[tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "win-64", "linux-64"]
 
@@ -215,13 +215,15 @@ build = { features = ["build"], solve-group = "default" }
 build-wheel = { cmd = "maturin build" }
 
 [tool.pixi.feature.dev.tasks]
-make-html = { cmd = "make html", cwd = "docs"}
 tests = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
 tests-u = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
 tests-i = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
 tests-r = "cargo test --locked --workspace --no-fail-fast"
 publish-revrt = "cargo publish --locked -p revrt --all-features"
 publish-cli = "cargo publish --locked -p revrt-cli --all-features"
+
+[tool.pixi.feature.doc.tasks]
+python-docs = { cmd = "make clean html", cwd = "docs", env = { SPHINXOPTS = "--fail-on-warning --keep-going --nitpicky" }}
 
 [tool.pixi.pypi-dependencies]
 NREL-reVRt = { path = ".", editable = true }
