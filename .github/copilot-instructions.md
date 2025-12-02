@@ -31,18 +31,18 @@ standalone analysis.
 
 ## 3. High-Level Project Structure
 ```
-revrt/                     Core Python package (CLI, costs, models, utilities)
-  costs/                   Layer builders and friction/barrier assembly
-  models/                  Pydantic config and cost layer schemas
-  spatial_characterization/Derived spatial analytics
-  utilities/               Shared IO, raster, logging, and helpers
-crates/
-  revrt/                   Rust routing library + PyO3 extension
-  cli/                     Rust CLI wrapper and benches
-docs/                      Sphinx sources and dev guidelines
-tests/python/unit          Focused unit coverage (>=95%)
-tests/python/integration   Scenario-level regression tests
-support/                   Helper scripts (e.g., Zarr conversion)
+revrt/                      Core Python package (CLI, costs, models, utilities)
+  costs/                    Layer builders and friction/barrier assembly
+  models/                   Pydantic config and cost layer schemas
+  spatial_characterization/ Derived spatial analytics
+  utilities/                Shared IO, raster, logging, and helpers
+crates/                     Rust code
+  revrt/                    Rust routing library + PyO3 extension
+  cli/                      Rust CLI wrapper and benches
+docs/                       Sphinx sources and dev guidelines
+tests/python/unit           Focused unit coverage (>=95%)
+tests/python/integration    Scenario-level regression tests
+support/                    Helper scripts (e.g., Zarr conversion)
 ```
 
 ## 4. Environment & Commands Cheat Sheet
@@ -170,5 +170,5 @@ Example: Add a new CLI subcommand that dumps routing metadata.
 ## 15. Security & Secrets
 - Do not commit credentials. External services (e.g., data sources) should be
   configured via environment variables or Pixi-managed secrets.
-- Review the Docker/CI workflows before altering release automation; they assume
+- Review the CI workflows before altering release automation; they assume
   reproducible Pixi environments and locked dependencies.
