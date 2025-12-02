@@ -18,7 +18,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          pixi-version: v0.50.2
+          pixi-version: v0.59.0
           cache: true
           frozen: true
           cache-write: ${{ github.ref == 'refs/heads/main' }}
@@ -32,7 +32,7 @@ jobs:
 
       - name: Run cargo check
         run: |
-          pixi run -e dev --frozen cargo check --workspace --locked
+          pixi run -e dev cargo check --workspace --locked
 
   lints:
     # Only run tests if code looks OK
@@ -45,7 +45,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          pixi-version: v0.50.2
+          pixi-version: v0.59.0
           cache: true
           frozen: true
           cache-write: ${{ github.ref == 'refs/heads/main' }}
@@ -85,7 +85,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          pixi-version: v0.50.2
+          pixi-version: v0.59.0
           cache: true
           frozen: true
           cache-write: ${{ github.ref == 'refs/heads/main' }}
@@ -96,4 +96,4 @@ jobs:
           shared-key: "gha"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - run: pixi run --frozen tests-r
+      - run: pixi run tests-r

@@ -19,15 +19,15 @@ logger = logging.getLogger(__name__)
 
 DRY_MULTIPLIER_TIFF = "dry_multipliers.tif"
 DEFAULT_HILL_MULTIPLIER = 1
-"""1: Default hill slope multiplier value"""
+"""Default hill slope multiplier value (1)"""
 DEFAULT_MTN_MULTIPLIER = 1
-"""1: Default mountain slope multiplier value"""
+"""Default mountain slope multiplier value (1)"""
 DEFAULT_HILL_SLOPE = 2
-"""2: Default hill slope cutoff value
+"""Default hill slope cutoff value (2)
 
 Slope values above this (inclusive) are considered hills"""
 DEFAULT_MTN_SLOPE = 8
-"""8: Default mountain slope cutoff value"""
+"""Default mountain slope cutoff value (8)"""
 NLCD_LAND_USE_CLASSES = {
     "cropland": [80, 81],
     "forest": [41, 42, 43],
@@ -37,9 +37,9 @@ NLCD_LAND_USE_CLASSES = {
 }
 """NLCD categories relevant to routing"""
 WATER_NLCD_CODE = 11
-"""11: NLCD category value for water"""
+"""NLCD category value for water (11)"""
 WATER_MULTIPLIER = 10.0
-"""10: Multiplier value for water cells based on NLCD"""
+"""Multiplier value for water cells based on NLCD (10)"""
 
 
 class DryCostsCreator(BaseLayerCreator):
@@ -74,7 +74,7 @@ class DryCostsCreator(BaseLayerCreator):
             Path to the National Land Coverage Database GeoTIFF.
         slope_tiff : path-like
             Path to the slope GeoTIFF. Slope must be in decimal percent.
-        transmission_config : dict | path-like, optional
+        transmission_config : dict or path-like, optional
             Dictionary or path to JSON file containing dictionary with
             transmission cost configuration values. Valid configuration
             keys are:
@@ -97,7 +97,7 @@ class DryCostsCreator(BaseLayerCreator):
             Boolean array representing mask where dry cost values should
             be applied. BY default, ``None``, which does not apply a
             mask to the cost array.
-        default_multipliers : dict | IsoMultipliers, optional
+        default_multipliers : dict or IsoMultipliers, optional
             Multipliers for regions not specified in the
             `iso_region_tiff`. Must be a dictionary of the form::
 
@@ -130,14 +130,15 @@ class DryCostsCreator(BaseLayerCreator):
             the nodata value for the output raster of that layer. This
             value will be added to the layer's attributes meta
             dictionary under the "nodata" key. By default, ``None``.
-        lock : bool | `dask.distributed.Lock`, optional
+        lock : bool or `dask.distributed.Lock`, optional
             Lock to use to write data to GeoTIFF using dask. If not
             supplied, a single process is used for writing data to disk.
             By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing output
             rasters. The following attributes ar ignored (they are set
-            using properties of the :class:`LayeredFile`):
+            using properties of the
+            :class:`~revrt.utilities.handlers.LayeredFile`):
 
                 - nodata
                 - transform
@@ -428,7 +429,7 @@ def compute_slope_multipliers(slope, chunks, config=None):
     chunks : tuple
         Dask chunks to use when creating multipliers array. Should be
         of the same shape as `slope`.
-    config : dict | None
+    config : dict or None
         Multipliers and slope cut offs for hilly and mountain terrain.
         The following keys are allowed:
 

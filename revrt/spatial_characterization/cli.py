@@ -105,7 +105,7 @@ def buffered_route_characterizations(
 
     Returns
     -------
-    pd.DataFrame
+    DataFrame
         Pandas DataFrame containing computed characteristics/stats.
     """
     rds = (

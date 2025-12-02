@@ -51,7 +51,7 @@ class TransmissionConfig(UserDict):
 
         Parameters
         ----------
-        config : str | dict, optional
+        config : str or dict, optional
             Dictionary of transmission cost configuration values, or
             path to JSON/JSON5 file containing this dictionary. The
             dictionary should have the following keys:
@@ -154,7 +154,7 @@ class TransmissionConfig(UserDict):
         ----------
         region : int
             Region code used to extract ISO.
-        tie_line_voltage : int | str
+        tie_line_voltage : int or str
             Tie-line voltage class in kV.
 
         Returns
@@ -179,7 +179,7 @@ class TransmissionConfig(UserDict):
         ----------
         region : int
             Region code used to extract ISO.
-        tie_line_voltage : int | str
+        tie_line_voltage : int or str
             Tie-line voltage class in kV.
 
         Returns
@@ -204,7 +204,7 @@ class TransmissionConfig(UserDict):
         ----------
         feature_voltage : int
             Voltage of feature that tie-line is connecting to.
-        tie_line_voltage : int | str
+        tie_line_voltage : int or str
             Tie-line voltage class in kV.
 
         Returns
@@ -229,7 +229,7 @@ def parse_config(config=None):
 
     Parameters
     ----------
-    config : str | dict | TransmissionConfig, optional
+    config : str or dict or TransmissionConfig, optional
         Path to transmission config JSON, dictionary of transmission
         config JSONs, or preloaded TransmissionConfig objects.
         By default, ``None``.
@@ -251,7 +251,7 @@ def parse_cap_class(capacity):
 
     Parameters
     ----------
-    capacity : int | float | str
+    capacity : int or float or str
         Capacity to convert to "capacity class".
 
     Returns

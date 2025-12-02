@@ -39,7 +39,7 @@ class LayerCreator(BaseLayerCreator):
 
         Parameters
         ----------
-        io_handler : :class:`LayeredFile`
+        io_handler : LayeredFile
             Layered file IO handler.
         masks : Masks
             Masks instance that can be used to retrieve multiple types
@@ -88,7 +88,7 @@ class LayerCreator(BaseLayerCreator):
         write_to_file : bool, default=True
             Option to write the layer to file after creation.
 
-            ..IMPORTANT::
+            .. IMPORTANT::
                 This will overwrite existing layers with the same name
                 already in the file.
 
@@ -96,22 +96,23 @@ class LayerCreator(BaseLayerCreator):
         description : str, optional
             Optional description to store with this layer in the H5
             file. By default, ``None``.
-        tiff_chunks : int | str, default="file"
+        tiff_chunks : int or str, default="file"
             Chunk size to use when reading the GeoTIFF file. This will
             be passed down as the ``chunks`` argument to
-            :meth:`rioxarray.open_rasterio`. By default, ``"file"``.
-        nodata : int | float, optional
+            :func:`rioxarray.open_rasterio`. By default, ``"file"``.
+        nodata : int or float, optional
             Optional nodata value for output rasters. This value will
             be added to the layer's attributes meta dictionary under the
             "nodata" key.
-        lock : bool | `dask.distributed.Lock`, optional
+        lock : bool or `dask.distributed.Lock`, optional
             Lock to use to write data to GeoTIFF using dask. If not
             supplied, a single process is used for writing data to disk.
             By default, ``None``.
         **profile_kwargs
             Additional keyword arguments to pass into writing output
             rasters. The following attributes ar ignored (they are set
-            using properties of the :class:`LayeredFile`):
+            using properties of the
+            :class:`~revrt.utilities.handlers.LayeredFile`):
 
                 - nodata
                 - transform
