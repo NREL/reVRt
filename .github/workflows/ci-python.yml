@@ -49,7 +49,7 @@ jobs:
         environments: pdev
 
     - run: |
-        pixi reinstall -e pdev --locked NREL-COMPASS
+        pixi reinstall -e dev --locked NREL-reVRt
 
   unit-tests:
     needs: lint
