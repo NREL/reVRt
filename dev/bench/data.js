@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1764698957939,
+  "lastUpdate": 1764716117266,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -1595,6 +1595,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 279717088,
             "range": "± 3838541",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ddbd0f51d40267f35ae17136a74b1819175555fc",
+          "message": "Repo updates (#167)\n\n* Bump pixi version\n\n* Add locked test\n\n* Add fetch tags\n\n* No frozen in GHA\n\n* Add codeql workflow\n\n* Add first pass of copilot instructions\n\n* MInor updates\n\n* Update Makefile\n\n* Add glossary\n\n* New build docs command\n\n* Use new build command\n\n* Avoid external warnings\n\n* Run check on PR\n\n* Add glossary link\n\n* Fix docs\n\n* Update doc deps\n\n* Add codecov action\n\n* Minor fix\n\n* Update lockfile\n\n* PR review updates",
+          "timestamp": "2025-12-02T15:30:43-07:00",
+          "tree_id": "da72357fb80deda74326d3dd415bd0ea5afec4aa",
+          "url": "https://github.com/NREL/reVRt/commit/ddbd0f51d40267f35ae17136a74b1819175555fc"
+        },
+        "date": 1764716116554,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 77233479,
+            "range": "± 1531831",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 127716334,
+            "range": "± 1447277",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 118419079,
+            "range": "± 3619883",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 161062058,
+            "range": "± 6198577",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 444495560,
+            "range": "± 22288541",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 143740076,
+            "range": "± 3282957",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 146434030,
+            "range": "± 642594",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 154487073,
+            "range": "± 1717808",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 182649492,
+            "range": "± 2124883",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 286060505,
+            "range": "± 2664445",
             "unit": "ns/iter"
           }
         ]
