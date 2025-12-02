@@ -16,9 +16,10 @@ from shapely.ops import unary_union
 
 from revrt._cli import main
 from revrt.constants import BARRIER_H5_LAYER_NAME
-from revrt.costs.cli import build_routing_layers
+from revrt.costs.cli import build_masks, build_routing_layers
 from revrt.costs.masks import Masks
 from revrt.exceptions import revrtConfigurationError
+from revrt.utilities import LayeredFile
 
 
 @pytest.fixture(scope="module")
@@ -72,6 +73,207 @@ def masks_for_testing(sample_tiff_props, tmp_path_factory):
     )
     masks.create(land_mask_fp, save_tiff=True, reproject_vector=True)
     return masks
+
+
+@pytest.fixture(scope="module")
+def basic_land_mask(tmp_path_factory):
+    """Write a basic union-of-boxes polygon to disk as a land mask"""
+
+    land_mask_fp = tmp_path_factory.mktemp("masks") / "land_mask.gpkg"
+    geometry = unary_union([box(0, -10, 10, 0), box(5, 0, 10, 5)])
+    basic_shape = gpd.GeoDataFrame(geometry=[geometry], crs="ESRI:102008")
+    basic_shape.to_file(land_mask_fp, driver="GPKG")
+    return land_mask_fp
+
+
+def _template_metadata(template_file):
+    """Return shape, CRS, and affine transform for template"""
+    template_file = Path(template_file)
+    if template_file.suffix == ".zarr":
+        open_func = xr.open_dataset
+        kwargs = {"consolidated": False, "engine": "zarr"}
+    else:
+        open_func = rioxarray.open_rasterio
+        kwargs = {}
+
+    with open_func(template_file, chunks="auto", **kwargs) as fh:
+        shape = fh.rio.shape
+        crs = fh.rio.crs
+        transform = fh.rio.transform()
+
+    return shape, crs, transform
+
+
+def _expected_masks(template_file, land_mask_fp, reproject_vector):
+    """Create masks in-memory to compare against CLI outputs"""
+    shape, crs, transform = _template_metadata(template_file)
+    expected_dir = Path(land_mask_fp).parent / "expected_masks"
+    masks = Masks(
+        shape=shape,
+        crs=crs,
+        transform=transform,
+        masks_dir=expected_dir,
+    )
+    masks.create(
+        land_mask_shp_fp=land_mask_fp,
+        save_tiff=False,
+        reproject_vector=reproject_vector,
+    )
+    return masks
+
+
+def _load_masks_from_disk(masks_dir, template_file):
+    """Load masks written to disk for comparison"""
+    shape, crs, transform = _template_metadata(template_file)
+    layered_fp = (
+        Path(masks_dir).parent / f"{Path(masks_dir).name}_template.zarr"
+    )
+    lf = LayeredFile(layered_fp)
+    lf.create_new(template_file, overwrite=True)
+
+    masks = Masks(
+        shape=shape,
+        crs=crs,
+        transform=transform,
+        masks_dir=masks_dir,
+    )
+    masks.load(layered_fp)
+    return masks
+
+
+def test_build_masks_writes_expected_outputs_from_geotiff(
+    tmp_path, sample_extra_fp, basic_land_mask
+):
+    """build_masks writes all mask GeoTIFFs matching in-memory expectations"""
+
+    expected_masks = _expected_masks(
+        sample_extra_fp, basic_land_mask, reproject_vector=False
+    )
+
+    masks_dir = tmp_path / "masks"
+    build_masks(
+        land_mask_shp_fp=basic_land_mask,
+        template_file=sample_extra_fp,
+        masks_dir=masks_dir,
+        reproject_vector=False,
+    )
+
+    for fname in (
+        Masks.LANDFALL_MASK_FNAME,
+        Masks.RAW_LAND_MASK_FNAME,
+        Masks.LAND_MASK_FNAME,
+        Masks.OFFSHORE_MASK_FNAME,
+    ):
+        assert (masks_dir / fname).exists()
+
+    actual_masks = _load_masks_from_disk(masks_dir, sample_extra_fp)
+
+    assert np.array_equal(
+        actual_masks.landfall_mask, expected_masks.landfall_mask
+    )
+    assert np.array_equal(actual_masks.dry_mask, expected_masks.dry_mask)
+    assert np.array_equal(actual_masks.wet_mask, expected_masks.wet_mask)
+    assert np.array_equal(
+        actual_masks.dry_plus_mask, expected_masks.dry_plus_mask
+    )
+    assert np.array_equal(
+        actual_masks.wet_plus_mask, expected_masks.wet_plus_mask
+    )
+
+
+def test_build_masks_writes_expected_outputs_from_zarr(
+    tmp_path, sample_extra_fp, basic_land_mask
+):
+    """build_masks handles zarr templates via xarray.open_dataset"""
+
+    template_zarr = tmp_path / "template.zarr"
+    LayeredFile(template_zarr).create_new(sample_extra_fp)
+
+    expected_masks = _expected_masks(
+        template_zarr, basic_land_mask, reproject_vector=False
+    )
+
+    masks_dir = tmp_path / "masks_zarr"
+    build_masks(
+        land_mask_shp_fp=basic_land_mask,
+        template_file=template_zarr,
+        masks_dir=masks_dir,
+        reproject_vector=False,
+    )
+
+    for fname in (
+        Masks.LANDFALL_MASK_FNAME,
+        Masks.RAW_LAND_MASK_FNAME,
+        Masks.LAND_MASK_FNAME,
+        Masks.OFFSHORE_MASK_FNAME,
+    ):
+        assert (masks_dir / fname).exists()
+
+    actual_masks = _load_masks_from_disk(masks_dir, template_zarr)
+
+    assert np.array_equal(
+        actual_masks.landfall_mask, expected_masks.landfall_mask
+    )
+    assert np.array_equal(actual_masks.dry_mask, expected_masks.dry_mask)
+    assert np.array_equal(actual_masks.wet_mask, expected_masks.wet_mask)
+    assert np.array_equal(
+        actual_masks.dry_plus_mask, expected_masks.dry_plus_mask
+    )
+    assert np.array_equal(
+        actual_masks.wet_plus_mask, expected_masks.wet_plus_mask
+    )
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_build_masks_cli_creates_expected_outputs(
+    tmp_path, sample_extra_fp, cli_runner, basic_land_mask
+):
+    """CLI build-masks command writes expected mask rasters"""
+
+    masks_dir = tmp_path / "masks_cli"
+    config = {
+        "land_mask_shp_fp": str(basic_land_mask),
+        "template_file": str(sample_extra_fp),
+        "masks_dir": str(masks_dir),
+        "reproject_vector": False,
+    }
+
+    config_path = tmp_path / "config.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    result = cli_runner.invoke(main, ["build-masks", "-c", str(config_path)])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    for fname in (
+        Masks.LANDFALL_MASK_FNAME,
+        Masks.RAW_LAND_MASK_FNAME,
+        Masks.LAND_MASK_FNAME,
+        Masks.OFFSHORE_MASK_FNAME,
+    ):
+        assert (masks_dir / fname).exists()
+
+    expected_masks = _expected_masks(
+        sample_extra_fp, basic_land_mask, reproject_vector=False
+    )
+    actual_masks = _load_masks_from_disk(masks_dir, sample_extra_fp)
+
+    assert np.array_equal(
+        actual_masks.landfall_mask, expected_masks.landfall_mask
+    )
+    assert np.array_equal(actual_masks.dry_mask, expected_masks.dry_mask)
+    assert np.array_equal(actual_masks.wet_mask, expected_masks.wet_mask)
+    assert np.array_equal(
+        actual_masks.dry_plus_mask, expected_masks.dry_plus_mask
+    )
+    assert np.array_equal(
+        actual_masks.wet_plus_mask, expected_masks.wet_plus_mask
+    )
 
 
 def test_build_config_missing_action(tmp_path):
