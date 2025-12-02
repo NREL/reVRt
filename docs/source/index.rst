@@ -21,4 +21,4 @@ What is reVRt?
    :start-after: inclusion-intro
    :end-before: Installing reVRt
 
-:ref:`genindex` | :ref:`modindex`
+:ref:`genindex` | :ref:`modindex` | :ref:`glossary`
