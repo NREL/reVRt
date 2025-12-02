@@ -88,7 +88,7 @@ class LayerCreator(BaseLayerCreator):
         write_to_file : bool, default=True
             Option to write the layer to file after creation.
 
-            ..IMPORTANT::
+            .. IMPORTANT::
                 This will overwrite existing layers with the same name
                 already in the file.
 
