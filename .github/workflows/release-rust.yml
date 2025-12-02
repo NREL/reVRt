@@ -14,7 +14,7 @@ jobs:
     name: Verify publish
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - uses: prefix-dev/setup-pixi@v0.9.3
       with:
@@ -38,7 +38,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/r')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: prefix-dev/setup-pixi@v0.9.3
         with:
@@ -64,7 +64,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/c')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: prefix-dev/setup-pixi@v0.9.3
         with:
@@ -116,7 +116,7 @@ jobs:
             strip: strip
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install Rust
       uses: actions-rs/toolchain@v1
