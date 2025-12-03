@@ -1,4 +1,4 @@
-"""Routing analysis library for the reV model"""
+"""Routing analysis library"""
 
 import importlib.metadata
 
