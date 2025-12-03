@@ -1,10 +1,18 @@
 """revrt utilities command line interface (CLI)"""
 
+import logging
 from pathlib import Path
 
+import rasterio
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point, LineString
 from gaps.cli import CLICommandFromClass, CLICommandFromFunction
 
 from revrt.utilities.handlers import LayeredFile
+
+
+logger = logging.getLogger(__name__)
 
 
 def layers_from_file(fp, _out_layer_dir, layers=None, profile_kwargs=None):
@@ -77,6 +85,70 @@ def _preprocess_layers_from_file_config(config, out_dir, out_layer_dir=None):
     return config
 
 
+def convert_pois_to_lines(poi_csv_f, template_f, out_f):
+    """Convert POIs in CSV to lines and save in a GPKG as substations
+
+    This function also creates a fake transmission line to connect to
+    the substations to satisfy LCP code requirements.
+
+    Parameters
+    ----------
+    poi_csv_f : path-like
+        Path to CSV file with POIs in it.
+    template_f : path-like
+        Path to template raster with CRS to use for GeoPackage.
+    out_f : path-like
+        Path and file name for GeoPackage.
+    """
+    logger.debug("Converting POIs in %s to lines in %s", poi_csv_f, out_f)
+    with rasterio.open(template_f) as tif:
+        crs = tif.crs
+
+    df = pd.read_csv(poi_csv_f)[
+        ["POI Name", "State", "Voltage (kV)", "Lat", "Long"]
+    ]
+
+    pts = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.Long, df.Lat))
+    pts = pts.set_crs("EPSG:4326")
+    pts = pts.to_crs(crs)
+
+    # Convert points to short lines
+    new_geom = []
+    for pt in pts.geometry:
+        end = Point(pt.x + 50, pt.y + 50)
+        line = LineString([pt, end])
+        new_geom.append(line)
+    lines = pts.set_geometry(new_geom, crs=crs)
+
+    # Append some fake values to make the LCP code happy
+    lines["ac_cap"] = 9999999
+    lines["category"] = "Substation"
+    lines["voltage"] = 500  # kV
+    lines["trans_gids"] = "[9999]"
+
+    # add a fake trans line for the subs to connect to
+    trans_line = pd.DataFrame(
+        {
+            "POI Name": "fake",
+            "ac_cap": 9999999,
+            "category": "TransLine",
+            "voltage": 500,  # kV
+            "trans_gids": None,
+        },
+        index=[9999],
+    )
+
+    trans_line = gpd.GeoDataFrame(trans_line)
+    geo = LineString([Point(0, 0), Point(100000, 100000)])
+    trans_line = trans_line.set_geometry([geo], crs=crs)
+
+    pois = pd.concat([lines, trans_line])
+    pois["gid"] = pois.index
+
+    pois.to_file(out_f, driver="GPKG")
+    logger.debug("Complete")
+
+
 layers_to_file_command = CLICommandFromClass(
     LayeredFile, method="layers_to_file", add_collect=False
 )
@@ -84,4 +156,10 @@ layers_from_file_command = CLICommandFromFunction(
     function=layers_from_file,
     add_collect=False,
     config_preprocessor=_preprocess_layers_from_file_config,
+)
+convert_pois_to_lines_command = CLICommandFromFunction(
+    convert_pois_to_lines,
+    name="convert-pois-to-lines",
+    add_collect=False,
+    split_keys=None,
 )

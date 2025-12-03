@@ -56,6 +56,9 @@ pixi run -e dev tests-u     # unit
 pixi run -e dev tests-i     # integration
 pixi run -e dev tests       # full suite
 
+# Focused unit modules (useful to check a particular feature)
+pixi run -e dev pytest tests/python/unit/... -rapP -vv
+
 # Rust tests & benches
 pixi run -e dev tests-r
 pixi run -e dev cargo test --locked --workspace --no-fail-fast

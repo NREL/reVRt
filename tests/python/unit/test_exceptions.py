@@ -10,8 +10,10 @@ from revrt.exceptions import (
     revrtConfigurationError,
     revrtFileExistsError,
     revrtFileNotFoundError,
+    revrtInvalidStartCostError,
     revrtKeyError,
     revrtNotImplementedError,
+    revrtLeastCostPathNotFoundError,
     revrtProfileCheckError,
     revrtRuntimeError,
     revrtTypeError,
@@ -67,6 +69,24 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
         (
             revrtFileNotFoundError,
             [revrtError, revrtFileNotFoundError, FileNotFoundError],
+        ),
+        (
+            revrtInvalidStartCostError,
+            [
+                revrtError,
+                revrtInvalidStartCostError,
+                revrtValueError,
+                ValueError,
+            ],
+        ),
+        (
+            revrtLeastCostPathNotFoundError,
+            [
+                revrtError,
+                revrtLeastCostPathNotFoundError,
+                revrtRuntimeError,
+                RuntimeError,
+            ],
         ),
         (
             revrtNotImplementedError,
