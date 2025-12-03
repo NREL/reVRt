@@ -30,4 +30,4 @@ updates:
   labels:
     - "chore"
     - "dependencies"
-    - "github-actions"
+    - "github_actions"
