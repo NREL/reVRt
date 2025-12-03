@@ -2,9 +2,12 @@
 
 import json
 import logging
+from pathlib import Path
 from warnings import warn
 
+import rioxarray
 import dask.config
+import xarray as xr
 import dask.distributed
 from gaps.cli import CLICommandFromFunction
 
@@ -23,6 +26,60 @@ from revrt.warn import revrtWarning
 
 logger = logging.getLogger(__name__)
 CONFIG_ACTIONS = ["layers", "dry_costs", "merge_friction_and_barriers"]
+
+
+def build_masks(
+    land_mask_shp_fp,
+    template_file,
+    masks_dir,
+    reproject_vector=True,
+    chunks="auto",
+):
+    """Build masks from land vector file
+
+    Parameters
+    ----------
+    land_mask_shp_fp : path-like
+        Path to land polygon GPKG or shp file.
+    template_file : path-like
+        Path to template GeoTIFF (``*.tif`` or ``*.tiff``) or Zarr
+        (``*.zarr``) file containing the profile and transform to be
+        used for the masks.
+    masks_dir : path-like
+        Directory to output mask GeoTIFFs.
+    reproject_vector : bool, default=True
+        Option to reproject CRS of input land vector file to match CRS
+        of template file. By default, ``True``.
+    chunks : str, optional
+        Chunk size to use when reading the template file. This will be
+        passed down as the ``chunks`` argument to
+        :func:`rioxarray.open_rasterio` or :func:`xarray.open_dataset`.
+        By default, ``"auto"``.
+    """
+    land_mask_shp_fp = Path(land_mask_shp_fp)
+    template_file = Path(template_file)
+    masks_dir = Path(masks_dir)
+
+    if template_file.suffix == ".zarr":
+        open_func = xr.open_dataset
+        kwargs = {"consolidated": False, "engine": "zarr"}
+    else:
+        open_func = rioxarray.open_rasterio
+        kwargs = {}
+
+    with open_func(template_file, chunks=chunks, **kwargs) as fh:
+        masks = Masks(
+            shape=fh.rio.shape,
+            crs=fh.rio.crs,
+            transform=fh.rio.transform(),
+            masks_dir=masks_dir,
+        )
+
+    masks.create(
+        land_mask_shp_fp=land_mask_shp_fp,
+        save_tiff=True,
+        reproject_vector=reproject_vector,
+    )
 
 
 def build_routing_layers(  # noqa: PLR0917, PLR0913
@@ -266,6 +323,13 @@ def _combine_friction_and_barriers(config, io_handler, lock):
     logger.info("Writing combined barriers to H5")
     io_handler.write_layer(combined, merge_config.output_layer_name)
 
+
+build_masks_command = CLICommandFromFunction(
+    build_masks,
+    name="build-masks",
+    add_collect=False,
+    split_keys=None,
+)
 
 build_routing_layers_command = CLICommandFromFunction(
     build_routing_layers,
