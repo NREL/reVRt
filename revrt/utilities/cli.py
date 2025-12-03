@@ -88,7 +88,7 @@ def _preprocess_layers_from_file_config(config, out_dir, out_layer_dir=None):
 def convert_pois_to_lines(poi_csv_f, template_f, out_f):
     """Convert POIs in CSV to lines and save in a GPKG as substations
 
-    This functions also creates a fake transmission line to connect to
+    This function also creates a fake transmission line to connect to
     the substations to satisfy LCP code requirements.
 
     Parameters

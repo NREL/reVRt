@@ -62,4 +62,4 @@ class revrtValueError(revrtError, ValueError):
 
 
 class revrtInvalidStartCostError(revrtValueError):
-    """revrt ValueError"""
+    """revrt revrtInvalidStartCostError"""
