@@ -20,7 +20,7 @@ Welcome to reV Routing (reVRt)!
 .. |Pixi| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json
     :target: https://pixi.sh
 
-.. |SWR| image:: https://img.shields.io/badge/SWR--25--112_-blue?label=NREL
+.. |SWR| image:: https://img.shields.io/badge/SWR--25--112_-blue?label=NLR
     :alt: Static Badge
 
 .. |Zenodo| image:: https://zenodo.org/badge/944738283.svg

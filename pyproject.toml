@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "NREL-reVRt"
 version = "0.2.1"
-description = "National Renewable Energy Laboratory's (NREL's) Transmission for reVX tool"
+description = "National Laboratory of the Rockies' (NLR's) Transmission for reVX tool"
 readme = "README.rst"
 authors = [
   {name = "Guilherme Castelão", email = "gpimenta@nrel.gov"},
@@ -16,7 +16,7 @@ maintainers = [
   {name = "Paul Pinchuk", email = "ppinchuk@nrel.gov"},
 ]
 license = {text = "BSD-3-Clause"}
-keywords = ["NREL", "routing", "transmission", "reVRt", "reV", "reVX"]
+keywords = ["NLR", "routing", "transmission", "reVRt", "reV", "reVX"]
 requires-python = ">= 3.11"
 classifiers=[
   "Development Status :: 2 - Pre-Alpha",

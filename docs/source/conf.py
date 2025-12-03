@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath("../../"))
 
 project = "reVRt"
 copyright = "2025, Alliance for Sustainable Energy, LLC"
-author = "NREL: Guilherme Pimenta Castelao, Paul Pinchuk"
+author = "NLR: Guilherme Pimenta Castelao, Paul Pinchuk"
 
 pkg = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
 pkg = os.path.dirname(pkg)
@@ -135,7 +135,7 @@ html_css_file = ["custom.css"]
 
 html_context = {
     "display_github": True,
-    "github_user": "nrel",
+    "github_user": "nlr",
     "github_repo": "reVRt",
     "github_version": "main",
     "conf_py_path": "/docs/source/",
