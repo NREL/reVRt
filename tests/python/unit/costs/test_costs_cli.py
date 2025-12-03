@@ -76,6 +76,80 @@ def masks_for_testing(sample_tiff_props, tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def expected_masks():
+    """Return hardcoded mask arrays matching the sample land geometry"""
+    landfall_mask = np.array(
+        [
+            [False, False, False, False, False, False],
+            [False, False, False, True, True, False],
+            [False, False, True, False, True, False],
+            [False, False, True, False, True, False],
+            [False, False, True, True, False, False],
+        ],
+        dtype=bool,
+    )
+
+    dry_mask = np.array(
+        [
+            [False, False, False, False, False, False],
+            [False, False, False, False, True, False],
+            [False, False, False, True, True, False],
+            [False, False, False, True, True, False],
+            [False, False, True, True, False, False],
+        ],
+        dtype=bool,
+    )
+
+    wet_mask = np.array(
+        [
+            [True, True, True, True, True, True],
+            [True, True, True, False, True, True],
+            [True, True, False, False, True, True],
+            [True, True, False, False, True, True],
+            [True, True, True, True, True, True],
+        ],
+        dtype=bool,
+    )
+
+    dry_plus_mask = np.array(
+        [
+            [False, False, False, False, False, False],
+            [False, False, False, True, True, False],
+            [False, False, True, True, True, False],
+            [False, False, True, True, True, False],
+            [False, False, True, True, False, False],
+        ],
+        dtype=bool,
+    )
+
+    wet_plus_mask = np.array(
+        [
+            [True, True, True, True, True, True],
+            [True, True, True, True, True, True],
+            [True, True, True, False, True, True],
+            [True, True, True, False, True, True],
+            [True, True, True, True, True, True],
+        ],
+        dtype=bool,
+    )
+
+    class ExpectedMasks:
+        """Container for hardcoded mask arrays used in tests"""
+
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+    return ExpectedMasks(
+        landfall_mask=landfall_mask,
+        dry_mask=dry_mask,
+        wet_mask=wet_mask,
+        dry_plus_mask=dry_plus_mask,
+        wet_plus_mask=wet_plus_mask,
+    )
+
+
+@pytest.fixture(scope="module")
 def basic_land_mask(tmp_path_factory):
     """Write a basic union-of-boxes polygon to disk as a land mask"""
 
@@ -104,24 +178,6 @@ def _template_metadata(template_file):
     return shape, crs, transform
 
 
-def _expected_masks(template_file, land_mask_fp, reproject_vector):
-    """Create masks in-memory to compare against CLI outputs"""
-    shape, crs, transform = _template_metadata(template_file)
-    expected_dir = Path(land_mask_fp).parent / "expected_masks"
-    masks = Masks(
-        shape=shape,
-        crs=crs,
-        transform=transform,
-        masks_dir=expected_dir,
-    )
-    masks.create(
-        land_mask_shp_fp=land_mask_fp,
-        save_tiff=False,
-        reproject_vector=reproject_vector,
-    )
-    return masks
-
-
 def _load_masks_from_disk(masks_dir, template_file):
     """Load masks written to disk for comparison"""
     shape, crs, transform = _template_metadata(template_file)
@@ -142,13 +198,9 @@ def _load_masks_from_disk(masks_dir, template_file):
 
 
 def test_build_masks_writes_expected_outputs_from_geotiff(
-    tmp_path, sample_extra_fp, basic_land_mask
+    tmp_path, sample_extra_fp, basic_land_mask, expected_masks
 ):
     """build_masks writes all mask GeoTIFFs matching in-memory expectations"""
-
-    expected_masks = _expected_masks(
-        sample_extra_fp, basic_land_mask, reproject_vector=False
-    )
 
     masks_dir = tmp_path / "masks"
     build_masks(
@@ -182,16 +234,12 @@ def test_build_masks_writes_expected_outputs_from_geotiff(
 
 
 def test_build_masks_writes_expected_outputs_from_zarr(
-    tmp_path, sample_extra_fp, basic_land_mask
+    tmp_path, sample_extra_fp, basic_land_mask, expected_masks
 ):
     """build_masks handles zarr templates via xarray.open_dataset"""
 
     template_zarr = tmp_path / "template.zarr"
     LayeredFile(template_zarr).create_new(sample_extra_fp)
-
-    expected_masks = _expected_masks(
-        template_zarr, basic_land_mask, reproject_vector=False
-    )
 
     masks_dir = tmp_path / "masks_zarr"
     build_masks(
@@ -230,7 +278,7 @@ def test_build_masks_writes_expected_outputs_from_zarr(
     reason="CLI does not work under tox env on windows",
 )
 def test_build_masks_cli_creates_expected_outputs(
-    tmp_path, sample_extra_fp, cli_runner, basic_land_mask
+    tmp_path, sample_extra_fp, cli_runner, basic_land_mask, expected_masks
 ):
     """CLI build-masks command writes expected mask rasters"""
 
@@ -258,9 +306,6 @@ def test_build_masks_cli_creates_expected_outputs(
     ):
         assert (masks_dir / fname).exists()
 
-    expected_masks = _expected_masks(
-        sample_extra_fp, basic_land_mask, reproject_vector=False
-    )
     actual_masks = _load_masks_from_disk(masks_dir, sample_extra_fp)
 
     assert np.array_equal(
