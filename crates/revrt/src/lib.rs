@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn test_routing_along_boundary() {
-        use ndarray::Array2;
+        use ndarray::Array3;
 
         let (ni, nj) = (4, 4);
         let (ci, cj) = (2, 2);
@@ -288,12 +288,12 @@ mod tests {
             .unwrap();
 
         let array = zarrs::array::ArrayBuilder::new(
-            vec![ni, nj], // array shape
-            vec![ci, cj], // regular chunk shape
+            vec![1, ni, nj], // array shape
+            vec![1, ci, cj], // regular chunk shape
             zarrs::array::DataType::Float32,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
-        .dimension_names(["y", "x"].into())
+        .dimension_names(["band", "y", "x"].into())
         .build(store.clone(), "/cost")
         .unwrap();
 
@@ -306,13 +306,17 @@ mod tests {
                      1., 50., 50., 1.,
                      1.,  1.,  1., 1.];
 
-        let data: Array2<f32> =
-            ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+        let data: Array3<f32> =
+            ndarray::Array::from_shape_vec((1, ni.try_into().unwrap(), nj.try_into().unwrap()), a)
                 .unwrap();
 
         array
             .store_chunks_ndarray(
-                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                    0..1,
+                    0..(ni / ci),
+                    0..(nj / cj),
+                ]),
                 data,
             )
             .unwrap();
