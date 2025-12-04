@@ -49,12 +49,12 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     should be a float that should be applied to scale the layer.
 ///     All of the layers in the list are processed this way and then
 ///     summed to obtain the final cost layer for routing.
-/// start : list of (int, int)
+/// start : list of tuple
 ///     List of two-tuples containing non-negative integers representing
 ///     the indices in the array for the pixel from which routing should
 ///     begin. A unique path will be returned for each of the starting
 ///     points.
-/// end : list of (int, int)
+/// end : list of tuple
 ///     List of two-tuples containing non-negative integers representing
 ///     the indices in the array for the any allowed final pixel.
 ///     When the algorithm reaches any of these points, the routing
@@ -65,7 +65,7 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///
 /// Returns
 /// -------
-/// list of tuples
+/// list of tuple
 ///     List of path routing results. Each result is a tuple
 ///     where the first element is a list of points that the
 ///     route goes through and the second element is the final
