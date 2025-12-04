@@ -259,6 +259,7 @@ pip = ">=25.1.1,<26"
 pipreqs = ">=0.4.13,<0.5"
 ruff = ">=0.14.0,<0.15"
 ruff-lsp = ">=0.0.62,<0.0.63"
+rust-src = ">=1.90.0,<2"
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=8.3.5,<9"
