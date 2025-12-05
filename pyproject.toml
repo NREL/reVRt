@@ -215,6 +215,8 @@ build = { features = ["build"], solve-group = "default" }
 build-wheel = { cmd = "maturin build" }
 
 [tool.pixi.feature.dev.tasks]
+lint = "ruff check ./revrt"
+format = "ruff format ./revrt"
 tests = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
 tests-u = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
 tests-i = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"
