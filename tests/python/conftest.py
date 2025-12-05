@@ -13,7 +13,7 @@ LOGGING_META_FILES = {"log.py", "exceptions.py", "warnings.py"}
 @pytest.fixture(scope="module")
 def repo_dir():
     """Return Path to top-level repo directory."""
-    return Path(__file__).parent.parent
+    return Path(__file__).parent.parent.parent
 
 
 @pytest.fixture(scope="module")

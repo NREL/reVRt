@@ -26,7 +26,7 @@ jobs:
           pixi-version: v0.59.0
           cache: true
           frozen: true
-          cache-write: ${{ github.ref == 'refs/heads/main' }}
+          cache-write: false
           environments: dev
 
       - uses: Swatinem/rust-cache@v2

@@ -42,6 +42,6 @@ mod test {
         let array = zarrs::array::Array::async_open(features.storage, "/A")
             .await
             .unwrap();
-        let _data = array.async_retrieve_chunk(&[0, 0]).await.unwrap();
+        let _data = array.async_retrieve_chunk(&[0, 0, 0]).await.unwrap();
     }
 }

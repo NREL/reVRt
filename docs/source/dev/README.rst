@@ -356,3 +356,36 @@ that are automatically run on GitHub Actions on the main branch. If
 you are actively developing the Rust-based routing algorithm, you
 should monitor the benchmarks to ensure that your changes do not
 introduce performance regressions.
+
+
+Rust Development
+^^^^^^^^^^^^^^^^
+If you are working on the Rust routing logic, you can use this command
+to run all tests locally:
+
+.. code-block:: shell
+
+    cargo test
+
+To run specific tests, just add their name after the command, like so:
+
+.. code-block:: shell
+
+    cargo test test_get_3x3_two_by_two_array::bottom_right_corner
+
+If you want to run the benchmarks locally, you can use this command:
+
+.. code-block:: shell
+
+    cargo criterion --output-format bencher --benches 2>&1 | tee output.txt
+
+This will save all of the benchmarking outputs to ``output.txt``.
+If you are working on routing internals and would like to check the
+output of a routing scenario, you can use this command:
+
+.. code-block:: shell
+
+    cargo run -p revrt-cli -- -v --dataset ./tests/data/utilities/transmission_layers.zarr --cost-function '{"cost_layers": [{"layer_name": "tie_line_costs_102MW"}]}' --start 10,10 --end 20,20 --cache-size 250000000
+
+You can of course change the start and end points and cache size as needed.
+If you need to see more verbose logs, simply add more ``-v`` flags (e.g. ``-vvv``).

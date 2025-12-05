@@ -1,6 +1,6 @@
 //! Dataset samples for tests and demonstrations
 
-use ndarray::Array2;
+use ndarray::Array3;
 use rand::Rng;
 use zarrs::storage::ReadableWritableListableStorage;
 
@@ -31,13 +31,13 @@ pub(crate) fn multi_variable_zarr() -> std::path::PathBuf {
     // Remember to remove /cost
     for array_path in ["/A", "/B", "/C", "/cost"] {
         let array = zarrs::array::ArrayBuilder::new(
-            vec![ni, nj], // array shape
-            vec![ci, cj], // regular chunk shape
+            vec![1, ni, nj], // array shape
+            vec![1, ci, cj], // regular chunk shape
             zarrs::array::DataType::Float32,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         // .bytes_to_bytes_codecs(vec![]) // uncompressed
-        .dimension_names(["y", "x"].into())
+        .dimension_names(["band", "y", "x"].into())
         // .storage_transformers(vec![].into())
         .build(store.clone(), array_path)
         .unwrap();
@@ -50,13 +50,17 @@ pub(crate) fn multi_variable_zarr() -> std::path::PathBuf {
         for _x in 0..(ni * nj) {
             a.push(rng.random_range(0.0..=1.0));
         }
-        let data: Array2<f32> =
-            ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+        let data: Array3<f32> =
+            ndarray::Array::from_shape_vec((1, ni.try_into().unwrap(), nj.try_into().unwrap()), a)
                 .unwrap();
 
         array
             .store_chunks_ndarray(
-                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                    0..1,
+                    0..(ni / ci),
+                    0..(nj / cj),
+                ]),
                 data,
             )
             .unwrap();
@@ -84,12 +88,12 @@ pub(crate) fn constant_value_cost_zarr(cost_value: f32) -> std::path::PathBuf {
         .unwrap();
 
     let array = zarrs::array::ArrayBuilder::new(
-        vec![ni, nj], // array shape
-        vec![ci, cj], // regular chunk shape
+        vec![1, ni, nj], // array shape
+        vec![1, ci, cj], // regular chunk shape
         zarrs::array::DataType::Float32,
         zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
     )
-    .dimension_names(["y", "x"].into())
+    .dimension_names(["band", "y", "x"].into())
     .build(store.clone(), "/cost")
     .unwrap();
 
@@ -97,12 +101,12 @@ pub(crate) fn constant_value_cost_zarr(cost_value: f32) -> std::path::PathBuf {
     array.store_metadata().unwrap();
 
     let (uni, unj): (usize, usize) = (ni.try_into().unwrap(), nj.try_into().unwrap());
-    let data: Array2<f32> =
-        ndarray::Array::from_shape_vec((uni, unj), vec![cost_value; uni * unj]).unwrap();
+    let data: Array3<f32> =
+        ndarray::Array::from_shape_vec((1, uni, unj), vec![cost_value; uni * unj]).unwrap();
 
     array
         .store_chunks_ndarray(
-            &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+            &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..1, 0..(ni / ci), 0..(nj / cj)]),
             data,
         )
         .unwrap();
@@ -126,12 +130,12 @@ pub(crate) fn cost_as_index_zarr((ni, nj): (u64, u64), (ci, cj): (u64, u64)) -> 
         .unwrap();
 
     let array = zarrs::array::ArrayBuilder::new(
-        vec![ni, nj], // array shape
-        vec![ci, cj], // regular chunk shape
+        vec![1, ni, nj], // array shape
+        vec![1, ci, cj], // regular chunk shape
         zarrs::array::DataType::Float32,
         zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
     )
-    .dimension_names(["y", "x"].into())
+    .dimension_names(["band", "y", "x"].into())
     .build(store.clone(), "/cost")
     .unwrap();
 
@@ -139,13 +143,13 @@ pub(crate) fn cost_as_index_zarr((ni, nj): (u64, u64), (ci, cj): (u64, u64)) -> 
     array.store_metadata().unwrap();
 
     let a: Vec<f32> = (0..ni * nj).map(|x| x as f32).collect();
-    let data: Array2<f32> =
-        ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+    let data: Array3<f32> =
+        ndarray::Array::from_shape_vec((1, ni.try_into().unwrap(), nj.try_into().unwrap()), a)
             .unwrap();
 
     array
         .store_chunks_ndarray(
-            &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+            &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..1, 0..(ni / ci), 0..(nj / cj)]),
             data,
         )
         .unwrap();
