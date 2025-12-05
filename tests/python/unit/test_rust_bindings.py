@@ -17,17 +17,19 @@ def test_basic_single_route(tmp_path):
     da = xr.DataArray(
         np.array(
             [
-                [7, 7, 8, 0, 9, 9, 9, 0],
-                [8, 1, 2, 2, 9, 9, 9, 0],
-                [9, 1, 3, 3, 9, 1, 2, 3],
-                [9, 1, 2, 1, 9, 1, 9, 0],
-                [9, 9, 9, 1, 9, 1, 9, 0],
-                [9, 9, 9, 1, 1, 1, 9, 0],
-                [9, 9, 9, 9, 9, 9, 9, 0],
+                [
+                    [7, 7, 8, 0, 9, 9, 9, 0],
+                    [8, 1, 2, 2, 9, 9, 9, 0],
+                    [9, 1, 3, 3, 9, 1, 2, 3],
+                    [9, 1, 2, 1, 9, 1, 9, 0],
+                    [9, 9, 9, 1, 9, 1, 9, 0],
+                    [9, 9, 9, 1, 1, 1, 9, 0],
+                    [9, 9, 9, 9, 9, 9, 9, 0],
+                ]
             ],
             dtype=np.float32,
         ),
-        dims=("y", "x"),
+        dims=("band", "y", "x"),
     )
 
     test_cost_fp = tmp_path / "test.zarr"
@@ -46,7 +48,7 @@ def test_basic_single_route(tmp_path):
     assert len(results) == 1
     test_path, test_cost = results[0]
 
-    mcp = MCP_Geometric(da.values)
+    mcp = MCP_Geometric(da.values[0])
     costs, __ = mcp.find_costs(starts=[(1, 1)], ends=[(2, 6)])
 
     assert test_path == mcp.traceback((2, 6))
