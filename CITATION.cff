@@ -7,18 +7,18 @@ type: software
 authors:
   - family-names: Castelão
     given-names: Guilherme
-    affiliation: National Renewable Energy Laboratory
+    affiliation: National Laboratory of the Rockies
     orcid: 'https://orcid.org/0000-0002-6765-0708'
   - family-names: Pinchuk
     given-names: Pavlo
-    affiliation: National Renewable Energy Laboratory
+    affiliation: National Laboratory of the Rockies
     orcid: 'https://orcid.org/0000-0003-4736-4728'
   - family-names: Gu
     given-names: Jianyu
-    affiliation: National Renewable Energy Laboratory
+    affiliation: National Laboratory of the Rockies
   - family-names: Rivers
     given-names: Marie
-    affiliation: National Renewable Energy Laboratory
+    affiliation: National Laboratory of the Rockies
     orcid: 'https://orcid.org/0000-0002-0804-9365'
 identifiers:
   - type: doi
