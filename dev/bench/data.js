@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1764810654231,
+  "lastUpdate": 1764975837128,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -1763,6 +1763,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 287789622,
             "range": "± 9710724",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6d4ddce2873ce4a87b4cb5d905d33074bebd1afe",
+          "message": "Support `band` dimension (#171)\n\n* Update env\n\n* Rust now reads 3D arrays from Zarr\n\n* Don't cache bench job\n\n* Fix benchmark\n\n* Move conftest\n\n* Add hints for rust development\n\n* Add integration test\n\n* More robust check for variable with correct shape\n\n* Test now uses 3D data\n\n* Add integration test for rust bindings",
+          "timestamp": "2025-12-05T15:40:00-07:00",
+          "tree_id": "c2cf56df615a8f3c7412ea83792174a6ad2ad7b8",
+          "url": "https://github.com/NREL/reVRt/commit/6d4ddce2873ce4a87b4cb5d905d33074bebd1afe"
+        },
+        "date": 1764975836278,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 54025550,
+            "range": "± 905751",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 62544005,
+            "range": "± 417186",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 89564036,
+            "range": "± 3740313",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 122096164,
+            "range": "± 2795662",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 293384087,
+            "range": "± 18880754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 91339125,
+            "range": "± 390869",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 93253478,
+            "range": "± 576634",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 99514244,
+            "range": "± 862918",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 119249515,
+            "range": "± 1055327",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 189969633,
+            "range": "± 2920851",
             "unit": "ns/iter"
           }
         ]
