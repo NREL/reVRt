@@ -70,14 +70,26 @@ impl Dataset {
             .store_metadata()
             .unwrap();
 
-        // -- Temporary solution to specify cost storage --
-        // Assume all variables have the same shape and chunk shape.
-        // Find the name of the first variable and use it.
-        let varname = source.list().unwrap()[0].to_string();
-        let varname = varname.split("/").collect::<Vec<_>>()[0];
+        let entries = source
+            .list()
+            .expect("failed to list variables in source dataset");
+        let first_entry = entries
+            .into_iter()
+            .map(|entry| entry.to_string())
+            .find(|entry| {
+                let name = entry.split('/').next().unwrap_or("").to_ascii_lowercase();
+                const EXCLUDES: [&str; 6] =
+                    ["latitude", "longitude", "band", "x", "y", "spatial_ref"];
+                !name.ends_with(".json") && !EXCLUDES.iter().any(|needle| name.contains(needle))
+            })
+            .expect("no suitable variables found in source dataset");
+        // Skip coordinate axes when selecting a representative variable for cost storage.
+        let varname = first_entry.split('/').next().unwrap().to_string();
+        debug!("Using '{}' to determine shape of cost data", varname);
         let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
         // let cost_shape = tmp.shape();
         let chunk_shape = tmp.chunk_grid().clone();
+        debug!("Chunk grid info: {:?}", &chunk_shape);
         // ----
 
         trace!("Creating an empty cost array");
