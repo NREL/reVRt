@@ -1,7 +1,8 @@
 //! Cost fuction
 
 use derive_builder::Builder;
-use ndarray::{Axis, stack};
+use ndarray::{ArrayD, Axis, IxDyn, stack};
+use std::convert::TryFrom;
 use tracing::{debug, trace};
 
 use crate::dataset::LazySubset;
@@ -32,6 +33,8 @@ struct CostLayer {
     multiplier_scalar: Option<f32>,
     #[builder(setter(strip_option, into), default)]
     multiplier_layer: Option<String>,
+    #[builder(setter(strip_option), default)]
+    is_invariant: Option<bool>,
 }
 
 impl CostFunction {
@@ -72,46 +75,23 @@ impl CostFunction {
     /// features.
     pub(crate) fn compute(
         &self,
-        mut features: LazySubset<f32>,
+        features: &mut LazySubset<f32>,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
         debug!("Calculating cost for ({})", features.subset());
 
-        let cost = self
+        let layers: Vec<&CostLayer> = self
             .cost_layers
             .iter()
-            .map(|layer| {
-                let layer_name = &layer.layer_name;
-                trace!("Layer name: {}", layer_name);
+            .filter(|layer| !layer.is_invariant.unwrap_or(false))
+            .collect();
 
-                let mut cost = features
-                    .get(layer_name)
-                    .expect("Layer not found in features");
+        if layers.is_empty() {
+            return empty_cost_array(features);
+        }
 
-                if let Some(multiplier_scalar) = layer.multiplier_scalar {
-                    trace!(
-                        "Layer {} has multiplier scalar {}",
-                        layer_name, multiplier_scalar
-                    );
-                    // Apply the multiplier scalar to the value
-                    cost *= multiplier_scalar;
-                    // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
-                }
-
-                if let Some(multiplier_layer) = &layer.multiplier_layer {
-                    trace!(
-                        "Layer {} has multiplier layer {}",
-                        layer_name, multiplier_layer
-                    );
-                    let multiplier_value = features
-                        .get(multiplier_layer)
-                        .expect("Multiplier layer not found in features");
-
-                    // Apply the multiplier layer to the value
-                    cost = cost * multiplier_value;
-                    // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
-                }
-                cost
-            })
+        let cost = layers
+            .into_iter()
+            .map(|layer| build_single_layer(layer, features))
             .collect::<Vec<_>>();
 
         let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
@@ -123,6 +103,100 @@ impl CostFunction {
 
         cost
     }
+
+    /// Calculate the cost from a given collection of input features
+    ///
+    /// Applies the cost function to a collection of input features, which
+    /// is typically a subset of a larger dataset, such as a chunk from a
+    /// Zarr dataset. The cost function is defined by a series of layers,
+    /// each of which may have a multiplier scalar or a multiplier layer.
+    ///
+    /// # Arguments
+    /// `features`: A lazy collection of input features.
+    ///
+    /// # Returns
+    /// A 2D array containing the cost for the subset covered by the input
+    /// features.
+    pub(crate) fn compute_invariant(
+        &self,
+        features: &mut LazySubset<f32>,
+    ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+        debug!("Calculating cost for ({})", features.subset());
+
+        let layers: Vec<&CostLayer> = self
+            .cost_layers
+            .iter()
+            .filter(|layer| layer.is_invariant.unwrap_or(false))
+            .collect();
+
+        if layers.is_empty() {
+            return empty_cost_array(features);
+        }
+
+        let cost = layers
+            .into_iter()
+            .map(|layer| build_single_layer(layer, features))
+            .collect::<Vec<_>>();
+
+        let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
+        let stack = stack(Axis(0), &views).unwrap();
+        //let cost = stack![Axis(3), &cost];
+        trace!("Stack shape: {:?}", stack.shape());
+        let cost = stack.sum_axis(Axis(0));
+        trace!("Stack shape: {:?}", stack.shape());
+
+        cost
+    }
+}
+
+fn empty_cost_array(
+    features: &LazySubset<f32>,
+) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+    let shape: Vec<usize> = features
+        .subset()
+        .shape()
+        .iter()
+        .map(|&dim| usize::try_from(dim).expect("subset dimension exceeds usize range"))
+        .collect();
+
+    ArrayD::<f32>::zeros(IxDyn(&shape))
+}
+
+fn build_single_layer(
+    layer: &CostLayer,
+    features: &mut LazySubset<f32>,
+) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+    let layer_name = &layer.layer_name;
+    trace!("Layer name: {}", layer_name);
+
+    let mut cost = features
+        .get(layer_name)
+        .expect("Layer not found in features");
+
+    if let Some(multiplier_scalar) = layer.multiplier_scalar {
+        trace!(
+            "Layer {} has multiplier scalar {}",
+            layer_name, multiplier_scalar
+        );
+        // Apply the multiplier scalar to the value
+        cost *= multiplier_scalar;
+        // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
+    }
+
+    if let Some(multiplier_layer) = &layer.multiplier_layer {
+        trace!(
+            "Layer {} has multiplier layer {}",
+            layer_name, multiplier_layer
+        );
+        let multiplier_value = features
+            .get(multiplier_layer)
+            .expect("Multiplier layer not found in features");
+
+        // Apply the multiplier layer to the value
+        cost = cost * multiplier_value;
+        // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
+    }
+    cost
 }
 
 #[cfg(test)]
@@ -139,7 +213,9 @@ pub(crate) mod sample {
                 {"layer_name": "A",
                     "multiplier_layer": "B"},
                 {"layer_name": "C", "multiplier_scalar": 2,
-                    "multiplier_layer": "A"}
+                    "multiplier_layer": "A"},
+                {"layer_name": "C", "multiplier_scalar": 100,
+                    "is_invariant": true}
             ]
         }
         "#
@@ -162,12 +238,14 @@ mod test_builder {
             .layer_name("A".to_string())
             .multiplier_scalar(2.0)
             .multiplier_layer("B")
+            .is_invariant(false)
             .build()
             .unwrap();
 
         assert_eq!(layer.layer_name, "A");
         assert_eq!(layer.multiplier_scalar, Some(2.0));
         assert_eq!(layer.multiplier_layer, Some("B".to_string()));
+        assert_eq!(layer.is_invariant, Some(false));
     }
 
     #[test]
@@ -180,6 +258,7 @@ mod test_builder {
         assert_eq!(layer.layer_name, "A");
         assert_eq!(layer.multiplier_scalar, None);
         assert_eq!(layer.multiplier_layer, None);
+        assert_eq!(layer.is_invariant, None);
     }
 }
 
@@ -192,14 +271,22 @@ mod test {
         let json = sample::as_text_v1();
         let cost = CostFunction::from_json(&json).unwrap();
 
-        assert_eq!(cost.cost_layers.len(), 4);
+        assert_eq!(cost.cost_layers.len(), 5);
         assert_eq!(cost.cost_layers[0].layer_name, "A");
+        assert_eq!(cost.cost_layers[0].is_invariant, None);
         assert_eq!(cost.cost_layers[1].layer_name, "B");
         assert_eq!(cost.cost_layers[1].multiplier_scalar, Some(100.0));
+        assert_eq!(cost.cost_layers[1].is_invariant, None);
         assert_eq!(cost.cost_layers[2].layer_name, "A");
         assert_eq!(cost.cost_layers[2].multiplier_layer, Some("B".to_string()));
+        assert_eq!(cost.cost_layers[2].is_invariant, None);
         assert_eq!(cost.cost_layers[3].layer_name, "C");
         assert_eq!(cost.cost_layers[3].multiplier_layer, Some("A".to_string()));
         assert_eq!(cost.cost_layers[3].multiplier_scalar, Some(2.0));
+        assert_eq!(cost.cost_layers[3].is_invariant, None);
+        assert_eq!(cost.cost_layers[4].layer_name, "C");
+        assert_eq!(cost.cost_layers[4].multiplier_layer, None);
+        assert_eq!(cost.cost_layers[4].multiplier_scalar, Some(100.0));
+        assert_eq!(cost.cost_layers[4].is_invariant, Some(true));
     }
 }
