@@ -34,11 +34,15 @@ class revrtFileNotFoundError(revrtError, FileNotFoundError):
 
 
 class revrtInvalidStartCostError(revrtError, ValueError):
-    """revrt FileNotFoundError"""
+    """revrt InvalidStartCostError"""
 
 
 class revrtKeyError(revrtError, KeyError):
     """revrt KeyError"""
+
+
+class revrtLeastCostPathNotFoundError(revrtError, RuntimeError):
+    """revrt LeastCostPathNotFoundError"""
 
 
 class revrtNotImplementedError(revrtError, NotImplementedError):
