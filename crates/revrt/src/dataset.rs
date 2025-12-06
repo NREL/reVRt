@@ -7,7 +7,7 @@ use std::sync::RwLock;
 
 use tracing::{debug, trace, warn};
 // use zarrs::array::ArrayChunkCacheExt;
-// use zarrs::array::ChunkGrid;
+use zarrs::array::ChunkGrid;
 use zarrs::storage::{
     ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
 };
@@ -87,30 +87,16 @@ impl Dataset {
         let varname = first_entry.split('/').next().unwrap().to_string();
         debug!("Using '{}' to determine shape of cost data", varname);
         let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
-        // let cost_shape = tmp.shape();
-        let chunk_shape = tmp.chunk_grid().clone();
-        debug!("Chunk grid info: {:?}", &chunk_shape);
-        // ----
+        let chunk_grid = tmp.chunk_grid();
+        debug!("Chunk grid info: {:?}", &chunk_grid);
 
-        trace!("Creating an empty cost array");
-        let array = zarrs::array::ArrayBuilder::new_with_chunk_grid(
-            // cost_shape,
-            chunk_shape,
-            zarrs::array::DataType::Float32,
-            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
-        )
-        .build(swap.clone(), "/cost")
-        .unwrap();
-        trace!("Cost shape: {:?}", array.shape().to_vec());
-        trace!("Cost chunk shape: {:?}", array.chunk_grid());
-        array.store_metadata().unwrap();
-
-        trace!("Cost dataset contents: {:?}", swap.list().unwrap());
+        add_layer_to_data("cost_invariant", chunk_grid, &swap);
+        add_layer_to_data("cost", chunk_grid, &swap);
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
-                array.chunk_grid_shape()[1] as usize,
-                array.chunk_grid_shape()[2] as usize,
+                tmp.chunk_grid_shape()[1] as usize,
+                tmp.chunk_grid_shape()[2] as usize,
             ),
             false,
         )
@@ -313,6 +299,35 @@ impl Dataset {
             .unwrap();
         */
     }
+}
+
+fn add_layer_to_data(
+    layer_name: &str,
+    chunk_shape: &ChunkGrid,
+    swap: &ReadableWritableListableStorage,
+) {
+    trace!("Creating an empty {} array", layer_name);
+    let dataset_path = format!("/{layer_name}");
+    zarrs::array::ArrayBuilder::new_with_chunk_grid(
+        // cost_shape,
+        chunk_shape.clone(),
+        zarrs::array::DataType::Float32,
+        zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
+    )
+    .build(swap.clone(), &dataset_path)
+    .unwrap()
+    .store_metadata()
+    .unwrap();
+
+    let array = zarrs::array::Array::open(swap.clone(), &dataset_path).unwrap();
+    trace!("'{}' shape: {:?}", layer_name, array.shape().to_vec());
+    trace!("'{}' chunk shape: {:?}", layer_name, array.chunk_grid());
+
+    trace!(
+        "Dataset contents after '{}' creation: {:?}",
+        layer_name,
+        swap.list().unwrap()
+    );
 }
 
 #[cfg(test)]
