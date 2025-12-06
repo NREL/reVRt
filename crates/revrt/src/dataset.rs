@@ -70,14 +70,26 @@ impl Dataset {
             .store_metadata()
             .unwrap();
 
-        // -- Temporary solution to specify cost storage --
-        // Assume all variables have the same shape and chunk shape.
-        // Find the name of the first variable and use it.
-        let varname = source.list().unwrap()[0].to_string();
-        let varname = varname.split("/").collect::<Vec<_>>()[0];
+        let entries = source
+            .list()
+            .expect("failed to list variables in source dataset");
+        let first_entry = entries
+            .into_iter()
+            .map(|entry| entry.to_string())
+            .find(|entry| {
+                let name = entry.split('/').next().unwrap_or("").to_ascii_lowercase();
+                const EXCLUDES: [&str; 6] =
+                    ["latitude", "longitude", "band", "x", "y", "spatial_ref"];
+                !name.ends_with(".json") && !EXCLUDES.iter().any(|needle| name.contains(needle))
+            })
+            .expect("no suitable variables found in source dataset");
+        // Skip coordinate axes when selecting a representative variable for cost storage.
+        let varname = first_entry.split('/').next().unwrap().to_string();
+        debug!("Using '{}' to determine shape of cost data", varname);
         let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
         // let cost_shape = tmp.shape();
         let chunk_shape = tmp.chunk_grid().clone();
+        debug!("Chunk grid info: {:?}", &chunk_shape);
         // ----
 
         trace!("Creating an empty cost array");
@@ -97,8 +109,8 @@ impl Dataset {
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
-                array.chunk_grid_shape()[0] as usize,
                 array.chunk_grid_shape()[1] as usize,
+                array.chunk_grid_shape()[2] as usize,
             ),
             false,
         )
@@ -127,7 +139,7 @@ impl Dataset {
         // cost variable is stored in the swap dataset
         let variable = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
         // Get the subset according to cost's chunk
-        let subset = variable.chunk_subset(&[ci, cj]).unwrap();
+        let subset = variable.chunk_subset(&[0, ci, cj]).unwrap();
         let data = LazySubset::<f32>::new(self.source.clone(), subset);
         let output = self.cost_function.compute(data);
 
@@ -144,10 +156,10 @@ impl Dataset {
 
         let cost = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
         cost.store_metadata().unwrap();
-        let chunk_indices: Vec<u64> = vec![ci, cj];
+        let chunk_indices: Vec<u64> = vec![0, ci, cj];
         trace!("Storing chunk at {:?}", chunk_indices);
         let chunk_subset =
-            &zarrs::array_subset::ArraySubset::new_with_ranges(&[ci..(ci + 1), cj..(cj + 1)]);
+            &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..1, ci..(ci + 1), cj..(cj + 1)]);
         trace!("Target chunk subset: {:?}", chunk_subset);
         cost.store_chunks_ndarray(chunk_subset, output).unwrap();
     }
@@ -168,8 +180,8 @@ impl Dataset {
         let shape = cost.shape();
         debug_assert!(!shape.contains(&0));
 
-        let max_i = shape[0] - 1;
-        let max_j = shape[1] - 1;
+        let max_i = shape[1] - 1;
+        let max_j = shape[2] - 1;
 
         let i_range = match i {
             0 if max_i == 0 => 0..1,
@@ -185,8 +197,11 @@ impl Dataset {
         };
 
         // Capture the 3x3 neighborhood
-        let subset =
-            zarrs::array_subset::ArraySubset::new_with_ranges(&[i_range.clone(), j_range.clone()]);
+        let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+            0..1,
+            i_range.clone(),
+            j_range.clone(),
+        ]);
         trace!("Cost subset: {:?}", subset);
 
         // Find the chunks that intersect the subset
@@ -197,8 +212,8 @@ impl Dataset {
             chunks.num_elements_usize()
         );
 
-        for ci in chunks.start()[0]..(chunks.start()[0] + chunks.shape()[0]) {
-            for cj in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
+        for ci in chunks.start()[1]..(chunks.start()[1] + chunks.shape()[1]) {
+            for cj in chunks.start()[2]..(chunks.start()[2] + chunks.shape()[2]) {
                 trace!(
                     "Checking if cost for chunk ({}, {}) has been calculated",
                     ci, cj
@@ -516,10 +531,10 @@ impl LazyChunk {
                 trace!("Loading chunk data for variable: {}", variable);
                 let array = zarrs::array::Array::open(self.source.clone(), &format!("/{variable}"))
                     .unwrap();
-                let chunk_indices = &[self.ci, self.cj];
                 let chunk_subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
-                    chunk_indices[0]..(chunk_indices[0] + 1),
-                    chunk_indices[1]..(chunk_indices[1] + 1),
+                    0..1,
+                    self.ci..(self.cj + 1),
+                    self.ci..(self.cj + 1),
                 ]);
                 trace!("Storing chunk data for variable: {}", variable);
                 let values = array.retrieve_chunks_ndarray::<f32>(&chunk_subset).unwrap();

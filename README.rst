@@ -2,7 +2,7 @@
 Welcome to reV Routing (reVRt)!
 *******************************
 
-|License| |Zenodo| |PythonV| |PyPi| |Ruff| |Pixi| |SWR|
+|License| |Zenodo| |PythonV| |PyPi| |Ruff| |Pixi| |SWR| |Codecov|
 
 
 .. |PythonV| image:: https://badge.fury.io/py/nrel-revrt.svg
@@ -25,6 +25,9 @@ Welcome to reV Routing (reVRt)!
 
 .. |Zenodo| image:: https://zenodo.org/badge/944738283.svg
     :target: https://doi.org/10.5281/zenodo.17173574
+
+.. |Codecov| image:: https://codecov.io/github/NREL/reVRt/graph/badge.svg?token=W072E3ZEMR
+    :target: https://codecov.io/github/NREL/reVRt
 
 .. inclusion-intro
 

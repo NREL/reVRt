@@ -23,7 +23,7 @@ use std::hint::black_box;
 use revrt::ArrayIndex;
 use revrt::bench_minimalist;
 
-use ndarray::Array2;
+use ndarray::Array3;
 use rand::Rng;
 
 enum FeaturesType {
@@ -50,13 +50,13 @@ fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::pat
     // Remember to remove /cost
     for array_path in ["/A", "/B", "/C", "/cost"].iter() {
         let array = zarrs::array::ArrayBuilder::new(
-            vec![ni, nj], // array shape
-            vec![ci, cj], // regular chunk shape
+            vec![1, ni, nj], // array shape
+            vec![1, ci, cj], // regular chunk shape
             zarrs::array::DataType::Float32,
             zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
         )
         // .bytes_to_bytes_codecs(vec![]) // uncompressed
-        .dimension_names(["y", "x"].into())
+        .dimension_names(["band", "y", "x"].into())
         // .storage_transformers(vec![].into())
         .build(store.clone(), array_path)
         .unwrap();
@@ -76,13 +76,17 @@ fn features(ni: u64, nj: u64, ci: u64, cj: u64, ftype: FeaturesType) -> std::pat
                 }
             }
         }
-        let data: Array2<f32> =
-            ndarray::Array::from_shape_vec((ni.try_into().unwrap(), nj.try_into().unwrap()), a)
+        let data: Array3<f32> =
+            ndarray::Array::from_shape_vec((1, ni.try_into().unwrap(), nj.try_into().unwrap()), a)
                 .unwrap();
 
         array
             .store_chunks_ndarray(
-                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..(ni / ci), 0..(nj / cj)]),
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                    0..1,
+                    0..(ni / ci),
+                    0..(nj / cj),
+                ]),
                 data,
             )
             .unwrap();

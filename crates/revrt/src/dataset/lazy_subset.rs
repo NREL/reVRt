@@ -121,10 +121,10 @@ mod tests {
         let store: ReadableListableStorage =
             Arc::new(zarrs::filesystem::FilesystemStore::new(&path).unwrap());
 
-        let subset = ArraySubset::new_with_start_shape(vec![0, 0], vec![2, 2]).unwrap();
+        let subset = ArraySubset::new_with_start_shape(vec![0, 0, 0], vec![1, 2, 2]).unwrap();
         let mut dataset = LazySubset::<f32>::new(store, subset);
         let tmp = dataset.get("A").unwrap();
-        assert_eq!(tmp.shape(), &[2, 2]);
+        assert_eq!(tmp.shape(), &[1, 2, 2]);
     }
 
     /*
