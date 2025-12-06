@@ -299,6 +299,47 @@ impl Dataset {
             .unwrap();
         */
     }
+
+    fn get_neighbor_costs(
+        &self,
+        i_range: std::ops::Range<u64>,
+        j_range: std::ops::Range<u64>,
+        subset: &zarrs::array_subset::ArraySubset,
+        is_invariant: bool,
+    ) -> Vec<((u64, u64), f32)> {
+        trace!("Opening cost dataset (is_invariant={})", is_invariant);
+
+        let layer_name = if is_invariant {
+            "/cost_invariant"
+        } else {
+            "/cost"
+        };
+        let cost_array = zarrs::array::Array::open(self.swap.clone(), layer_name).unwrap();
+        trace!(
+            "Cost dataset (is_invariant={}) with shape: {:?}",
+            is_invariant,
+            cost_array.shape()
+        );
+
+        // Retrieve the 3x3 neighborhood values
+        let cost_values: Vec<f32> = cost_array
+            .retrieve_array_subset_elements_opt::<f32>(
+                subset,
+                &zarrs::array::codec::CodecOptions::default(),
+            )
+            .unwrap();
+
+        trace!("Read values {:?}", cost_values);
+
+        // Match the indices
+        let neighbor_costs = i_range
+            .flat_map(|e| iter::repeat(e).zip(j_range.clone()))
+            .zip(cost_values)
+            .collect();
+
+        trace!("Neighbors {:?}", neighbor_costs);
+        neighbor_costs
+    }
 }
 
 fn add_layer_to_data(
