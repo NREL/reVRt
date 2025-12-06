@@ -101,6 +101,7 @@ def test_catching_error_by_type(
             raise raise_type(BASIC_ERROR_MESSAGE)
 
         assert BASIC_ERROR_MESSAGE in str(exc_info.value)
+        assert_message_was_logged(raise_type.__name__, "ERROR")
         assert_message_was_logged(BASIC_ERROR_MESSAGE, "ERROR")
 
 
