@@ -3,14 +3,12 @@
 //! This was originally developed to support the cost calculation, where the
 //! variables that will be used are not known until the cost is actually
 //! computed, and the same variable may be used multiple times. Thus the goal
-//! is to load each variable only once, don't load unecessary variables.
+//! is to load each variable only once, don't load unnecessary variables.
 //!
 //! The subset is fixed at the time of creation, so all variables are
 //! consistent for the same domain.
 //!
-//! Before we used the LazyChunk, which assumed that the intended outcome
-//! would match the source chunks. Here we replace that concept by a
-//! `LazySubset`, which is tied to an `ArraySubset`, thus it has no assumtions
+//! A `LazySubset` is tied to an `ArraySubset`, thus it has no assumptions
 //! on the source's chunk. Therefore, the source can have variable chunk shapes,
 //! one for each variable, and don't need to match the desired cost chunk shape.
 //!
