@@ -396,9 +396,58 @@ mod tests {
         for point in test_points {
             let results = dataset.get_3x3(&point);
 
+            let ArrayIndex { i: ci, j: cj } = point;
+            let center_subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                0..1,
+                ci..(ci + 1),
+                cj..(cj + 1),
+            ]);
+            let center_cost: f32 = array
+                .retrieve_array_subset_elements(&center_subset)
+                .expect("Error reading zarr data")[0];
+
             for (ArrayIndex { i, j }, val) in results {
-                let subset =
-                    zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
+                let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                    0..1,
+                    i..(i + 1),
+                    j..(j + 1),
+                ]);
+                let subset_elements: Vec<f32> = array
+                    .retrieve_array_subset_elements(&subset)
+                    .expect("Error reading zarr data");
+                assert_eq!(subset_elements.len(), 1);
+
+                let neighbor_cost: f32 = subset_elements[0];
+                let mut averaged_cost: f32 = 0.5 * (neighbor_cost + center_cost);
+                if i != ci && j != cj {
+                    averaged_cost *= SQRT_2;
+                }
+                assert_eq!(averaged_cost, val)
+            }
+        }
+    }
+
+    #[test]
+    fn test_simple_invariant_cost_function_get_3x3() {
+        let path = samples::multi_variable_zarr();
+        let cost_function = CostFunction::from_json(
+            r#"{"cost_layers": [{"layer_name": "A", "is_invariant": true}]}"#,
+        )
+        .unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+
+        let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
+        let array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
+        for point in test_points {
+            let results = dataset.get_3x3(&point);
+
+            for (ArrayIndex { i, j }, val) in results {
+                let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                    0..1,
+                    i..(i + 1),
+                    j..(j + 1),
+                ]);
                 let subset_elements: Vec<f32> = array
                     .retrieve_array_subset_elements(&subset)
                     .expect("Error reading zarr data");
@@ -408,7 +457,7 @@ mod tests {
         }
     }
 
-    #[allow(dead_code)]
+    #[test]
     fn test_sample_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
