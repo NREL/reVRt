@@ -82,56 +82,16 @@ impl CostFunction {
         features: &mut LazySubset<f32>,
         is_invariant: bool,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        debug!("Calculating cost for ({})", features.subset());
+        debug!(
+            "Calculating (is_invariant={}) cost for ({})",
+            is_invariant,
+            features.subset()
+        );
 
         let layers: Vec<&CostLayer> = self
             .cost_layers
             .iter()
-            .filter(|layer| !layer.is_invariant.unwrap_or(false))
-            .collect();
-
-        if layers.is_empty() {
-            return empty_cost_array(features);
-        }
-
-        let cost = layers
-            .into_iter()
-            .map(|layer| build_single_layer(layer, features))
-            .collect::<Vec<_>>();
-
-        let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
-        let stack = stack(Axis(0), &views).unwrap();
-        //let cost = stack![Axis(3), &cost];
-        trace!("Stack shape: {:?}", stack.shape());
-        let cost = stack.sum_axis(Axis(0));
-        trace!("Stack shape: {:?}", stack.shape());
-
-        cost
-    }
-
-    /// Calculate the cost from a given collection of input features
-    ///
-    /// Applies the cost function to a collection of input features, which
-    /// is typically a subset of a larger dataset, such as a chunk from a
-    /// Zarr dataset. The cost function is defined by a series of layers,
-    /// each of which may have a multiplier scalar or a multiplier layer.
-    ///
-    /// # Arguments
-    /// `features`: A lazy collection of input features.
-    ///
-    /// # Returns
-    /// A 2D array containing the cost for the subset covered by the input
-    /// features.
-    pub(crate) fn compute_invariant(
-        &self,
-        features: &mut LazySubset<f32>,
-    ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-        debug!("Calculating cost for ({})", features.subset());
-
-        let layers: Vec<&CostLayer> = self
-            .cost_layers
-            .iter()
-            .filter(|layer| layer.is_invariant.unwrap_or(false))
+            .filter(|layer| layer.is_invariant.unwrap_or(false) == is_invariant)
             .collect();
 
         if layers.is_empty() {
