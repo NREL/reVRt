@@ -26,7 +26,10 @@ pub(crate) struct CostFunction {
 /// operating on input features. Following the original `revX` structure,
 /// the possible compositions are limited to combinations of the relation
 /// `weight * layer_name * multiplier_layer`, where the `weight` and the
-/// `multiplier_layer` are optional.
+/// `multiplier_layer` are optional. Each layer can also be marked as invariant,
+/// meaning that it's value does not get scaled by the distance traveled
+/// through the cell. Instead, the value of the layer is added once, right
+/// when the path enters the cell.
 struct CostLayer {
     layer_name: String,
     #[builder(setter(strip_option), default)]
