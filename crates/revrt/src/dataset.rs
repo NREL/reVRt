@@ -126,21 +126,37 @@ impl Dataset {
         let variable = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
         // Get the subset according to cost's chunk
         let subset = variable.chunk_subset(&[0, ci, cj]).unwrap();
-        let data = LazySubset::<f32>::new(self.source.clone(), subset);
-        let output = self.cost_function.compute(data);
+        let mut data = LazySubset::<f32>::new(self.source.clone(), subset);
+
+        self.calculate_chunk_cost_single_layer(ci, cj, &mut data, true);
+        self.calculate_chunk_cost_single_layer(ci, cj, &mut data, false);
+    }
+
+    fn calculate_chunk_cost_single_layer(
+        &self,
+        ci: u64,
+        cj: u64,
+        subset: &mut LazySubset<f32>,
+        is_invariant: bool,
+    ) {
+        let output;
+        let layer_name;
+        if is_invariant {
+            trace!("Calculating invariant cost for chunk ({}, {})", ci, cj);
+            output = self.cost_function.compute(subset, true);
+            layer_name = "/cost_invariant";
+        } else {
+            trace!(
+                "Calculating length-dependent cost for chunk ({}, {})",
+                ci, cj
+            );
+            output = self.cost_function.compute(subset, false);
+            layer_name = "/cost";
+        }
 
         trace!("Cost function: {:?}", self.cost_function);
 
-        /*
-        trace!("Getting '/A' variable");
-        let array = zarrs::array::Array::open(self.source.clone(), "/A").unwrap();
-        let value = array.retrieve_chunk_ndarray::<f32>(&[i, j]).unwrap();
-        trace!("Value: {:?}", value);
-        trace!("Calculating cost for chunk ({}, {})", i, j);
-        let output = value * 10.0;
-        */
-
-        let cost = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
+        let cost = zarrs::array::Array::open(self.swap.clone(), layer_name).unwrap();
         cost.store_metadata().unwrap();
         let chunk_indices: Vec<u64> = vec![0, ci, cj];
         trace!("Storing chunk at {:?}", chunk_indices);
