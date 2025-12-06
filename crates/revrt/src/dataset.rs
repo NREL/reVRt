@@ -78,12 +78,12 @@ impl Dataset {
             .map(|entry| entry.to_string())
             .find(|entry| {
                 let name = entry.split('/').next().unwrap_or("").to_ascii_lowercase();
+                // Skip coordinate axes when selecting a representative variable for cost storage.
                 const EXCLUDES: [&str; 6] =
                     ["latitude", "longitude", "band", "x", "y", "spatial_ref"];
                 !name.ends_with(".json") && !EXCLUDES.iter().any(|needle| name.contains(needle))
             })
             .expect("no suitable variables found in source dataset");
-        // Skip coordinate axes when selecting a representative variable for cost storage.
         let varname = first_entry.split('/').next().unwrap().to_string();
         debug!("Using '{}' to determine shape of cost data", varname);
         let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
