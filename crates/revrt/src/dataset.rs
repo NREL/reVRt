@@ -268,23 +268,29 @@ impl Dataset {
 
         // Calculate the average with center point (half grid + other half grid).
         // Also, apply the diagonal factor for the extra distance.
-        let neighbors = neighbors
+        let cost_to_neighbors = neighbors
             .iter()
-            .filter(|((ir, jr), _)| !(*ir == i && *jr == j)) // no center point
-            .map(|((ir, jr), v)| ((ir, jr), 0.5 * (v + center.1)))
-            .map(|((ir, jr), v)| {
-                if *ir != i && *jr != j {
+            .zip(invariant_neighbors.iter())
+            .filter(|(((ir, jr), _), _)| !(*ir == i && *jr == j)) // no center point
+            .map(|(((ir, jr), v), ((inv_ir, inv_jr), inv_cost))| {
+                debug_assert_eq!((ir, jr), (inv_ir, inv_jr));
+                ((ir, jr), 0.5 * (v + center.1), inv_cost)
+            })
+            .map(|((ir, jr), v, inv_cost)| {
+                let scaled = if *ir != i && *jr != j {
                     // Diagonal factor for longer distance (hypotenuse)
-                    ((ir, jr), v * f32::sqrt(2.0))
+                    v * f32::sqrt(2.0)
                 } else {
-                    ((ir, jr), v)
-                }
+                    v
+                };
+                ((ir, jr), scaled + inv_cost)
             })
             .map(|((ir, jr), v)| (ArrayIndex { i: *ir, j: *jr }, v))
             .collect::<Vec<_>>();
-        trace!("Neighbors {:?}", neighbors);
 
-        neighbors
+        trace!("Neighbors {:?}", cost_to_neighbors);
+
+        cost_to_neighbors
 
         /*
         let mut data = array
