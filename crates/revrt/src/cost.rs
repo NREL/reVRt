@@ -72,6 +72,7 @@ impl CostFunction {
     ///
     /// # Arguments
     /// `features`: A lazy collection of input features.
+    /// `is_invariant`: If true, only invariant layers contribute.
     ///
     /// # Returns
     /// A 2D array containing the cost for the subset covered by the input
@@ -79,6 +80,7 @@ impl CostFunction {
     pub(crate) fn compute(
         &self,
         features: &mut LazySubset<f32>,
+        is_invariant: bool,
     ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
         debug!("Calculating cost for ({})", features.subset());
 
