@@ -33,6 +33,10 @@ class revrtFileNotFoundError(revrtError, FileNotFoundError):
     """revrt FileNotFoundError"""
 
 
+class revrtInvalidStartCostError(revrtError, ValueError):
+    """revrt FileNotFoundError"""
+
+
 class revrtKeyError(revrtError, KeyError):
     """revrt KeyError"""
 
