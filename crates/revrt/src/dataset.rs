@@ -244,19 +244,10 @@ impl Dataset {
             }
         }
 
-        // Retrieve the 3x3 neighborhood values
-        let value: Vec<f32> = cost
-            //.retrieve_array_subset_elements_opt_cached::<f32, zarrs::array::ChunkCacheTypeDecoded>(
-            .retrieve_array_subset_elements_opt::<f32>(
-                // &self.cache,
-                &subset,
-                &zarrs::array::codec::CodecOptions::default(),
-            )
-            .unwrap();
-
-        trace!("Read values {:?}", value);
-
         trace!("Input index: (i={}, j={})", i, j);
+
+        let neighbors = self.get_neighbor_costs(i_range.clone(), j_range.clone(), &subset, false);
+        let invariant_neighbors = self.get_neighbor_costs(i_range, j_range, &subset, true);
 
         /*
          * The transition between two gridpoint centers is along half the distance
@@ -267,13 +258,6 @@ impl Dataset {
          * of both values, but we have to scale for the longer distance along the
          * diagonal, thus a sqrt(2) factor along the diagonals.
          */
-
-        // Match the indices
-        let neighbors: Vec<((u64, u64), f32)> = i_range
-            .flat_map(|e| iter::repeat(e).zip(j_range.clone()))
-            .zip(value)
-            .collect();
-        trace!("Neighbors {:?}", neighbors);
 
         // Extract the origin point.
         let center = neighbors
