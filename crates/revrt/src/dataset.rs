@@ -383,7 +383,7 @@ mod tests {
     use std::f32::consts::SQRT_2;
     use test_case::test_case;
 
-    #[allow(dead_code)]
+    #[test]
     fn test_simple_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function =
@@ -471,9 +471,31 @@ mod tests {
         for point in test_points {
             let results = dataset.get_3x3(&point);
 
+            let ArrayIndex { i: ci, j: cj } = point;
+            let center_subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                0..1,
+                ci..(ci + 1),
+                cj..(cj + 1),
+            ]);
+            let center_a = array_a
+                .retrieve_array_subset_elements::<f32>(&center_subset)
+                .expect("Error reading zarr data")[0];
+            let center_b = array_b
+                .retrieve_array_subset_elements::<f32>(&center_subset)
+                .expect("Error reading zarr data")[0];
+            let center_c = array_c
+                .retrieve_array_subset_elements::<f32>(&center_subset)
+                .expect("Error reading zarr data")[0];
+
+            let center_cost: f32 =
+                center_a + center_b * 100. + center_a * center_b + center_c * center_a * 2.;
+
             for (ArrayIndex { i, j }, val) in results {
-                let subset =
-                    zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
+                let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                    0..1,
+                    i..(i + 1),
+                    j..(j + 1),
+                ]);
                 let subset_elements_a: Vec<f32> = array_a
                     .retrieve_array_subset_elements(&subset)
                     .expect("Error reading zarr data");
@@ -489,13 +511,26 @@ mod tests {
                     .expect("Error reading zarr data");
                 assert_eq!(subset_elements_c.len(), 1);
 
-                assert_eq!(
-                    subset_elements_a[0]
-                        + subset_elements_b[0] * 100.
-                        + subset_elements_a[0] * subset_elements_b[0]
-                        + subset_elements_c[0] * subset_elements_a[0] * 2.,
-                    val
-                )
+                // based on the const function definition
+                let neighbor_cost: f32 = subset_elements_a[0]
+                    + subset_elements_b[0] * 100.
+                    + subset_elements_a[0] * subset_elements_b[0]
+                    + subset_elements_c[0] * subset_elements_a[0] * 2.;
+                let mut averaged_cost: f32 = 0.5 * (neighbor_cost + center_cost);
+                if i != ci && j != cj {
+                    averaged_cost *= SQRT_2;
+                }
+                // add invariant cost
+                let expected: f32 = averaged_cost + subset_elements_c[0] * 100.;
+
+                let diff: f32 = (expected - val).abs();
+                assert!(
+                    diff < 1e-4_f32,
+                    "Unexpected cost for {:?}: {:?} (expected {:?}): ",
+                    (i, j),
+                    val,
+                    expected
+                );
             }
         }
     }
