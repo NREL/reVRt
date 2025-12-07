@@ -1,0 +1,182 @@
+"""reVrt tests for routing one point to many endpoints"""
+
+from pathlib import Path
+
+import pytest
+import numpy as np
+import xarray as xr
+from rasterio.transform import from_origin
+
+from revrt.utilities import LayeredFile
+from revrt.routing.point_to_many import find_all_routes, RoutingScenario
+
+
+@pytest.fixture(scope="module")
+def sample_layered_data(tmp_path_factory):
+    """Sample layered data files to use across tests"""
+    data_dir = tmp_path_factory.mktemp("routing_data")
+
+    layered_fp = data_dir / "test_layered.zarr"
+    layer_file = LayeredFile(layered_fp)
+
+    height, width = (7, 8)
+    cell_size = 1.0
+    x0, y0 = 0.0, float(height)
+    transform = from_origin(x0, y0, cell_size, cell_size)
+    x_coords = (
+        x0 + np.arange(width, dtype=np.float32) * cell_size + cell_size / 2
+    )
+    y_coords = (
+        y0 - np.arange(height, dtype=np.float32) * cell_size - cell_size / 2
+    )
+
+    layer_1 = np.array(
+        [
+            [
+                [7, 7, 8, 0, 9, 9, 9, 0],
+                [8, 1, 2, 2, 9, 9, 9, 0],
+                [9, 1, 3, 3, 9, 1, 2, 3],
+                [9, 1, 2, 1, 9, 1, 9, 0],
+                [9, 9, 9, 1, 9, 1, 9, 0],
+                [9, 9, 9, 1, 1, 1, 9, 0],
+                [9, 9, 9, 9, 9, 9, 9, 0],
+            ]
+        ],
+        dtype=np.float32,
+    )
+
+    layer_2 = np.array(
+        [
+            [
+                [8, 7, 6, 5, 5, 6, 7, 9],
+                [7, 1, 1, 2, 3, 3, 2, 8],
+                [6, 2, 9, 6, 5, 2, 1, 7],
+                [7, 3, 8, 1, 2, 3, 2, 6],
+                [8, 4, 7, 2, 8, 4, 3, 5],
+                [9, 5, 6, 3, 4, 4, 3, 4],
+                [9, 6, 7, 4, 5, 5, 4, 3],
+            ]
+        ],
+        dtype=np.float32,
+    )
+
+    layer_3 = np.array(
+        [
+            [
+                [6, 6, 6, 6, 6, 7, 8, 9],
+                [5, 2, 2, 3, 4, 5, 6, 8],
+                [4, 3, 7, 7, 6, 4, 5, 7],
+                [5, 4, 6, 2, 3, 4, 4, 6],
+                [6, 5, 5, 3, 7, 5, 5, 5],
+                [7, 6, 6, 4, 5, 5, 4, 4],
+                [8, 7, 7, 5, 6, 5, 4, 3],
+            ]
+        ],
+        dtype=np.float32,
+    )
+
+    layer_4 = np.array(
+        [
+            [
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+            ]
+        ],
+        dtype=np.float32,
+    )
+
+    layer_5 = np.array(
+        [
+            [
+                [0, 0, 0, 1, 1, 1, 1, 1],
+                [0, 0, 0, 1, 1, 1, 1, 1],
+                [0, 0, 0, 1, 1, 1, 1, 1],
+                [0, 1, 1, 1, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 1, 0],
+                [0, 0, 0, 1, 0, 1, 1, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+            ]
+        ],
+        dtype=np.float32,
+    )
+
+    for ind, routing_layer in enumerate(
+        [
+            layer_1,
+            layer_2,
+            layer_3,
+            layer_4,
+            layer_5,
+        ],
+        start=1,
+    ):
+        da = xr.DataArray(
+            routing_layer,
+            dims=("band", "y", "x"),
+            coords={"y": y_coords, "x": x_coords},
+        )
+        da = da.rio.write_crs("EPSG:4326")
+        da = da.rio.write_transform(transform)
+
+        geotiff_fp = data_dir / f"layer_{ind}.tif"
+        da.rio.to_raster(geotiff_fp, driver="GTiff")
+
+        layer_file.write_geotiff_to_file(
+            geotiff_fp, f"layer_{ind}", overwrite=True
+        )
+    return layered_fp
+
+
+def test_basic_single_route_layered_file_short_path(sample_layered_data):
+    """Test routing using a LayeredFile-generated cost surface"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    output = find_all_routes(
+        scenario, route_definitions=[((1, 1), [(1, 2)])], save_paths=False
+    )
+
+    assert len(output) == 1
+    assert output.iloc[0]["cost"] == pytest.approx((1 + 2) / 2)
+    assert output.iloc[0]["length_km"] == 1 / 1000
+    assert output.iloc[0]["cost"] == output.iloc[0]["optimized_objective"]
+
+
+def test_basic_single_route_layered_file(sample_layered_data):
+    """Test routing using a LayeredFile-generated cost surface"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[((1, 1), [(2, 6)]), ((1, 2), [(2, 6)])],
+        save_paths=False,
+    )
+
+    assert len(output) == 2
+    assert output.iloc[0]["cost"] == pytest.approx(11.192389)
+    assert output.iloc[0]["length_km"] == pytest.approx(0.0090710678)
+    assert np.isclose(
+        output.iloc[0]["cost"], output.iloc[0]["optimized_objective"]
+    )
+
+    assert output.iloc[1]["cost"] == pytest.approx(12.278174)
+    assert output.iloc[1]["length_km"] == pytest.approx(0.008656854)
+    assert np.isclose(
+        output.iloc[1]["cost"], output.iloc[1]["optimized_objective"]
+    )
+
+
+if __name__ == "__main__":
+    pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
