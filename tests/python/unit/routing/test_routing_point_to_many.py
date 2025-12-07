@@ -359,5 +359,38 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
     assert np.isclose(route["cost"], route["optimized_objective"], rtol=1e-6)
 
 
+def test_routing_with_tracked_layers(sample_layered_data):
+    """Tracked layers report aggregated stats alongside routing results"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        tracked_layers={
+            "layer_1": "mean",
+            "layer_2": "max",
+            "layer_3": "min",
+        },
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[((1, 1), [(1, 2)])],
+        save_paths=False,
+    )
+
+    assert len(output) == 1
+    route = output.iloc[0]
+
+    assert {
+        "layer_1_mean",
+        "layer_2_max",
+        "layer_3_min",
+    }.issubset(output.columns)
+
+    assert route["layer_1_mean"] == pytest.approx(1.5)
+    assert route["layer_2_max"] == pytest.approx(1.0)
+    assert route["layer_3_min"] == pytest.approx(2.0)
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
