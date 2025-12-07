@@ -325,13 +325,13 @@ class CharacterizedLayer:
         )
 
         if self.agg_method is None:
-            return self._compute_total_amd_length(
+            return self._compute_total_and_length(
                 layer_values, route, cell_size
             )
 
         return self._compute_agg(layer_values)
 
-    def _compute_total_amd_length(self, layer_values, route, cell_size):
+    def _compute_total_and_length(self, layer_values, route, cell_size):
         # Use Pythagorean theorem to calculate length between cells (km)
         # Use c**2 = a**2 + b**2 to determine length of individual paths
         lens = np.sqrt(np.sum(np.diff(route, axis=0) ** 2, axis=1))
