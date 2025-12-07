@@ -243,5 +243,77 @@ def test_multi_layer_route_layered_file(sample_layered_data):
     )
 
 
+def test_multi_layer_route_with_multiplier(sample_layered_data):
+    """Test routing with multiple layers and a scalar multiplier"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_1"},
+            {
+                "layer_name": "layer_2",
+                "multiplier_scalar": 0.5,
+            },
+        ],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[
+            ((1, 1), [(2, 6)]),
+            ((1, 2), [(2, 6)]),
+        ],
+        save_paths=False,
+    )
+
+    assert len(output) == 2
+
+    first_route = output.iloc[0]
+    assert first_route["cost"] == pytest.approx(
+        22.588835,
+        rel=1e-4,
+    )
+    assert first_route["length_km"] == pytest.approx(
+        0.005414,
+        rel=1e-4,
+    )
+    assert first_route["layer_1_cost"] == pytest.approx(
+        17.571068,
+        rel=1e-4,
+    )
+    assert first_route["layer_2_cost"] == pytest.approx(
+        5.017767,
+        rel=1e-4,
+    )
+    assert np.isclose(
+        first_route["cost"],
+        first_route["optimized_objective"],
+        rtol=1e-4,
+    )
+
+    second_route = output.iloc[1]
+    assert second_route["cost"] == pytest.approx(
+        20.588835,
+        rel=1e-4,
+    )
+    assert second_route["length_km"] == pytest.approx(
+        0.004414,
+        rel=1e-4,
+    )
+    assert second_route["layer_1_cost"] == pytest.approx(
+        16.071068,
+        rel=1e-4,
+    )
+    assert second_route["layer_2_cost"] == pytest.approx(
+        4.517767,
+        rel=1e-4,
+    )
+    assert np.isclose(
+        second_route["cost"],
+        second_route["optimized_objective"],
+        rtol=1e-4,
+    )
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
