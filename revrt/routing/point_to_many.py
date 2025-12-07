@@ -332,31 +332,18 @@ class CharacterizedLayer:
         return self._compute_agg(layer_values)
 
     def _compute_total_and_length(self, layer_values, route, cell_size):
-        # Use Pythagorean theorem to calculate length between cells (km)
-        # Use c**2 = a**2 + b**2 to determine length of individual paths
-        lens = np.sqrt(np.sum(np.diff(route, axis=0) ** 2, axis=1))
+        lens, __ = _compute_lens(route, cell_size)
 
-        # Need to determine distance coming into and out of any cell.
-        # Assume paths start and end at the center of a cell. Therefore,
-        # distance traveled in the cell is half the distance entering it
-        # and half the distance exiting it. Duplicate all lengths,
-        # pad 0s on ends for start  and end cells, and divide all
-        # distance by half.
-        lens = np.repeat(lens, 2)
-        lens = np.insert(np.append(lens, 0), 0, 0)
-        lens /= 2
-
-        # Group entrance and exits distance together, and add them
-        lens = lens.reshape((int(lens.shape[0] / 2), 2))
-        lens = da.sum(lens, axis=1)
+        layer_data = getattr(layer_values, "data", layer_values)
+        if not isinstance(layer_data, da.Array):
+            layer_data = da.asarray(layer_data)
 
         if self.is_length_invariant:
-            layer_cost = da.sum(layer_values)
+            layer_cost = da.sum(layer_data)
         else:
-            layer_cost = da.sum(layer_values * lens)
+            layer_cost = da.sum(layer_data * lens)
 
-        # Get path length in km only where layer costs are > 0
-        layer_length = da.sum(lens[layer_values > 0]) * cell_size / 1000
+        layer_length = da.sum(lens[layer_data > 0]) * cell_size / 1000
 
         return {
             f"{self.name}_cost": layer_cost.astype(np.float32).compute(),
@@ -463,24 +450,9 @@ class RouteResult:
 
     def _compute_path_length(self):
         """Compute the total length and cell by cell length of LCP"""
-        # Use Pythagorean theorem to calculate length between cells (km)
-        # Use c**2 = a**2 + b**2 to determine length of individual paths
-        lens = np.sqrt(np.sum(np.diff(self._route, axis=0) ** 2, axis=1))
-        self._total_path_length = np.sum(lens) * self.cell_size / 1000
-
-        # Need to determine distance coming into and out of any cell.
-        # Assume paths start and end at the center of a cell. Therefore,
-        # distance traveled in the cell is half the distance entering it
-        # and half the distance exiting it. Duplicate all lengths,
-        # pad 0s on ends for start  and end cells, and divide all
-        # distance by half.
-        lens = np.repeat(lens, 2)
-        lens = np.insert(np.append(lens, 0), 0, 0)
-        lens /= 2
-
-        # Group entrance and exits distance together, and add them
-        lens = lens.reshape((int(lens.shape[0] / 2), 2))
-        self._lens = np.sum(lens, axis=1)
+        self._lens, self._total_path_length = _compute_lens(
+            self._route, self.cell_size
+        )
 
 
 def find_all_routes(routing_scenario, route_definitions, save_paths=False):
@@ -537,3 +509,26 @@ def _compute_routes(
         return gpd.GeoDataFrame([])
 
     return pd.DataFrame(routes)
+
+
+def _compute_lens(route, cell_size):
+    """Compute the total length and cell by cell length of LCP"""
+    # Use Pythagorean theorem to calculate length between cells (km)
+    # Use c**2 = a**2 + b**2 to determine length of individual paths
+    lens = np.sqrt(np.sum(np.diff(route, axis=0) ** 2, axis=1))
+    total_path_length = np.sum(lens) * cell_size / 1000
+
+    # Need to determine distance coming into and out of any cell.
+    # Assume paths start and end at the center of a cell. Therefore,
+    # distance traveled in the cell is half the distance entering it
+    # and half the distance exiting it. Duplicate all lengths,
+    # pad 0s on ends for start  and end cells, and divide all
+    # distance by half.
+    lens = np.repeat(lens, 2)
+    lens = np.insert(np.append(lens, 0), 0, 0)
+    lens /= 2
+
+    # Group entrance and exits distance together, and add them
+    lens = lens.reshape((int(lens.shape[0] / 2), 2))
+    lens = np.sum(lens, axis=1)
+    return lens, total_path_length

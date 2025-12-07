@@ -354,8 +354,8 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
     assert route["layer_5_cost"] == pytest.approx(0.0, abs=1e-8)
     assert route["layer_1_dist_km"] == pytest.approx(0.001, rel=1e-4)
     assert route["layer_2_dist_km"] == pytest.approx(0.001, rel=1e-4)
-    assert route["layer_3_dist_km"] == pytest.approx(0.001, rel=1e-4)
-    assert route["layer_5_dist_km"] == pytest.approx(0.001, rel=1e-4)
+    assert route["layer_3_dist_km"] == pytest.approx(0.0, abs=1e-8)
+    assert route["layer_5_dist_km"] == pytest.approx(0.0, abs=1e-8)
     assert np.isclose(route["cost"], route["optimized_objective"], rtol=1e-6)
 
 
