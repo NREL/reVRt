@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import geopandas as gpd
+import pandas as pd
 import pytest
 import numpy as np
 import xarray as xr
@@ -295,6 +296,46 @@ def test_save_paths_returns_expected_geometry(sample_layered_data):
         assert np.allclose(
             np.asarray(geom.coords), np.asarray(expected_coords)
         )
+
+
+def test_empty_route_definitions_returns_empty_dataframe(sample_layered_data):
+    """Empty route definitions return an empty dataframe"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[],
+        save_paths=False,
+    )
+
+    assert isinstance(output, pd.DataFrame)
+    assert output.empty
+    assert list(output.columns) == []
+
+
+def test_empty_route_definitions_returns_empty_geo_dataframe(
+    sample_layered_data,
+):
+    """Empty route definitions return an empty dataframe"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[],
+        save_paths=True,
+    )
+
+    assert isinstance(output, gpd.GeoDataFrame)
+    assert output.empty
+    assert list(output.columns) == []
 
 
 def test_multi_layer_route_with_multiplier(sample_layered_data):
