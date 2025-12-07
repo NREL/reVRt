@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import geopandas as gpd
 import pytest
 import numpy as np
 import xarray as xr
@@ -241,6 +242,59 @@ def test_multi_layer_route_layered_file(sample_layered_data):
     assert np.isclose(
         second_route["cost"], second_route["optimized_objective"], rtol=1e-6
     )
+
+
+def test_save_paths_returns_expected_geometry(sample_layered_data):
+    """Saving paths returns expected geometries for each route"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[
+            ((1, 1), [(2, 6)]),
+            ((1, 2), [(2, 6)]),
+        ],
+        save_paths=True,
+    )
+
+    assert isinstance(output, gpd.GeoDataFrame)
+    assert len(output) == 2
+    assert output.crs.to_string() == "EPSG:4326"
+
+    expected_geometries = [
+        [
+            (1.5, 5.5),
+            (1.5, 4.5),
+            (2.5, 3.5),
+            (3.5, 2.5),
+            (4.5, 1.5),
+            (5.5, 2.5),
+            (5.5, 3.5),
+            (6.5, 4.5),
+        ],
+        [
+            (2.5, 5.5),
+            (2.5, 4.5),
+            (3.5, 3.5),
+            (3.5, 2.5),
+            (4.5, 1.5),
+            (5.5, 2.5),
+            (5.5, 3.5),
+            (6.5, 4.5),
+        ],
+    ]
+
+    for geom, expected_coords in zip(
+        output.geometry, expected_geometries, strict=True
+    ):
+        assert geom.geom_type == "LineString"
+        assert np.allclose(
+            np.asarray(geom.coords), np.asarray(expected_coords)
+        )
 
 
 def test_multi_layer_route_with_multiplier(sample_layered_data):
