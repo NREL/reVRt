@@ -80,9 +80,16 @@ impl Dataset {
                 let name = entry.split('/').next().unwrap_or("").to_ascii_lowercase();
                 const EXCLUDES: [&str; 6] =
                     ["latitude", "longitude", "band", "x", "y", "spatial_ref"];
-                !name.ends_with(".json") && !EXCLUDES.iter().any(|needle| name.contains(needle))
+                !name.ends_with(".json") && !EXCLUDES.iter().any(|needle| name == *needle)
             })
-            .expect("no suitable variables found in source dataset");
+            .unwrap_or_else(|| {
+                panic!(
+                    "no non-coordinate variables found in source dataset: {:?}",
+                    source
+                        .list()
+                        .unwrap_or_else(|err| panic!("failed to list dataset entries: {err}"))
+                )
+            });
         // Skip coordinate axes when selecting a representative variable for cost storage.
         let varname = first_entry.split('/').next().unwrap().to_string();
         debug!("Using '{}' to determine shape of cost data", varname);
