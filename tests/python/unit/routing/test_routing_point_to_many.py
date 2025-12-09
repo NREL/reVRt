@@ -35,7 +35,7 @@ def sample_layered_data(tmp_path_factory):
     layer_1 = np.array(
         [
             [
-                [7, 7, 8, 0, 9, 9, 9, 0],
+                [7, 7, 8, -1, 9, 9, 9, 0],
                 [8, 1, 2, 2, 9, 9, 9, 0],
                 [9, 1, 3, 3, 9, 1, 2, 3],
                 [9, 1, 2, 1, 9, 1, 9, 0],
@@ -485,6 +485,65 @@ def test_routing_with_tracked_layers(sample_layered_data):
     assert route["layer_1_mean"] == pytest.approx(1.5)
     assert route["layer_2_max"] == pytest.approx(1.0)
     assert route["layer_3_min"] == pytest.approx(2.0)
+
+
+def test_start_point_on_barrier_returns_no_route(sample_layered_data):
+    """If the start point is on a barrier (cost <= 0) no route is returned"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    # (0, 3) in layer_1 is 0 -> treated as barrier
+    output = find_all_routes(
+        scenario, route_definitions=[((0, 3), [(2, 6)])], save_paths=False
+    )
+
+    assert isinstance(output, pd.DataFrame)
+    assert output.empty
+
+
+def test_some_endpoints_include_barriers_but_one_valid(sample_layered_data):
+    """If some end points <=0 but at least one is valid, route is found"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    # include one barrier end (0,3) and one valid end (2,6)
+    output = find_all_routes(
+        scenario,
+        route_definitions=[((1, 1), [(0, 3), (2, 6)])],
+        save_paths=False,
+    )
+
+    assert len(output) == 1
+    # At least one valid endpoint must be reached and cost must be positive.
+    assert output.iloc[0]["cost"] > 0
+
+    end_row = int(output.iloc[0]["end_row"])
+    end_col = int(output.iloc[0]["end_col"])
+    assert (end_row, end_col) == (2, 6)
+
+
+def test_all_endpoints_are_barriers_returns_no_route(sample_layered_data):
+    """If all end points are barriers, no route is returned"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[((1, 1), [(0, 3), (0, 7)])],
+        save_paths=False,
+    )
+
+    assert isinstance(output, pd.DataFrame)
+    assert output.empty
 
 
 if __name__ == "__main__":
