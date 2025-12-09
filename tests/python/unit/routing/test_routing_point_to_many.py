@@ -35,7 +35,7 @@ def sample_layered_data(tmp_path_factory):
     layer_1 = np.array(
         [
             [
-                [7, 7, 8, -1, 9, 9, 9, 0],
+                [7, 7, 8, 0, 9, 9, 9, 0],
                 [8, 1, 2, 2, 9, 9, 9, 0],
                 [9, 1, 3, 3, 9, 1, 2, 3],
                 [9, 1, 2, 1, 9, 1, 9, 0],
@@ -487,7 +487,9 @@ def test_routing_with_tracked_layers(sample_layered_data):
     assert route["layer_3_min"] == pytest.approx(2.0)
 
 
-def test_start_point_on_barrier_returns_no_route(sample_layered_data):
+def test_start_point_on_barrier_returns_no_route(
+    sample_layered_data, assert_message_was_logged
+):
     """If the start point is on a barrier (cost <= 0) no route is returned"""
 
     scenario = RoutingScenario(
@@ -498,6 +500,10 @@ def test_start_point_on_barrier_returns_no_route(sample_layered_data):
     # (0, 3) in layer_1 is 0 -> treated as barrier
     output = find_all_routes(
         scenario, route_definitions=[((0, 3), [(2, 6)])], save_paths=False
+    )
+    assert_message_was_logged(
+        "Start idx (0, 3) does not have a valid cost: -1.00 (must be > 0)!",
+        "ERROR",
     )
 
     assert isinstance(output, pd.DataFrame)
@@ -528,7 +534,9 @@ def test_some_endpoints_include_barriers_but_one_valid(sample_layered_data):
     assert (end_row, end_col) == (2, 6)
 
 
-def test_all_endpoints_are_barriers_returns_no_route(sample_layered_data):
+def test_all_endpoints_are_barriers_returns_no_route(
+    sample_layered_data, assert_message_was_logged
+):
     """If all end points are barriers, no route is returned"""
 
     scenario = RoutingScenario(
@@ -540,6 +548,10 @@ def test_all_endpoints_are_barriers_returns_no_route(sample_layered_data):
         scenario,
         route_definitions=[((1, 1), [(0, 3), (0, 7)])],
         save_paths=False,
+    )
+    assert_message_was_logged(
+        "None of the end idx [(0, 3), (0, 7)] have a valid cost (must be > 0)",
+        "ERROR",
     )
 
     assert isinstance(output, pd.DataFrame)
