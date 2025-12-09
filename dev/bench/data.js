@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1764975837128,
+  "lastUpdate": 1765306706098,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -1847,6 +1847,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 189969633,
             "range": "± 2920851",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "712cf59408580064f2dcf5d04227a2ed95567f9a",
+          "message": "Minimalist validation against scikit-image using hypothesis (#160)\n\n* cfg: Adding hypothesis as dependency for test\n\n* Minimalist validation against scikit-image using hypothesis\n\n* fix: Missing hypothesis as dependency for TOX setup\n\n* Defining MAX_COST\n\n* cfg: Increasing hypothesis deadline\n\n* cfg: Updating pixi.lock\n\n* Attempt to fix GitHub CI (#174)\n\n* Use correct data shape\n\n* Use temp dir for data\n\n* Use fixtures\n\n* Relax time to run\n\n* Remove unnecessary str cast\n\n---------\n\nCo-authored-by: Paul Pinchuk <ppinchuk@nrel.gov>",
+          "timestamp": "2025-12-09T11:46:26-07:00",
+          "tree_id": "2b07a7b43ac551ab66ad2331c7c7f26f48b40914",
+          "url": "https://github.com/NREL/reVRt/commit/712cf59408580064f2dcf5d04227a2ed95567f9a"
+        },
+        "date": 1765306704722,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74641727,
+            "range": "± 1734656",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 101565616,
+            "range": "± 1776695",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 116115087,
+            "range": "± 3895078",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 159272315,
+            "range": "± 5233464",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 442116898,
+            "range": "± 20858102",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 148063273,
+            "range": "± 1286138",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 151330120,
+            "range": "± 603884",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 160014478,
+            "range": "± 1008146",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 188948145,
+            "range": "± 1325888",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 289235865,
+            "range": "± 4365158",
             "unit": "ns/iter"
           }
         ]
