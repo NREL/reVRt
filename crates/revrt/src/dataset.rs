@@ -292,6 +292,7 @@ impl Dataset {
         let neighbors = neighbors
             .iter()
             .filter(|((ir, jr), _)| !(*ir == i && *jr == j)) // no center point
+            .filter(|((_, _), v)| *v > 0.) // only positive costs
             .map(|((ir, jr), v)| ((ir, jr), 0.5 * (v + center.1)))
             .map(|((ir, jr), v)| {
                 if *ir != i && *jr != j {
