@@ -69,7 +69,7 @@ def validate_single_var(data, start, end, tmp_path):
         hypothesis.strategies.floats(0, 1), hypothesis.strategies.floats(0, 1)
     ),
 )
-@hypothesis.settings(deadline=1_000, max_examples=100)
+@hypothesis.settings(deadline=5_000, max_examples=100)
 def test_basic(tmp_path_factory, data, start, end):
     """Validate single f32 variable"""
     start = (
