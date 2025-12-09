@@ -5,8 +5,6 @@ same conditions.
 """
 
 import json
-import tempfile
-from pathlib import Path
 
 import hypothesis
 from hypothesis.extra.numpy import arrays, array_shapes
@@ -21,33 +19,25 @@ from revrt import find_paths
 MAX_COST = 1e6
 
 
-def validate_single_var(data, start, end):
+def validate_single_var(data, start, end, tmp_path):
     """Validate reVRt against skimage for a given feature array
 
     Currently only for a single variable
     """
     da = xr.DataArray(data[None], dims=("band", "y", "x"))
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        test_cost_fp = Path(tmpdir) / "test.zarr"
-        ds = xr.Dataset({"test_costs": da})
-        ds["test_costs"].encoding = {
-            "fill_value": 1_000.0,
-            "_FillValue": 1_000.0,
-        }
-        ds.chunk({"x": 4, "y": 3}).to_zarr(
-            test_cost_fp,
-            mode="w",
-            zarr_format=3,
-        )
+    test_cost_fp = tmp_path / "test.zarr"
+    ds = xr.Dataset({"test_costs": da})
+    ds["test_costs"].encoding = {"fill_value": 1_000.0, "_FillValue": 1_000.0}
+    ds.chunk({"x": 4, "y": 3}).to_zarr(test_cost_fp, mode="w", zarr_format=3)
 
-        cost_definition = {"cost_layers": [{"layer_name": "test_costs"}]}
-        results = find_paths(
-            zarr_fp=str(test_cost_fp),
-            cost_layers=json.dumps(cost_definition),
-            start=[start],
-            end=[end],
-        )
+    cost_definition = {"cost_layers": [{"layer_name": "test_costs"}]}
+    results = find_paths(
+        zarr_fp=str(test_cost_fp),
+        cost_layers=json.dumps(cost_definition),
+        start=[start],
+        end=[end],
+    )
 
     assert len(results) == 1
     revrt_route, revrt_cost = results[0]
@@ -80,7 +70,7 @@ def validate_single_var(data, start, end):
     ),
 )
 @hypothesis.settings(deadline=1_000, max_examples=100)
-def test_basic(data, start, end):
+def test_basic(tmp_path_factory, data, start, end):
     """Validate single f32 variable"""
     start = (
         round(start[0] * max(0, data.shape[0] - 1)),
@@ -91,4 +81,5 @@ def test_basic(data, start, end):
         round(end[1] * max(0, data.shape[1] - 1)),
     )
 
-    validate_single_var(data, start, end)
+    tmpdir = tmp_path_factory.mktemp("skimage_test")
+    validate_single_var(data, start, end, tmpdir)
