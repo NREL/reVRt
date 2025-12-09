@@ -5,6 +5,8 @@ same conditions.
 """
 
 import json
+import tempfile
+from pathlib import Path
 
 import hypothesis
 from hypothesis.extra.numpy import arrays, array_shapes
@@ -26,18 +28,26 @@ def validate_single_var(data, start, end):
     """
     da = xr.DataArray(data[None], dims=("band", "y", "x"))
 
-    test_cost_fp = "test.zarr"
-    ds = xr.Dataset({"test_costs": da})
-    ds["test_costs"].encoding = {"fill_value": 1_000.0, "_FillValue": 1_000.0}
-    ds.chunk({"x": 4, "y": 3}).to_zarr(test_cost_fp, mode="w", zarr_format=3)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        test_cost_fp = Path(tmpdir) / "test.zarr"
+        ds = xr.Dataset({"test_costs": da})
+        ds["test_costs"].encoding = {
+            "fill_value": 1_000.0,
+            "_FillValue": 1_000.0,
+        }
+        ds.chunk({"x": 4, "y": 3}).to_zarr(
+            test_cost_fp,
+            mode="w",
+            zarr_format=3,
+        )
 
-    cost_definition = {"cost_layers": [{"layer_name": "test_costs"}]}
-    results = find_paths(
-        zarr_fp=test_cost_fp,
-        cost_layers=json.dumps(cost_definition),
-        start=[start],
-        end=[end],
-    )
+        cost_definition = {"cost_layers": [{"layer_name": "test_costs"}]}
+        results = find_paths(
+            zarr_fp=str(test_cost_fp),
+            cost_layers=json.dumps(cost_definition),
+            start=[start],
+            end=[end],
+        )
 
     assert len(results) == 1
     revrt_route, revrt_cost = results[0]
