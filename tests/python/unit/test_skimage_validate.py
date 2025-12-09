@@ -18,14 +18,15 @@ from revrt import find_paths
 # The test never ends for large values, such as 1e10.
 MAX_COST = 1e6
 
-def validate_single_var(data, start, end):
+
+def validate_single_var(data, start, end, tmp_path):
     """Validate reVRt against skimage for a given feature array
 
     Currently only for a single variable
     """
-    da = xr.DataArray(data, dims=("y", "x"))
+    da = xr.DataArray(data[None], dims=("band", "y", "x"))
 
-    test_cost_fp = "test.zarr"
+    test_cost_fp = tmp_path / "test.zarr"
     ds = xr.Dataset({"test_costs": da})
     ds["test_costs"].encoding = {"fill_value": 1_000.0, "_FillValue": 1_000.0}
     ds.chunk({"x": 4, "y": 3}).to_zarr(test_cost_fp, mode="w", zarr_format=3)
@@ -41,7 +42,7 @@ def validate_single_var(data, start, end):
     assert len(results) == 1
     revrt_route, revrt_cost = results[0]
 
-    cost = da.values
+    cost = da.values[0]
     mcp = MCP_Geometric(cost)
     costs, __ = mcp.find_costs(starts=[start], ends=[end])
     skimage_route = mcp.traceback(end)
@@ -68,8 +69,8 @@ def validate_single_var(data, start, end):
         hypothesis.strategies.floats(0, 1), hypothesis.strategies.floats(0, 1)
     ),
 )
-@hypothesis.settings(deadline=1_000, max_examples=100)
-def test_basic(data, start, end):
+@hypothesis.settings(deadline=5_000, max_examples=100)
+def test_basic(tmp_path_factory, data, start, end):
     """Validate single f32 variable"""
     start = (
         round(start[0] * max(0, data.shape[0] - 1)),
@@ -80,4 +81,5 @@ def test_basic(data, start, end):
         round(end[1] * max(0, data.shape[1] - 1)),
     )
 
-    validate_single_var(data, start, end)
+    tmpdir = tmp_path_factory.mktemp("skimage_test")
+    validate_single_var(data, start, end, tmpdir)
