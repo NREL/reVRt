@@ -4,6 +4,7 @@ import json
 import time
 import logging
 from warnings import warn
+from functools import cached_property
 
 import rasterio
 import numpy as np
@@ -16,11 +17,11 @@ from shapely.geometry.linestring import LineString
 
 from revrt import find_paths
 
-# from revrt.exceptions import (
-#     # revrtValueError,
-#     # revrtInvalidStartCostError,
-#     revrtLeastCostPathNotFoundError,
-# )
+from revrt.exceptions import (
+    # revrtValueError,
+    # revrtInvalidStartCostError,
+    revrtLeastCostPathNotFoundError,
+)
 from revrt.warn import revrtWarning
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,10 @@ class RoutingScenario:
         self.cost_multiplier_layer = cost_multiplier_layer
         self.cost_multiplier_scalar = cost_multiplier_scalar
         self.use_hard_barrier = use_hard_barrier
+
+    @cached_property
+    def cl_as_json(self):
+        return json.dumps({"cost_layers": self.cost_layers})
 
 
 class RoutingLayers:
@@ -99,6 +104,7 @@ class RoutingLayers:
 
         self.cost = None
         self.li_cost = None
+        self.final_routing_layer = None
 
     @property
     def latitudes(self):
@@ -176,7 +182,7 @@ class RoutingLayers:
         )
 
         self._build_cost_layer()
-        self._build_mcp_cost()
+        self._build_final_routing_layer()
         self._build_tracked_layers()
 
         return self
@@ -208,15 +214,16 @@ class RoutingLayers:
             self.cost *= self._layer_fh[mll].isel(band=0).astype(np.float32)
 
         self.cost *= self.routing_scenario.cost_multiplier_scalar
+        self.li_cost += self.cost * 0
 
-    def _build_mcp_cost(self):
+    def _build_final_routing_layer(self):
         """Build out the routing array"""
-        self.mcp_cost = self.cost.copy()
-        self.mcp_cost += self.li_cost
+        self.final_routing_layer = self.cost.copy()
+        self.final_routing_layer += self.li_cost
 
         # for li_cost_layer in self.li_cost_layer_map.values():
         #     # normalize by cell size for routing only
-        #     self.mcp_cost += li_cost_layer / self.cell_size
+        #     self.final_routing_layer += li_cost_layer / self.cell_size
 
         friction_costs = da.zeros(self._full_shape, dtype=np.float32)
         for layer_info in self.routing_scenario.friction_layers:
@@ -234,19 +241,21 @@ class RoutingLayers:
 
         # Must happen at end of loop so that "lcp_agg_cost"
         # remains constant
-        self.mcp_cost += friction_costs
+        self.final_routing_layer += friction_costs
 
-        max_val = np.max(self.mcp_cost) * self.SOFT_BARRIER_MULTIPLIER
-        self.mcp_cost = da.where(
-            self.mcp_cost <= 0,
-            -1 if self.routing_scenario.use_hard_barrier else max_val,
-            self.mcp_cost,
+        max_val = (
+            np.max(self.final_routing_layer) * self.SOFT_BARRIER_MULTIPLIER
         )
+        self.final_routing_layer = da.where(
+            self.final_routing_layer <= 0,
+            -1 if self.routing_scenario.use_hard_barrier else max_val,
+            self.final_routing_layer,
+        ) + (self.cost * 0)
         # logger.debug(
         #     "MCP cost min: %.2f, max: %.2f, median: %.2f",
-        #     np.min(self.mcp_cost),
-        #     np.max(self.mcp_cost),
-        #     np.median(self.mcp_cost),
+        #     np.min(self.final_routing_layer),
+        #     np.max(self.final_routing_layer),
+        #     np.median(self.final_routing_layer),
         # )
 
     def _extract_and_scale_layer(self, layer_info, allow_cl=False):
@@ -265,7 +274,7 @@ class RoutingLayers:
     def _extract_layer(self, layer_name, allow_cl=False):
         """Extract layer based on name"""
         if allow_cl and layer_name == LCP_AGG_COST_LAYER_NAME:
-            return self.mcp_cost.copy()
+            return self.final_routing_layer.copy()
 
         self._verify_layer_exists(layer_name)
         return self._layer_fh[layer_name].isel(band=0).astype(np.float32)
@@ -476,21 +485,12 @@ def _compute_routes(
     routing_scenario, route_definitions, routing_layers, save_paths
 ):
     routes = []
-    cost_layers = json.dumps({"cost_layers": routing_scenario.cost_layers})
     for start_point, end_points in route_definitions:
         try:
-            indices, optimized_objective = find_paths(
-                zarr_fp=routing_scenario.cost_fpath,
-                cost_layers=cost_layers,
-                start=[start_point],
-                end=end_points,
-            )[0]
-        except Exception:
-            logger.error(
-                "Error computing least cost path from %s to %s",
-                start_point,
-                end_points,
+            indices, optimized_objective = _compute_valid_path(
+                routing_scenario, routing_layers, start_point, end_points
             )
+        except revrtLeastCostPathNotFoundError:
             continue
 
         route = RouteResult(
@@ -509,6 +509,53 @@ def _compute_routes(
         return gpd.GeoDataFrame([])
 
     return pd.DataFrame(routes)
+
+
+def _compute_valid_path(
+    routing_scenario, routing_layers, start_point, end_points
+):
+    start_row, start_col = start_point
+    # print(f"{routing_layers.final_routing_layer=}")
+    start_cost = (
+        routing_layers.final_routing_layer.isel(y=start_row, x=start_col)
+        .compute()
+        .item()
+    )
+
+    if start_cost <= 0:
+        msg = (
+            f"Start idx {start_point} does not have a valid cost: "
+            f"{start_cost:.2f} (must be > 0)!"
+        )
+        raise revrtLeastCostPathNotFoundError(msg)
+
+    end_rows, end_cols = np.array(end_points).T
+    end_costs = routing_layers.final_routing_layer.isel(
+        y=xr.DataArray(end_rows, dims="points"),
+        x=xr.DataArray(end_cols, dims="points"),
+    )
+    if not np.any(end_costs.compute() > 0):
+        msg = (
+            f"None of the end idx {end_points} have a valid cost "
+            f"(must be > 0)!"
+        )
+        raise revrtLeastCostPathNotFoundError(msg)
+
+    try:
+        indices, optimized_objective = find_paths(
+            zarr_fp=routing_scenario.cost_fpath,
+            cost_layers=routing_scenario.cl_as_json,
+            start=[start_point],
+            end=end_points,
+        )[0]
+    except Exception as ex:
+        msg = (
+            f"Unable to find path from {start_point} any of {end_points}: {ex}"
+        )
+
+        raise revrtLeastCostPathNotFoundError(msg) from ex
+
+    return indices, optimized_objective
 
 
 def _compute_lens(route, cell_size):
