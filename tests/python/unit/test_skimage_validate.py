@@ -18,12 +18,13 @@ from revrt import find_paths
 # The test never ends for large values, such as 1e10.
 MAX_COST = 1e6
 
+
 def validate_single_var(data, start, end):
     """Validate reVRt against skimage for a given feature array
 
     Currently only for a single variable
     """
-    da = xr.DataArray(data, dims=("y", "x"))
+    da = xr.DataArray(data[None], dims=("band", "y", "x"))
 
     test_cost_fp = "test.zarr"
     ds = xr.Dataset({"test_costs": da})
@@ -41,7 +42,7 @@ def validate_single_var(data, start, end):
     assert len(results) == 1
     revrt_route, revrt_cost = results[0]
 
-    cost = da.values
+    cost = da.values[0]
     mcp = MCP_Geometric(cost)
     costs, __ = mcp.find_costs(starts=[start], ends=[end])
     skimage_route = mcp.traceback(end)
