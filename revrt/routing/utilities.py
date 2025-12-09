@@ -15,23 +15,24 @@ logger = logging.getLogger(__name__)
 
 
 def map_to_costs(route_points, crs, transform, shape):
-    """_summary_
+    """Map route table to cost indices and drop out-of-bounds rows
 
     Parameters
     ----------
-    route_points : _type_
-        _description_
-    crs : _type_
-        _description_
-    transform : _type_
-        _description_
-    shape : _type_
-        _description_
+    route_points : pandas.DataFrame
+        Route definitions table with at least `start_lat`, `start_lon`,
+        `end_lat`, and `end_lon` coordinate columns.
+    crs : str or pyproj.CRS
+        Coordinate reference system for the cost raster.
+    transform : affine.Affine
+        Rasterio affine transform giving pixel origin and resolution.
+    shape : tuple[int, int]
+        Raster height and width for bounds checking.
 
     Returns
     -------
-    _type_
-        _description_
+    pandas.DataFrame
+        Updated route table filtered to routes within the cost domain.
     """
     route_points = _get_start_end_point_cost_indices(
         route_points, crs, transform
@@ -40,7 +41,7 @@ def map_to_costs(route_points, crs, transform, shape):
 
 
 def _get_start_end_point_cost_indices(route_points, cost_crs, transform):
-    """Map features to cost row, col indices"""
+    """Populate start/end row and column indices for each route"""
 
     logger.debug("Map %d routes to cost raster", len(route_points))
     logger.debug("First few routes:\n%s", route_points.head())
@@ -68,7 +69,7 @@ def _get_start_end_point_cost_indices(route_points, cost_crs, transform):
 
 
 def _filter_points_outside_cost_domain(route_points, shape):
-    """Remove points outside of cost domain"""
+    """Drop routes whose indices fall outside the cost domain"""
 
     logger.debug("Filtering out points outside cost domain...")
     mask = route_points["start_row"] >= 0
@@ -94,7 +95,7 @@ def _filter_points_outside_cost_domain(route_points, shape):
 
 
 def _transform_lat_lon_to_row_col(transform, cost_crs, lat, lon):
-    """Transform lat/lon info to a row/col index into cost raster"""
+    """Convert WGS84 coordinates to cost grid row and column arrays"""
     feats = gpd.GeoDataFrame(
         geometry=[Point(*p) for p in zip(lon, lat, strict=True)]
     )
