@@ -119,19 +119,14 @@ supporting technologies referenced throughout the reVRt documentation.
       ``revrt._rust``.
 
    reV
-      NREL's Renewable Energy Potential platform that models generation
-      profiles for renewable resources. reVRt complements reV by adding
+      NLR's reV tool that models generation profiles and supply curves
+      for various generation types. reVRt complements reV by adding
       transmission routing capabilities that feed downstream analyses.
 
    reVRt
       The reV Routing toolkit that prepares cost surfaces, runs routing
       simulations, and exports supporting analytics for transmission
       planning studies.
-
-   reVX
-      NREL's valuation framework that builds on reV outputs to assess
-      market and financial metrics. reVRt outputs can flow into reVX to
-      inform siting and transmission decisions.
 
    routing file
       HDF5 file produced by the cost preparation pipeline that stores
