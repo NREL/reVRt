@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "NREL-reVRt"
 version = "0.2.1"
-description = "National Laboratory of the Rockies' (NLR's) Transmission for reVX tool"
+description = "National Laboratory of the Rockies' (NLR's) Transmission for reV tool"
 readme = "README.rst"
 authors = [
   {name = "Guilherme Castelão", email = "gpimenta@nrel.gov"},
@@ -216,6 +216,8 @@ build = { features = ["build"], solve-group = "default" }
 build-wheel = { cmd = "maturin build" }
 
 [tool.pixi.feature.dev.tasks]
+lint = "ruff check ./revrt"
+format = "ruff format ./revrt"
 tests = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python"
 tests-u = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml --cov-fail-under=95 tests/python/unit"
 tests-i = "pytest --durations=20 -rapP -vv --cov=revrt --cov-report=html --cov-branch --cov-report=xml:coverage.xml tests/python/integration"

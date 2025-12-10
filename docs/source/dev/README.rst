@@ -136,7 +136,7 @@ You can run python reVRt tests locally using ``pixi``:
 
 .. code-block:: shell
 
-    pixi r tests
+    pixi run tests
 
 Tests for a module should ideally cover all code in that module,
 i.e., statement coverage should be at 100%, though this alone does not ensure that
@@ -226,7 +226,7 @@ To check your docstring additions/updates, you can build a local version of the 
 
 .. code-block:: shell
 
-    pixi r make-html
+    pixi run make-html
 
 After running this command, simply open ``docs/_build/html/index.html`` using your favorite browser, e.g.:
 

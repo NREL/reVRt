@@ -51,10 +51,17 @@ Always use Pixi to ensure aligned dependencies:
 # Enter dev shell (Python + Rust toolchain)
 pixi shell -e dev
 
+# Linting and formatting
+pixi run -e dev lint
+pixi run -e dev format
+
 # Python tests (95% coverage gate)
 pixi run -e dev tests-u     # unit
 pixi run -e dev tests-i     # integration
 pixi run -e dev tests       # full suite
+
+# Focused unit modules (useful to check a particular feature)
+pixi run -e dev pytest tests/python/unit/... -rapP -vv
 
 # Rust tests & benches
 pixi run -e dev tests-r
@@ -69,8 +76,12 @@ pixi run -e build build-wheel
 # CLI smoke test
 pixi run -e dev reVRt --help
 ```
-Use `pixi add <package>` (optionally with `--feature <name>`) to manage new
-dependencies; this updates both `pyproject.toml` and `pixi.lock` atomically.
+To add a new dependency, use `pixi add --pipy <package>`;
+this updates `pyproject.toml` and the lockfile atomically.
+You will also have to run a subsequent command `pixi add <package>`
+to add the dependency to the conda environment.
+Use `pixi add --feature dev <package>` to add a dependency
+that is only used for development (tests, linting, docs, etc.).
 
 ## 5. Coding Guidelines (Python)
 - Follow `docs/source/dev/README.rst` for style: maintain numpy-style
@@ -81,6 +92,8 @@ dependencies; this updates both `pyproject.toml` and `pixi.lock` atomically.
   opening a PR.
 - Favor descriptive names instead of extra comments; only add comments for
   non-obvious behavior (e.g., tricky array ops or concurrency concerns).
+  If some functionality needs further explanation, add this to the
+  class/function/method docstring under the "Notes" section.
 - Use absolute imports under `revrt.`.
 - Surface warnings/errors through `revrt.warn` and `revrt.exceptions` (e.g.,
   raise `revrtValueError` and emit `revrtWarning`) to ensure logging hooks fire.
@@ -112,7 +125,11 @@ dependencies; this updates both `pyproject.toml` and `pixi.lock` atomically.
 - Rust tests/benches live within each crate (`cargo test`, `cargo bench` via
   Pixi). Keep tests deterministic and avoid long-running benchmarks in CI.
 - Include regression data under `tests/data/` when necessary; prefer fixtures in
-  `tests/conftest.py` for shared setup.
+  `tests/conftest.py` for shared setup. Keep all test data small (individual files <1MB).
+  The data doesn't need to fully reproduce realistic analysis cases - it just
+  needs to include characteristics of a realistic case.
+- Pytest options for parallel execution (`-n auto`) are supported; prefer
+  `pixi run -e dev pytest -n auto` for heavier suites.
 
 ## 9. Logging, Errors, and Warnings
 - Do not log-and-raise manually; custom exceptions/warnings already emit log

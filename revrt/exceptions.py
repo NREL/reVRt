@@ -59,9 +59,17 @@ class revrtRuntimeError(revrtError, RuntimeError):
     """revrt RuntimeError"""
 
 
+class revrtLeastCostPathNotFoundError(revrtRuntimeError):
+    """revrt LeastCostPathNotFoundError"""
+
+
 class revrtTypeError(revrtError, TypeError):
     """revrt TypeError"""
 
 
 class revrtValueError(revrtError, ValueError):
     """revrt ValueError"""
+
+
+class revrtInvalidStartCostError(revrtValueError):
+    """revrt revrtInvalidStartCostError"""

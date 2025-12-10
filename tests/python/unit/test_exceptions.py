@@ -72,11 +72,21 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
         ),
         (
             revrtInvalidStartCostError,
-            [revrtError, revrtInvalidStartCostError, ValueError],
+            [
+                revrtError,
+                revrtInvalidStartCostError,
+                revrtValueError,
+                ValueError,
+            ],
         ),
         (
             revrtLeastCostPathNotFoundError,
-            [revrtError, revrtLeastCostPathNotFoundError, RuntimeError],
+            [
+                revrtError,
+                revrtLeastCostPathNotFoundError,
+                revrtRuntimeError,
+                RuntimeError,
+            ],
         ),
         (
             revrtNotImplementedError,
@@ -92,9 +102,7 @@ def test_exceptions_log_uncaught_error(assert_message_was_logged):
         (revrtValueError, [revrtError, revrtValueError, ValueError]),
     ],
 )
-def test_catching_error_by_type(
-    raise_type, catch_types, assert_message_was_logged
-):
+def test_catching_error_by_type(raise_type, catch_types, assert_message_was_logged):
     """Test that gaps exceptions are caught correctly."""
     for catch_type in catch_types:
         with pytest.raises(catch_type) as exc_info:
