@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765336838926,
+  "lastUpdate": 1765352430944,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2015,6 +2015,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 295344628,
             "range": "± 3877946",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3d1a1b8f75fa16a0fa460008e09000691bff2c61",
+          "message": "Extra cli commands (#169)\n\n* New exceptions + tests\n\n* Minor update to instructions\n\n* MInor update to instructions\n\n* First pass of tests\n\n* Finalize tests for new CLI command\n\n* Add `build-masks` command\n\n* Test for new command\n\n* Add `convert-pois-to-lines` command\n\n* PR review updates",
+          "timestamp": "2025-12-10T00:24:53-07:00",
+          "tree_id": "711270340f3d69ec252dc9da737402a80fa06be4",
+          "url": "https://github.com/NREL/reVRt/commit/3d1a1b8f75fa16a0fa460008e09000691bff2c61"
+        },
+        "date": 1765352430394,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 77165429,
+            "range": "± 2589074",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 87708019,
+            "range": "± 1316652",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 118416206,
+            "range": "± 4209772",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 164237688,
+            "range": "± 6589250",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 456208962,
+            "range": "± 18646946",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 151906809,
+            "range": "± 3016209",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155430360,
+            "range": "± 675411",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 164396403,
+            "range": "± 1267503",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 194728194,
+            "range": "± 5485371",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 298789484,
+            "range": "± 6523528",
             "unit": "ns/iter"
           }
         ]
