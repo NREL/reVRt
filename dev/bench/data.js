@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765306706098,
+  "lastUpdate": 1765336838926,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -1931,6 +1931,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 289235865,
             "range": "± 4365158",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "63080b3e9a1a76819996733c53af8f9f5711d616",
+          "message": "Long range dijkstra (#93)\n\n* feat: Supporting cost for a node\n\n* refact: Cost holder using ArrayIndex as index\n\n* feat: PartialOrd & Ord for NodeCost<f32>\n\n* feat: Network MVP\n\nA custom Network for our needs. Assumes a regular grid and edges are\nstored with the node, so that when pop a node, the associated nodes are\nremoved with it.\n\n* refact: Generalizing NodeCost index\n\nIt was initially fixed to ArrayIndex, but we don't need to restrict to\nthat.",
+          "timestamp": "2025-12-09T20:10:16-07:00",
+          "tree_id": "270c66a7bdbafbf26610faeeb2f7cd10d6625e10",
+          "url": "https://github.com/NREL/reVRt/commit/63080b3e9a1a76819996733c53af8f9f5711d616"
+        },
+        "date": 1765336838350,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 78297685,
+            "range": "± 1893050",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 85662625,
+            "range": "± 1174136",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 118782162,
+            "range": "± 3469865",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 162681801,
+            "range": "± 6373696",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 447986489,
+            "range": "± 11675135",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 151471741,
+            "range": "± 581677",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 154513337,
+            "range": "± 962445",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 163365494,
+            "range": "± 1111565",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 192701046,
+            "range": "± 2022131",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 295344628,
+            "range": "± 3877946",
             "unit": "ns/iter"
           }
         ]
