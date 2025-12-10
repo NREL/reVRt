@@ -230,7 +230,6 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     logger.debug("Transmission config input: %r", transmission_config)
 
     transmission_config = parse_config(config=transmission_config)
-    logger.debug("Transmission Config: %s", transmission_config)
 
     inds = _get_indices(
         route_table,
