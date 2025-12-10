@@ -18,8 +18,7 @@ from shapely.geometry.linestring import LineString
 from revrt import find_paths
 
 from revrt.exceptions import (
-    # revrtValueError,
-    # revrtInvalidStartCostError,
+    revrtKeyError,
     revrtLeastCostPathNotFoundError,
 )
 from revrt.warn import revrtWarning
@@ -121,8 +120,7 @@ class RoutingLayers:
                 f"Did not find layer {layer_name!r} in cost "
                 f"file {str(self.routing_scenario.cost_fpath)!r}"
             )
-            logger.error(msg)
-            raise KeyError(msg)
+            raise revrtKeyError(msg)
 
     def close(self):
         """Close the underlying xarray file handle"""
@@ -372,7 +370,12 @@ class RouteResult:
     """Class to compute route characteristics given layer cost maps"""
 
     def __init__(
-        self, routing_layers, route, optimized_objective, add_geom=False
+        self,
+        routing_layers,
+        route,
+        optimized_objective,
+        add_geom=False,
+        attrs=None,
     ):
         self._routing_layers = routing_layers
         self._route = route
@@ -380,11 +383,11 @@ class RouteResult:
         self._lens = self._total_path_length = None
         self._by_layer_results = {}
         self._add_geom = add_geom
+        self._attrs = attrs or {}
 
     @property
     def cell_size(self):
         return abs(self._routing_layers.transform.a)
-        # return self._routing_layers.cell_size
 
     @property
     def lens(self):
@@ -444,10 +447,25 @@ class RouteResult:
             "cost": self.cost,
             "poi_lat": self.end_lat,
             "poi_lon": self.end_lon,
+            "start_row": self._route[0][0],
+            "start_col": self._route[0][1],
             "end_row": self._route[-1][0],
             "end_col": self._route[-1][1],
             "optimized_objective": self._optimized_objective,
         }
+        for check_key in ["start_row", "start_col", "end_row", "end_col"]:
+            if (
+                check_key in self._attrs
+                and results[check_key] != self._attrs[check_key]
+            ):
+                msg = (
+                    f"Computed {check_key}={results[check_key]} does "
+                    f"not match expected {check_key}="
+                    f"{self._attrs[check_key]}!"
+                )
+                warn(msg, revrtWarning)
+
+        results.update(self._attrs)
         for layer in self._routing_layers.tracked_layers:
             layer_result = layer.compute(self._route, self.cell_size)
             results.update(layer_result)
@@ -465,15 +483,21 @@ class RouteResult:
 
 
 def find_all_routes(routing_scenario, route_definitions, save_paths=False):
+    if not route_definitions:
+        return []
+
     ts = time.monotonic()
 
     routing_layers = RoutingLayers(routing_scenario).build()
-    routes = _compute_routes(
-        routing_scenario,
-        route_definitions,
-        routing_layers,
-        save_paths=save_paths,
-    )
+    try:
+        routes = _compute_routes(
+            routing_scenario,
+            route_definitions,
+            routing_layers,
+            save_paths=save_paths,
+        )
+    finally:
+        routing_layers.close()
 
     time_elapsed = f"{(time.monotonic() - ts) / 60:.4f} min"
     logger.debug("Least Cost tie-line computed in %s", time_elapsed)
@@ -485,7 +509,7 @@ def _compute_routes(
     routing_scenario, route_definitions, routing_layers, save_paths
 ):
     routes = []
-    for start_point, end_points in route_definitions:
+    for start_point, end_points, attrs in route_definitions:
         try:
             indices, optimized_objective = _compute_valid_path(
                 routing_scenario, routing_layers, start_point, end_points
@@ -498,24 +522,39 @@ def _compute_routes(
             indices,
             optimized_objective,
             add_geom=save_paths,
+            attrs=attrs,
         )
         routes.append(route.build())
 
-    if save_paths:
-        if routes:
-            return gpd.GeoDataFrame(
-                routes, geometry="geometry", crs=routing_layers.cost_crs
-            )
-        return gpd.GeoDataFrame([])
-
-    return pd.DataFrame(routes)
+    return routes
 
 
 def _compute_valid_path(
     routing_scenario, routing_layers, start_point, end_points
 ):
+    _validate_starting_point(routing_layers, start_point)
+    _validate_end_points(routing_layers, end_points)
+
+    try:
+        route_result = find_paths(
+            zarr_fp=routing_scenario.cost_fpath,
+            cost_layers=routing_scenario.cl_as_json,
+            start=[start_point],
+            end=end_points,
+        )[0]
+    except Exception as ex:
+        msg = (
+            f"Unable to find path from {start_point} any of {end_points}: {ex}"
+        )
+        logger.exception(msg)
+
+        raise revrtLeastCostPathNotFoundError(msg) from ex
+
+    return route_result
+
+
+def _validate_starting_point(routing_layers, start_point):
     start_row, start_col = start_point
-    # print(f"{routing_layers.final_routing_layer=}")
     start_cost = (
         routing_layers.final_routing_layer.isel(y=start_row, x=start_col)
         .compute()
@@ -529,6 +568,8 @@ def _compute_valid_path(
         )
         raise revrtLeastCostPathNotFoundError(msg)
 
+
+def _validate_end_points(routing_layers, end_points):
     end_rows, end_cols = np.array(end_points).T
     end_costs = routing_layers.final_routing_layer.isel(
         y=xr.DataArray(end_rows, dims="points"),
@@ -540,22 +581,6 @@ def _compute_valid_path(
             f"(must be > 0)!"
         )
         raise revrtLeastCostPathNotFoundError(msg)
-
-    try:
-        indices, optimized_objective = find_paths(
-            zarr_fp=routing_scenario.cost_fpath,
-            cost_layers=routing_scenario.cl_as_json,
-            start=[start_point],
-            end=end_points,
-        )[0]
-    except Exception as ex:
-        msg = (
-            f"Unable to find path from {start_point} any of {end_points}: {ex}"
-        )
-
-        raise revrtLeastCostPathNotFoundError(msg) from ex
-
-    return indices, optimized_objective
 
 
 def _compute_lens(route, cell_size):
