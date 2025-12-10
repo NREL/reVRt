@@ -426,6 +426,7 @@ def _update_multipliers(layers, polarity, voltage, transmission_config):
 
 
 def _get_row_multiplier(transmission_config, voltage):
+    """Get right-of-way width multiplier for a given voltage"""
     try:
         row_widths = transmission_config["row_width"]
     except KeyError as e:
@@ -450,6 +451,7 @@ def _get_row_multiplier(transmission_config, voltage):
 
 
 def _get_polarity_multiplier(transmission_config, voltage, polarity):
+    """Get multiplier for a given voltage and polarity"""
     try:
         polarity_config = transmission_config["voltage_polarity_mult"]
     except KeyError as e:
