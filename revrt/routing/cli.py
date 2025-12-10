@@ -437,13 +437,13 @@ def _get_row_multiplier(transmission_config, voltage):
         raise revrtKeyError(msg) from e
 
     try:
-        row_multiplier = row_widths["voltage"]
+        row_multiplier = row_widths[voltage]
     except KeyError as e:
         msg = (
             "`apply_row_mult` was set to `True`, but voltage ' "
             f"{voltage}' not found in transmission config "
             "'row_width' settings. Available voltages: "
-            f"{list(row_multiplier)}"
+            f"{list(row_widths)}"
         )
         raise revrtKeyError(msg) from e
 
