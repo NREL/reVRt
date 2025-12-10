@@ -12,6 +12,7 @@ from rasterio.transform import from_origin
 
 from revrt.utilities import LayeredFile
 from revrt.routing.utilities import map_to_costs
+from revrt.exceptions import revrtKeyError
 from revrt.routing.cli import (
     compute_lcp_routes,
     _run_lcp,
@@ -20,6 +21,8 @@ from revrt.routing.cli import (
     _route_points_subset,
     _paths_to_compute,
     _split_routes,
+    _get_row_multiplier,
+    _get_polarity_multiplier,
     _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL,
 )
 
@@ -497,6 +500,50 @@ def test_update_multipliers_applies_row_and_polarity():
         [{"layer_name": "layer_3"}], "dc", "unknown", transmission_config
     )
     assert unchanged[0]["layer_name"] == "layer_3"
+
+
+def test_get_row_multiplier_missing_config():
+    """_get_row_multiplier should raise when configuration keys are absent"""
+
+    with pytest.raises(revrtKeyError) as excinfo:
+        _get_row_multiplier({}, "138")
+    assert "'row_width'" in str(excinfo.value)
+
+
+def test_get_row_multiplier_unknown_voltage():
+    """_get_row_multiplier should surface available voltages on failure"""
+
+    config = {"row_width": {"230": 1.2}}
+    with pytest.raises(revrtKeyError) as excinfo:
+        _get_row_multiplier(config, "138")
+    assert "Available voltages" in str(excinfo.value)
+    assert "230" in str(excinfo.value)
+
+
+def test_get_polarity_multiplier_missing_config():
+    """_get_polarity_multiplier should raise when multiplier section missing"""
+
+    with pytest.raises(revrtKeyError) as excinfo:
+        _get_polarity_multiplier({}, "138", "ac")
+    assert "voltage_polarity_mult" in str(excinfo.value)
+
+
+def test_get_polarity_multiplier_unknown_voltage():
+    """_get_polarity_multiplier should guard against unknown voltages"""
+
+    config = {"voltage_polarity_mult": {"230": {"ac": 1.0}}}
+    with pytest.raises(revrtKeyError) as excinfo:
+        _get_polarity_multiplier(config, "138", "ac")
+    assert "Available voltages" in str(excinfo.value)
+
+
+def test_get_polarity_multiplier_unknown_polarity():
+    """_get_polarity_multiplier should guard against unknown polarities"""
+
+    config = {"voltage_polarity_mult": {"138": {"dc": 1.0}}}
+    with pytest.raises(revrtKeyError) as excinfo:
+        _get_polarity_multiplier(config, "138", "ac")
+    assert "Available polarities" in str(excinfo.value)
 
 
 if __name__ == "__main__":
