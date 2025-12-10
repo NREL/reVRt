@@ -128,12 +128,12 @@ class RoutingLayers:
 
     @property
     def latitudes(self):
-        """array-like: Latitude coordinates for the cost grid"""
+        """xarray.DataArray: Latitude coordinates for the cost grid"""
         return self._layer_fh["latitude"]
 
     @property
     def longitudes(self):
-        """array-like: Longitude coordinates for the cost grid"""
+        """xarray.DataArray: Longitude coordinates for the cost grid"""
         return self._layer_fh["longitude"]
 
     def _verify_layer_exists(self, layer_name):
@@ -404,7 +404,7 @@ class RouteResult:
         return abs(self._routing_layers.transform.a)
 
     @property
-    def lens(self):
+    def _lens(self):
         """array-like: Cached per-cell travel distances"""
         if self._lens is None:
             self._compute_path_length()
@@ -427,7 +427,7 @@ class RouteResult:
         )
 
         # Multiple distance travel through cell by cost and sum it!
-        return da.sum(cell_costs * self.lens).astype(np.float32).compute()
+        return da.sum(cell_costs * self._lens).astype(np.float32).compute()
 
     @property
     def end_lat(self):
