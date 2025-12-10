@@ -505,45 +505,39 @@ def test_update_multipliers_applies_row_and_polarity():
 def test_get_row_multiplier_missing_config():
     """_get_row_multiplier should raise when configuration keys are absent"""
 
-    with pytest.raises(revrtKeyError) as excinfo:
+    with pytest.raises(revrtKeyError, match="'row_width'"):
         _get_row_multiplier({}, "138")
-    assert "'row_width'" in str(excinfo.value)
 
 
 def test_get_row_multiplier_unknown_voltage():
     """_get_row_multiplier should surface available voltages on failure"""
 
     config = {"row_width": {"230": 1.2}}
-    with pytest.raises(revrtKeyError) as excinfo:
+    with pytest.raises(revrtKeyError, match=r"Available voltages.*230"):
         _get_row_multiplier(config, "138")
-    assert "Available voltages" in str(excinfo.value)
-    assert "230" in str(excinfo.value)
 
 
 def test_get_polarity_multiplier_missing_config():
     """_get_polarity_multiplier should raise when multiplier section missing"""
 
-    with pytest.raises(revrtKeyError) as excinfo:
+    with pytest.raises(revrtKeyError, match="voltage_polarity_mult"):
         _get_polarity_multiplier({}, "138", "ac")
-    assert "voltage_polarity_mult" in str(excinfo.value)
 
 
 def test_get_polarity_multiplier_unknown_voltage():
     """_get_polarity_multiplier should guard against unknown voltages"""
 
     config = {"voltage_polarity_mult": {"230": {"ac": 1.0}}}
-    with pytest.raises(revrtKeyError) as excinfo:
+    with pytest.raises(revrtKeyError, match="Available voltages"):
         _get_polarity_multiplier(config, "138", "ac")
-    assert "Available voltages" in str(excinfo.value)
 
 
 def test_get_polarity_multiplier_unknown_polarity():
     """_get_polarity_multiplier should guard against unknown polarities"""
 
     config = {"voltage_polarity_mult": {"138": {"dc": 1.0}}}
-    with pytest.raises(revrtKeyError) as excinfo:
+    with pytest.raises(revrtKeyError, match="Available polarities"):
         _get_polarity_multiplier(config, "138", "ac")
-    assert "Available polarities" in str(excinfo.value)
 
 
 if __name__ == "__main__":
