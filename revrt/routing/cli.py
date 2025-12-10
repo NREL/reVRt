@@ -43,7 +43,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     use_hard_barrier=False,
     _split_params=None,
 ):
-    """_summary_
+    """Run least-cost path routing for pairs of points
 
     Parameters
     ----------
@@ -114,10 +114,9 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
               Default is ``False``.
 
     out_dir : path-like
-        Directory to store routing outputs.
+        Directory where routing outputs should be written.
     job_name : str
-        Name to use for this routing job. This name will be used to
-        construct output file names.
+        Label used to name the generated output file.
     friction_layers : list, optional
         Layers to be added to costs to influence routing but NOT
         reported in final cost (i.e. friction, barriers, etc.). Each
@@ -175,14 +174,15 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         By default, ``None``.
     tracked_layers : dict, optional
         Dictionary mapping layer names to strings, where the strings are
-        dask (which supports almost all numpy-equivalent) methods that
+        dask aggregation methods (similar to what numpy has) that
         should be applied to the layer along the LCP to be included as a
         characterization column in the output. By default, ``None``.
     cost_multiplier_layer : str, optional
-        Name of layer in layered Zarr file containing final cost layer
-        spatial multipliers. By default, ``None``.
+        Name of the spatial multiplier layer applied to final costs.
+        By default, ``None``.
     cost_multiplier_scalar : int, default=1
-        Final cost layer multiplier. By default, ``1``.
+        Scalar multiplier applied to the final cost surface.
+        By default, ``1``.
     transmission_config : path-like or dict, optional
         Dictionary of transmission cost configuration values, or
         path to JSON/JSON5 file containing this dictionary. The
@@ -207,9 +207,8 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         values from the default config are used.
         By default, ``None``.
     save_paths : bool, default=False
-        Boolean flag to save the least cost path geometry in the output
-        (i.e. the output file will be a GeoPackage instead of a CSV).
-        By default, ``False``.
+        Save outputs as a GeoPackage with path geometries when ``True``.
+        Defaults to ``False``.
     use_hard_barrier : bool, optional
         Optional flag to treat any cost values of <= 0 as a hard barrier
         (i.e. no paths can ever cross this). If ``False``, cost values
@@ -219,8 +218,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     Returns
     -------
     str or None
-        Path to file containing route data, if any routes were
-        completed.
+        Path to the output table if any routes were computed.
     """
 
     start_time = time.time()
@@ -286,6 +284,8 @@ def _run_lcp(
     tracked_layers=None,
     use_hard_barrier=True,
 ):
+    """Execute least-cost path routing for the prepared route subset"""
+
     ts = time.monotonic()
     out_fp = Path(out_fp)
     save_paths = out_fp.suffix.lower() == ".gpkg"
@@ -349,11 +349,7 @@ def _run_lcp(
 
 
 def _paths_to_compute(route_points, out_fp):
-    """Iterate over the paths that should be computed
-
-    Filters out any routes that are already present in `out_fp`. If all
-    routes in a group already exist, the group is skipped.
-    """
+    """Yield route groups that still require computation"""
     existing_routes = _collect_existing_routes(out_fp)
 
     group_cols = ["start_row", "start_col", "polarity", "voltage"]
@@ -385,6 +381,8 @@ def _paths_to_compute(route_points, out_fp):
 
 
 def _collect_existing_routes(out_fp):
+    """Collect already computed routes from an existing output file"""
+
     if out_fp is None or not out_fp.exists():
         return set()
 
@@ -407,7 +405,7 @@ def _collect_existing_routes(out_fp):
 
 
 def _update_multipliers(layers, polarity, voltage, transmission_config):
-    """update layer multipliers based on user input"""
+    """Update layer multipliers based on user input"""
     output_layers = deepcopy(layers)
     polarity = str(polarity)
     voltage = str(int(voltage)) if voltage != "unknown" else "unknown"
