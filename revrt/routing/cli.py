@@ -231,20 +231,14 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
 
     transmission_config = parse_config(config=transmission_config)
 
-    inds = _get_indices(
+    route_points = _route_points_subset(
         route_table,
         sort_cols=["start_lat", "start_lon"],
         split_params=_split_params,
     )
-    if len(inds) == 0:
-        logger.info("No indices to process: %s", inds)
+    if len(route_points) == 0:
+        logger.info("No routes to process!")
         return None
-
-    with contextlib.suppress(TypeError, UnicodeDecodeError):
-        route_points = pd.read_csv(route_table)
-
-    if inds is not None:
-        route_points = route_points.loc[inds]
 
     out_fp = (
         out_dir / f"{job_name}.gpkg"
@@ -430,14 +424,17 @@ def _update_multipliers(layers, polarity, voltage, transmission_config):
     return output_layers
 
 
-def _get_indices(features_fp, sort_cols, split_params):
+def _route_points_subset(route_table, sort_cols, split_params):
     """Get indices of points that are sorted by location"""
-    features = gpd.read_file(features_fp)
-    features = features.sort_values(sort_cols)
+
+    with contextlib.suppress(TypeError, UnicodeDecodeError):
+        route_points = pd.read_csv(route_table)
+
+    route_points = route_points.sort_values(sort_cols).reset_index(drop=True)
 
     start_ind, n_chunks = split_params or (0, 1)
-    chunk_size = ceil(len(features) / n_chunks)
-    return features.index[
+    chunk_size = ceil(len(route_points) / n_chunks)
+    return route_points.iloc[
         start_ind * chunk_size : (start_ind + 1) * chunk_size
     ]
 
