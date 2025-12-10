@@ -8,10 +8,8 @@ from functools import cached_property
 
 import rasterio
 import numpy as np
-import pandas as pd
 import xarray as xr
 import dask.array as da
-import geopandas as gpd
 from shapely.geometry import Point
 from shapely.geometry.linestring import LineString
 
@@ -29,6 +27,8 @@ LCP_AGG_COST_LAYER_NAME = "lcp_agg_costs"
 
 
 class RoutingScenario:
+    """Container for routing scenario configuration"""
+
     def __init__(
         self,
         cost_fpath,
@@ -39,6 +39,28 @@ class RoutingScenario:
         cost_multiplier_scalar=1,
         use_hard_barrier=True,
     ):
+        """
+
+        Parameters
+        ----------
+        cost_fpath : path-like
+            Path to the cost layer Zarr store used for routing.
+        cost_layers : list
+            List of dictionaries containing layer definitions
+            contributing to the summed routing cost.
+        friction_layers : list, optional
+            List of dictionaries defining layers that influence routing
+            but are excluded from reports.
+        tracked_layers : dict, optional
+            Layers to summarize along the path, mapped to aggregation
+            names.
+        cost_multiplier_layer : str, optional
+            Layer name providing spatial multipliers for total cost.
+        cost_multiplier_scalar : int or float, optional
+            Scalar multiplier applied to the final cost surface.
+        use_hard_barrier : bool, optional
+            Flag indicating whether non-positive costs block traversal.
+        """
         self.cost_fpath = cost_fpath
         self.cost_layers = cost_layers
         self.friction_layers = friction_layers or []
@@ -47,8 +69,18 @@ class RoutingScenario:
         self.cost_multiplier_scalar = cost_multiplier_scalar
         self.use_hard_barrier = use_hard_barrier
 
+    def __repr__(self):
+        return (
+            "RoutingScenario:"
+            f"\n\t- cost_layers: {self.cost_layers}"
+            f"\n\t- friction_layers: {self.friction_layers}"
+            f"\n\t- cost_multiplier_layer: {self.cost_multiplier_layer}"
+            f"\n\t- cost_multiplier_scalar: {self.cost_multiplier_scalar}"
+        )
+
     @cached_property
     def cl_as_json(self):
+        """str: JSON string describing configured cost layers"""
         return json.dumps({"cost_layers": self.cost_layers})
 
 
@@ -66,22 +98,11 @@ class RoutingLayers:
 
         Parameters
         ----------
-        cost_fpath : str
-            Full path to HDF5 file containing cost arrays. The cost data
-            layers should be named ``"tie_line_costs_{capacity}MW"``,
-            where ``capacity`` is an integer value representing the
-            capacity of the line (the integer values must matches at
-            least one of the integer capacity values represented by the
-            keys in the ``power_classes`` portion of the transmission
-            config).
-        cell_size : int, optional
-            Side length of each cell, in meters. Cells are assumed to be
-            square. By default, :obj:`CELL_SIZE`.
-        use_hard_barrier : bool, optional
-            Optional flag to treat any cost values of <= 0 as a hard
-            barrier (i.e. no paths can ever cross this). If ``False``,
-            cost values of <= 0 are set to a large value to simulate a
-            strong but permeable barrier. By default, ``True``.
+        routing_scenario : RoutingScenario
+            Scenario containing cost, friction, and tracking metadata.
+        chunks : str or mapping, default="auto"
+            Chunk specification forwarded to ``xarray.open_dataset``.
+            By default, ``"auto"``.
         """
         self.routing_scenario = routing_scenario
         self._layer_fh = xr.open_dataset(
@@ -90,27 +111,29 @@ class RoutingLayers:
             consolidated=False,
             engine="zarr",
         )
-        # self.cost_layer_map = {}
         self.li_cost_layer_map = {}
-        # self.friction_layer_map = {}
         self.tracked_layers = []
 
         self.transform = self._layer_fh.rio.transform()
         self._full_shape = self._layer_fh.rio.shape
         self.cost_crs = self._layer_fh.rio.crs
-        # self.cell_size = abs(self.transform.a)
         self._layers = set(self._layer_fh.variables)
 
         self.cost = None
         self.li_cost = None
         self.final_routing_layer = None
 
+    def __repr__(self):
+        return f"RoutingLayers for {self.routing_scenario!r}"
+
     @property
     def latitudes(self):
+        """array-like: Latitude coordinates for the cost grid"""
         return self._layer_fh["latitude"]
 
     @property
     def longitudes(self):
+        """array-like: Longitude coordinates for the cost grid"""
         return self._layer_fh["longitude"]
 
     def _verify_layer_exists(self, layer_name):
@@ -127,58 +150,9 @@ class RoutingLayers:
         self._layer_fh.close()
 
     def build(self):
-        """Extract clipped cost arrays from exclusion files
+        """Build lazy routing arrays from layered file"""
 
-        Parameters
-        ----------
-        cost_layers : List[str]
-            List of layers in H5 that are summed to determine total
-            costs raster used for routing. Costs and distances for each
-            individual layer are also reported (e.g. wet and dry costs).
-            determining path using main cost layer.
-        friction_layers : List[dict] | None, optional
-            List of layers in H5 to be added to the cost raster to
-            influence routing but NOT reported in final cost. Should
-            have the same format as the `cost_layers` input.
-            By default, ``None``.
-        tracked_layers : dict, optional
-            Dictionary mapping layer names to strings, where the strings
-            are numpy methods that should be applied to the layer along
-            the LCP. For example,
-            ``tracked_layers={'layer_1': 'mean', 'layer_2': 'max}``
-            would report the average of ``layer_1`` values along the
-            least cost path and the max of ``layer_2`` values along the
-            least cost path. Examples of numpy methods (non-exhaustive):
-
-                - mean
-                - max
-                - min
-                - mode
-                - median
-                - std
-
-            By default, ``None``, which does not track any extra layers.
-        cost_multiplier_layer : str, optional
-            Name of layer containing final cost layer spatial
-            multipliers. By default, ``None``.
-        cost_multiplier_scalar : int | float, optional
-            Final cost layer multiplier. By default, ``1``.
-        """
-
-        logger.debug(
-            # TODO: Turn this input a repr of routing scenario and use
-            # that here
-            "Building cost layer with the following inputs:"
-            "\n\t- cost_layers: %r"
-            "\n\t- friction_layers: %r"
-            "\n\t- cost_multiplier_layer: %r"
-            "\n\t- cost_multiplier_scalar: %r",
-            self.routing_scenario.cost_layers,
-            self.routing_scenario.friction_layers,
-            self.routing_scenario.cost_multiplier_layer,
-            self.routing_scenario.cost_multiplier_scalar,
-        )
-
+        logger.debug("Building %r", self)
         self._build_cost_layer()
         self._build_final_routing_layer()
         self._build_tracked_layers()
@@ -219,17 +193,12 @@ class RoutingLayers:
         self.final_routing_layer = self.cost.copy()
         self.final_routing_layer += self.li_cost
 
-        # for li_cost_layer in self.li_cost_layer_map.values():
-        #     # normalize by cell size for routing only
-        #     self.final_routing_layer += li_cost_layer / self.cell_size
-
         friction_costs = da.zeros(self._full_shape, dtype=np.float32)
         for layer_info in self.routing_scenario.friction_layers:
             layer_name = layer_info["layer_name"]
             friction_layer = self._extract_and_scale_layer(
                 layer_info, allow_cl=True
             )
-            # self.friction_layer_map[layer_name] = friction_layer
             if layer_info.get("include_in_report", False):
                 self.tracked_layers.append(
                     CharacterizedLayer(layer_name, friction_layer)
@@ -249,12 +218,6 @@ class RoutingLayers:
             -1 if self.routing_scenario.use_hard_barrier else max_val,
             self.final_routing_layer,
         ) + (self.cost * 0)
-        # logger.debug(
-        #     "MCP cost min: %.2f, max: %.2f, median: %.2f",
-        #     np.min(self.final_routing_layer),
-        #     np.max(self.final_routing_layer),
-        #     np.median(self.final_routing_layer),
-        # )
 
     def _extract_and_scale_layer(self, layer_info, allow_cl=False):
         """Extract layer based on name and scale according to input"""
@@ -293,8 +256,9 @@ class RoutingLayers:
 
             if tracked_layer not in self._layers:
                 msg = (
-                    f"Did not find layer {tracked_layer!r} in cost "
-                    f"file {str(self.routing_scenario.cost_fpath)!r}. Skipping..."
+                    f"Did not find layer {tracked_layer!r} in cost file "
+                    f"{str(self.routing_scenario.cost_fpath)!r}. "
+                    "Skipping..."
                 )
                 warn(msg, revrtWarning)
                 continue
@@ -308,9 +272,26 @@ class RoutingLayers:
 
 
 class CharacterizedLayer:
+    """Encapsulate tracked routing layer metadata"""
+
     def __init__(
         self, name, layer, is_length_invariant=False, agg_method=None
     ):
+        """
+
+        Parameters
+        ----------
+        name : str
+            Identifier used when reporting layer-derived metrics.
+        layer : xarray.DataArray or dask.array.Array
+            Data values sampled from the routing stack.
+        is_length_invariant : bool, default=False
+            Flag signaling cost values should ignore segment length.
+            By default, ``False``.
+        agg_method : str, optional
+            Name of dask aggregation used when tracking statistics.
+            By default, ``None``.
+        """
         self.name = name
         self.layer = layer
         self.is_length_invariant = is_length_invariant
@@ -324,7 +305,20 @@ class CharacterizedLayer:
         )
 
     def compute(self, route, cell_size):
-        """Compute aggregate value over route"""
+        """Compute layer metrics along a route
+
+        Parameters
+        ----------
+        route : sequence
+            Ordered ``(row, col)`` indices describing the path.
+        cell_size : float
+            Raster cell size in meters for distance calculations.
+
+        Returns
+        -------
+        dict
+            Mapping of metric names to aggregated layer values.
+        """
         rows, cols = np.array(route).T
         layer_values = self.layer.isel(
             y=xr.DataArray(rows, dims="points"),
@@ -339,6 +333,7 @@ class CharacterizedLayer:
         return self._compute_agg(layer_values)
 
     def _compute_total_and_length(self, layer_values, route, cell_size):
+        """Compute total cost and length metrics for the layer"""
         lens, __ = _compute_lens(route, cell_size)
 
         layer_data = getattr(layer_values, "data", layer_values)
@@ -360,6 +355,7 @@ class CharacterizedLayer:
         }
 
     def _compute_agg(self, layer_values):
+        """Compute aggregated statistic for tracked layer"""
         aggregate = getattr(da, self.agg_method)(layer_values).astype(
             np.float32
         )
@@ -377,6 +373,23 @@ class RouteResult:
         add_geom=False,
         attrs=None,
     ):
+        """
+
+        Parameters
+        ----------
+        routing_layers : RoutingLayers
+            Routing layer manager containing cost and tracker arrays.
+        route : list
+            Ordered row and column indices defining the path.
+        optimized_objective : float
+            Objective value returned by the routing solver.
+        add_geom : bool, default=False
+            Include shapely geometry in the output when ``True``.
+            By default, ``False``.
+        attrs : dict, optional
+            Additional metadata merged into the result dictionary.
+            By default, ``None``.
+        """
         self._routing_layers = routing_layers
         self._route = route
         self._optimized_objective = optimized_objective
@@ -387,22 +400,26 @@ class RouteResult:
 
     @property
     def cell_size(self):
+        """float: Raster cell size in meters"""
         return abs(self._routing_layers.transform.a)
 
     @property
     def lens(self):
+        """array-like: Cached per-cell travel distances"""
         if self._lens is None:
             self._compute_path_length()
         return self._lens
 
     @property
     def total_path_length(self):
+        """float: Total path length in kilometers"""
         if self._total_path_length is None:
             self._compute_path_length()
         return self._total_path_length
 
     @property
     def cost(self):
+        """float: Optimized objective evaluated over the route"""
         rows, cols = np.array(self._route).T
         cell_costs = self._routing_layers.cost.isel(
             y=xr.DataArray(rows, dims="points"),
@@ -414,6 +431,7 @@ class RouteResult:
 
     @property
     def end_lat(self):
+        """float: Latitude of the terminal path cell"""
         row, col = self._route[-1]
         return (
             self._routing_layers.latitudes.isel(y=row, x=col)
@@ -424,6 +442,7 @@ class RouteResult:
 
     @property
     def end_lon(self):
+        """float: Longitude of the terminal path cell"""
         row, col = self._route[-1]
         return (
             self._routing_layers.longitudes.isel(y=row, x=col)
@@ -434,6 +453,7 @@ class RouteResult:
 
     @property
     def geom(self):
+        """shapely.GeometryType: Geometry for the computed path"""
         rows, cols = np.array(self._route).T
         x, y = rasterio.transform.xy(
             self._routing_layers.transform, rows, cols
@@ -442,6 +462,7 @@ class RouteResult:
         return geom(list(zip(x, y, strict=True)))
 
     def build(self):
+        """Assemble route metrics and optional geometry payload"""
         results = {
             "length_km": self.total_path_length,
             "cost": self.cost,
@@ -483,6 +504,25 @@ class RouteResult:
 
 
 def find_all_routes(routing_scenario, route_definitions, save_paths=False):
+    """Compute least-cost routes for each start and destination set
+
+    Parameters
+    ----------
+    routing_scenario : RoutingScenario
+        Scenario describing the cost layers and routing options.
+    route_definitions : Iterable
+        Sequence of ``(start_point, end_points, attrs)`` tuples
+        defining which points to route between. The `attrs` dictionary
+        will be appended to the output for each route.
+    save_paths : bool, default=False
+        Include shapely geometries in the output when ``True``.
+        By default, ``False``.
+
+    Returns
+    -------
+    list
+        Route summaries for each successfully computed path.
+    """
     if not route_definitions:
         return []
 
@@ -508,6 +548,7 @@ def find_all_routes(routing_scenario, route_definitions, save_paths=False):
 def _compute_routes(
     routing_scenario, route_definitions, routing_layers, save_paths
 ):
+    """Evaluate route definitions and build result records"""
     routes = []
     for start_point, end_points, attrs in route_definitions:
         try:
@@ -532,6 +573,7 @@ def _compute_routes(
 def _compute_valid_path(
     routing_scenario, routing_layers, start_point, end_points
 ):
+    """Validate provided indices then solve for the least-cost path"""
     _validate_starting_point(routing_layers, start_point)
     _validate_end_points(routing_layers, end_points)
 
@@ -554,6 +596,7 @@ def _compute_valid_path(
 
 
 def _validate_starting_point(routing_layers, start_point):
+    """Raise when the starting cell lacks a positive traversal cost"""
     start_row, start_col = start_point
     start_cost = (
         routing_layers.final_routing_layer.isel(y=start_row, x=start_col)
@@ -570,6 +613,7 @@ def _validate_starting_point(routing_layers, start_point):
 
 
 def _validate_end_points(routing_layers, end_points):
+    """Raise when no end cell provides a positive traversal cost"""
     end_rows, end_cols = np.array(end_points).T
     end_costs = routing_layers.final_routing_layer.isel(
         y=xr.DataArray(end_rows, dims="points"),
