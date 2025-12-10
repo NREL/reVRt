@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import geopandas as gpd
-import pandas as pd
 import pytest
 import numpy as np
 import xarray as xr
@@ -151,9 +149,10 @@ def test_basic_single_route_layered_file_short_path(sample_layered_data):
     )
 
     assert len(output) == 1
-    assert output.iloc[0]["cost"] == pytest.approx((1 + 2) / 2)
-    assert output.iloc[0]["length_km"] == 1 / 1000
-    assert output.iloc[0]["cost"] == output.iloc[0]["optimized_objective"]
+    route = output[0]
+    assert route["cost"] == pytest.approx((1 + 2) / 2)
+    assert route["length_km"] == 1 / 1000
+    assert route["cost"] == route["optimized_objective"]
 
 
 def test_basic_single_route_layered_file(sample_layered_data):
@@ -174,16 +173,16 @@ def test_basic_single_route_layered_file(sample_layered_data):
     )
 
     assert len(output) == 2
-    assert output.iloc[0]["cost"] == pytest.approx(11.192389)
-    assert output.iloc[0]["length_km"] == pytest.approx(0.0090710678)
-    assert np.isclose(
-        output.iloc[0]["cost"], output.iloc[0]["optimized_objective"]
-    )
+    first_route = output[0]
+    assert first_route["cost"] == pytest.approx(11.192389)
+    assert first_route["length_km"] == pytest.approx(0.0090710678)
+    assert np.isclose(first_route["cost"], first_route["optimized_objective"])
 
-    assert output.iloc[1]["cost"] == pytest.approx(12.278174)
-    assert output.iloc[1]["length_km"] == pytest.approx(0.008656854)
+    second_route = output[1]
+    assert second_route["cost"] == pytest.approx(12.278174)
+    assert second_route["length_km"] == pytest.approx(0.008656854)
     assert np.isclose(
-        output.iloc[1]["cost"], output.iloc[1]["optimized_objective"]
+        second_route["cost"], second_route["optimized_objective"]
     )
 
 
@@ -209,7 +208,7 @@ def test_multi_layer_route_layered_file(sample_layered_data):
 
     assert len(output) == 2
 
-    first_route = output.iloc[0]
+    first_route = output[0]
     assert first_route["cost"] == pytest.approx(
         27.606602,
         rel=1e-4,
@@ -230,7 +229,7 @@ def test_multi_layer_route_layered_file(sample_layered_data):
         first_route["cost"], first_route["optimized_objective"], rtol=1e-6
     )
 
-    second_route = output.iloc[1]
+    second_route = output[1]
     assert second_route["cost"] == pytest.approx(
         25.106602,
         rel=1e-4,
@@ -272,6 +271,8 @@ def test_save_paths_returns_expected_geometry(sample_layered_data):
     assert isinstance(output, list)
     assert len(output) == 2
 
+    route_geoms = [route["geometry"] for route in output]
+
     expected_geometries = [
         [
             (1.5, 5.5),
@@ -296,7 +297,7 @@ def test_save_paths_returns_expected_geometry(sample_layered_data):
     ]
 
     for geom, expected_coords in zip(
-        output.geometry, expected_geometries, strict=True
+        route_geoms, expected_geometries, strict=True
     ):
         assert geom.geom_type == "LineString"
         assert np.allclose(
@@ -367,7 +368,7 @@ def test_multi_layer_route_with_multiplier(sample_layered_data):
 
     assert len(output) == 2
 
-    first_route = output.iloc[0]
+    first_route = output[0]
     assert first_route["cost"] == pytest.approx(
         22.588835,
         rel=1e-4,
@@ -390,7 +391,7 @@ def test_multi_layer_route_with_multiplier(sample_layered_data):
         rtol=1e-4,
     )
 
-    second_route = output.iloc[1]
+    second_route = output[1]
     assert second_route["cost"] == pytest.approx(
         20.588835,
         rel=1e-4,
@@ -446,7 +447,7 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
 
     assert len(output) == 1
 
-    route = output.iloc[0]
+    route = output[0]
     assert route["cost"] == pytest.approx(2.0, rel=1e-4)
     assert route["length_km"] == pytest.approx(0.001, rel=1e-4)
     assert route["layer_1_cost"] == pytest.approx(1.5, rel=1e-4)
@@ -482,13 +483,13 @@ def test_routing_with_tracked_layers(sample_layered_data):
     )
 
     assert len(output) == 1
-    route = output.iloc[0]
+    route = output[0]
 
     assert {
         "layer_1_mean",
         "layer_2_max",
         "layer_3_min",
-    }.issubset(output.columns)
+    }.issubset(route.keys())
 
     assert route["layer_1_mean"] == pytest.approx(1.5)
     assert route["layer_2_max"] == pytest.approx(1.0)
@@ -541,10 +542,11 @@ def test_some_endpoints_include_barriers_but_one_valid(sample_layered_data):
 
     assert len(output) == 1
     # At least one valid endpoint must be reached and cost must be positive.
-    assert output.iloc[0]["cost"] > 0
+    route = output[0]
+    assert route["cost"] > 0
 
-    end_row = int(output.iloc[0]["end_row"])
-    end_col = int(output.iloc[0]["end_col"])
+    end_row = int(route["end_row"])
+    end_col = int(route["end_col"])
     assert (end_row, end_col) == (2, 6)
 
 
