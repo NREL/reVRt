@@ -211,7 +211,7 @@ class RoutingLayers:
         self.final_routing_layer += friction_costs
 
         max_val = (
-            np.max(self.final_routing_layer) * self.SOFT_BARRIER_MULTIPLIER
+            da.max(self.final_routing_layer) * self.SOFT_BARRIER_MULTIPLIER
         )
         self.final_routing_layer = da.where(
             self.final_routing_layer <= 0,
