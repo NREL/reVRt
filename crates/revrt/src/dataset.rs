@@ -342,6 +342,13 @@ mod tests {
         for point in test_points {
             let results = dataset.get_3x3(&point);
 
+            // index 0, 0 has a cost of 0 and should therefore be filtered out
+            assert!(
+                !results
+                    .iter()
+                    .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+            );
+
             for (ArrayIndex { i, j }, val) in results {
                 let subset =
                     zarrs::array_subset::ArraySubset::new_with_ranges(&[i..(i + 1), j..(j + 1)]);
@@ -367,6 +374,13 @@ mod tests {
         let array_c = zarrs::array::Array::open(dataset.source.clone(), "/C").unwrap();
         for point in test_points {
             let results = dataset.get_3x3(&point);
+
+            // index 0, 0 has a cost of 0 and should therefore be filtered out
+            assert!(
+                !results
+                    .iter()
+                    .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+            );
 
             for (ArrayIndex { i, j }, val) in results {
                 let subset =
@@ -407,13 +421,20 @@ mod tests {
 
         let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
 
+        // index 0, 0 has a cost of 0 and should therefore be filtered out
+        assert!(
+            !results
+                .iter()
+                .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+        );
+
         assert_eq!(results, vec![]);
     }
 
     #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 1.0), (1, 1, 1.5 * SQRT_2)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.5), (1, 0, 1.5 * SQRT_2), (1, 1, 2.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 1.), (0, 1, 1.5 * SQRT_2), (1, 1, 2.5)] ; "bottom left corner")]
-    #[test_case((1, 1), vec![(0, 0, 1.5 * SQRT_2), (0, 1, 2.), (1, 0, 2.5)] ; "bottom right corner")]
+    #[test_case((0, 1), vec![(1, 0, 1.5 * SQRT_2), (1, 1, 2.)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 1, 1.5 * SQRT_2), (1, 1, 2.5)] ; "bottom left corner")]
+    #[test_case((1, 1), vec![(0, 1, 2.), (1, 0, 2.5)] ; "bottom right corner")]
     fn test_get_3x3_two_by_two_array((si, sj): (u64, u64), expected_output: Vec<(u64, u64, f32)>) {
         let path = samples::cost_as_index_zarr((2, 2), (2, 2));
         let cost_function =
@@ -422,6 +443,13 @@ mod tests {
             Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
+
+        // index 0, 0 has a cost of 0 and should therefore be filtered out
+        assert!(
+            !results
+                .iter()
+                .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+        );
 
         assert_eq!(
             results,
@@ -433,10 +461,10 @@ mod tests {
     }
 
     #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 1.5), (1, 1, 2.0 * SQRT_2)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.5), (0, 2, 1.5), (1, 0, 2.0 * SQRT_2), (1, 1, 2.5), (1, 2, 3. * SQRT_2)] ; "top middle")]
+    #[test_case((0, 1), vec![(0, 2, 1.5), (1, 0, 2.0 * SQRT_2), (1, 1, 2.5), (1, 2, 3. * SQRT_2)] ; "top middle")]
     #[test_case((0, 2), vec![(0, 1, 1.5), (1, 1, 3.0 * SQRT_2), (1, 2, 3.5)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 1.5), (0, 1, 2.0 * SQRT_2), (1, 1, 3.5), (2, 0, 4.5), (2, 1, 5.0 * SQRT_2)] ; "middle left")]
-    #[test_case((1, 1), vec![(0, 0, 2.0 * SQRT_2), (0, 1, 2.5), (0, 2, 3.0 * SQRT_2), (1, 0, 3.5), (1, 2, 4.5), (2, 0, 5.0 * SQRT_2), (2, 1, 5.5), (2, 2, 6.0 * SQRT_2)] ; "middle middle")]
+    #[test_case((1, 0), vec![(0, 1, 2.0 * SQRT_2), (1, 1, 3.5), (2, 0, 4.5), (2, 1, 5.0 * SQRT_2)] ; "middle left")]
+    #[test_case((1, 1), vec![(0, 1, 2.5), (0, 2, 3.0 * SQRT_2), (1, 0, 3.5), (1, 2, 4.5), (2, 0, 5.0 * SQRT_2), (2, 1, 5.5), (2, 2, 6.0 * SQRT_2)] ; "middle middle")]
     #[test_case((1, 2), vec![(0, 1, 3.0 * SQRT_2), (0, 2, 3.5), (1, 1, 4.5), (2, 1, 6.0 * SQRT_2), (2, 2, 6.5)] ; "middle right")]
     #[test_case((2, 0), vec![(1, 0, 4.5), (1, 1, 5.0 * SQRT_2), (2, 1, 6.5)] ; "bottom left corner")]
     #[test_case((2, 1), vec![(1, 0, 5.0 * SQRT_2), (1, 1, 5.5), (1, 2, 6.0 * SQRT_2), (2, 0, 6.5), (2, 2, 7.5)] ; "bottom middle")]
@@ -453,6 +481,13 @@ mod tests {
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
 
+        // index 0, 0 has a cost of 0 and should therefore be filtered out
+        assert!(
+            !results
+                .iter()
+                .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+        );
+
         assert_eq!(
             results,
             expected_output
@@ -463,10 +498,10 @@ mod tests {
     }
 
     #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 2.), (1, 1, 2.5 * SQRT_2)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.5), (0, 2, 1.5), (1, 0, 2.5 * SQRT_2), (1, 1, 3.), (1, 2, 3.5 * SQRT_2)] ; "top left edge")]
+    #[test_case((0, 1), vec![(0, 2, 1.5), (1, 0, 2.5 * SQRT_2), (1, 1, 3.), (1, 2, 3.5 * SQRT_2)] ; "top left edge")]
     #[test_case((0, 2), vec![(0, 1, 1.5), (0, 3, 2.5), (1, 1, 3.5 * SQRT_2), (1, 2, 4.), (1, 3, 4.5 * SQRT_2)] ; "top right edge")]
     #[test_case((0, 3), vec![(0, 2, 2.5), (1, 2, 4.5 * SQRT_2), (1, 3, 5.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 2.), (0, 1, 2.5 * SQRT_2), (1, 1, 4.5), (2, 0, 6.), (2, 1, 6.5 * SQRT_2)] ; "left top edge")]
+    #[test_case((1, 0), vec![(0, 1, 2.5 * SQRT_2), (1, 1, 4.5), (2, 0, 6.), (2, 1, 6.5 * SQRT_2)] ; "left top edge")]
     #[test_case((1, 3), vec![(0, 2, 4.5 * SQRT_2), (0, 3, 5.), (1, 2, 6.5), (2, 2, 8.5 * SQRT_2), (2, 3, 9.)] ; "right top edge")]
     #[test_case((2, 0), vec![(1, 0, 6.), (1, 1, 6.5 * SQRT_2), (2, 1, 8.5), (3, 0, 10.), (3, 1, 10.5 * SQRT_2)] ; "left bottom edge")]
     #[test_case((2, 3), vec![(1, 2, 8.5 * SQRT_2), (1, 3, 9.), (2, 2, 10.5), (3, 2, 12.5 * SQRT_2), (3, 3, 13.)] ; "right bottom edge")]
@@ -485,6 +520,13 @@ mod tests {
             Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
+
+        // index 0, 0 has a cost of 0 and should therefore be filtered out
+        assert!(
+            !results
+                .iter()
+                .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+        );
 
         assert_eq!(
             results,

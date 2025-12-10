@@ -185,7 +185,6 @@ mod tests {
     #[test_case((1, 1), vec![(1, 3), (3, 1)], 1.; "horizontal and vertical")]
     #[test_case((3, 3), vec![(3, 5), (1, 1), (3, 1)], 1.; "horizontal")]
     #[test_case((3, 3), vec![(5, 3), (5, 5), (1, 3)], 1.; "vertical")]
-    #[test_case((3, 3), vec![(3, 1), (3, 4)], 0.; "zero costs")]
     fn routing_one_point_to_many_same_cost_and_length(
         (si, sj): (u64, u64),
         endpoints: Vec<(u64, u64)>,
