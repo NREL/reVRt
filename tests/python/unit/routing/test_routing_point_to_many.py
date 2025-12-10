@@ -7,8 +7,17 @@ import numpy as np
 import xarray as xr
 from rasterio.transform import from_origin
 
+from revrt.routing import point_to_many
 from revrt.utilities import LayeredFile
-from revrt.routing.point_to_many import find_all_routes, RoutingScenario
+from revrt.routing.point_to_many import (
+    find_all_routes,
+    LCP_AGG_COST_LAYER_NAME,
+    RouteResult,
+    RoutingLayers,
+    RoutingScenario,
+)
+from revrt.exceptions import revrtKeyError, revrtLeastCostPathNotFoundError
+from revrt.warn import revrtWarning
 
 
 @pytest.fixture(scope="module")
@@ -574,6 +583,398 @@ def test_all_endpoints_are_barriers_returns_no_route(
 
     assert isinstance(output, list)
     assert not output
+
+
+def test_routing_scenario_repr_contains_fields(sample_layered_data):
+    """RoutingScenario repr surfaces configured layer metadata"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[{"layer_name": "layer_2"}],
+        cost_multiplier_layer="layer_3",
+        cost_multiplier_scalar=1.5,
+    )
+
+    representation = repr(scenario)
+
+    assert "layer_1" in representation
+    assert "layer_2" in representation
+    assert "cost_multiplier_scalar: 1.5" in representation
+
+
+def test_missing_cost_layer_raises_key_error(sample_layered_data):
+    """Missing layers surface a revrtKeyError during build"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "not_there"}],
+    )
+
+    with pytest.raises(
+        revrtKeyError, match="Did not find layer 'not_there' in cost file"
+    ):
+        find_all_routes(
+            scenario,
+            route_definitions=[
+                ((1, 1), [(1, 2)], {}),
+            ],
+            save_paths=False,
+        )
+
+
+def test_cost_multiplier_layer_and_scalar_applied(sample_layered_data):
+    """Cost multipliers scale base costs before routing aggregation"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        cost_multiplier_layer="layer_3",
+        cost_multiplier_scalar=2.0,
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        cost_val = routing_layers.cost.isel(y=1, x=1).compute().item()
+        layer_one = (
+            routing_layers._layer_fh["layer_1"]
+            .isel(band=0, y=1, x=1)
+            .compute()
+            .item()
+        )
+        layer_three = (
+            routing_layers._layer_fh["layer_3"]
+            .isel(band=0, y=1, x=1)
+            .compute()
+            .item()
+        )
+        expected = layer_one * layer_three * scenario.cost_multiplier_scalar
+
+        assert cost_val == pytest.approx(expected)
+    finally:
+        routing_layers.close()
+
+
+def test_length_invariant_layer_costs_ignore_path_length(
+    sample_layered_data,
+):
+    """Length invariant cost layers ignore per-cell distances"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_1"},
+            {"layer_name": "layer_2", "is_invariant": True},
+        ],
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        route = [(1, 1), (1, 2)]
+        result = RouteResult(
+            routing_layers,
+            route,
+            optimized_objective=0.0,
+        ).build()
+
+        layer_two = (
+            routing_layers._layer_fh["layer_2"].isel(band=0).compute().values
+        )
+        expected = sum(layer_two[row, col] for row, col in route)
+
+        assert result["layer_2_cost"] == pytest.approx(expected)
+    finally:
+        routing_layers.close()
+
+
+def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
+    """Soft barriers convert impassable cells to large positive costs"""
+
+    hard_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        use_hard_barrier=True,
+    )
+    hard_layers = RoutingLayers(hard_scenario).build()
+    try:
+        hard_value = (
+            hard_layers.final_routing_layer.isel(y=0, x=3).compute().item()
+        )
+    finally:
+        hard_layers.close()
+
+    soft_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        use_hard_barrier=False,
+    )
+    soft_layers = RoutingLayers(soft_scenario).build()
+    try:
+        soft_value = (
+            soft_layers.final_routing_layer.isel(y=0, x=3).compute().item()
+        )
+        assert hard_value == -1
+        assert soft_value > 0
+        assert soft_value > abs(hard_value)
+    finally:
+        soft_layers.close()
+
+
+def test_tracked_layers_invalid_configs_warn(
+    sample_layered_data, assert_message_was_logged
+):
+    """Tracked layer config issues emit revrtWarning messages"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        tracked_layers={
+            "layer_1": "does_not_exist",
+            "missing_layer": "mean",
+        },
+    )
+
+    with pytest.warns(revrtWarning) as warning_record:
+        routing_layers = RoutingLayers(scenario).build()
+
+    assert_message_was_logged("Did not find layer", "WARNING")
+    assert_message_was_logged("Did not find method", "WARNING")
+
+    try:
+        assert len(warning_record) == 2
+    finally:
+        routing_layers.close()
+
+
+def test_friction_layers_and_lcp_agg_costs(sample_layered_data):
+    """Friction layers may include cost stack and tracked layer toggles"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_1", "include_in_report": False},
+        ],
+        friction_layers=[
+            {
+                "layer_name": "layer_2",
+                "multiplier_scalar": 0.5,
+                "include_in_report": True,
+            },
+            {
+                "layer_name": LCP_AGG_COST_LAYER_NAME,
+                "multiplier_scalar": 0.1,
+            },
+        ],
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        tracked_names = {layer.name for layer in routing_layers.tracked_layers}
+        assert "layer_1" not in tracked_names
+        assert "layer_2" in tracked_names
+
+        base_value = routing_layers.cost.isel(y=1, x=1).compute().item()
+        final_value = (
+            routing_layers.final_routing_layer.isel(y=1, x=1).compute().item()
+        )
+
+        assert final_value > base_value
+    finally:
+        routing_layers.close()
+
+
+def test_route_result_build_warns_on_attr_mismatch(
+    sample_layered_data, assert_message_was_logged
+):
+    """RouteResult build warns when provided attrs contradict results"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        route = [(1, 1), (1, 2)]
+        with pytest.warns(revrtWarning):
+            result = RouteResult(
+                routing_layers,
+                route,
+                optimized_objective=0.0,
+                add_geom=True,
+                attrs={"start_row": 0},
+            ).build()
+
+        assert_message_was_logged("does not match", "WARNING")
+
+        assert result["geometry"].geom_type == "LineString"
+        assert result["start_row"] == 0
+    finally:
+        routing_layers.close()
+
+
+def test_route_result_geom_returns_point_for_single_cell(sample_layered_data):
+    """RouteResult.geom returns a Point geometry for single-cell routes"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        route = [(1, 1)]
+        result = RouteResult(
+            routing_layers,
+            route,
+            optimized_objective=0.0,
+        )
+
+        assert result.geom.geom_type == "Point"
+    finally:
+        routing_layers.close()
+
+
+def test_characterized_layer_length_metric_uses_positive_mask(
+    sample_layered_data,
+):
+    """CharacterizedLayer uses positive-value mask when summing lengths"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        layer = next(
+            tracked
+            for tracked in routing_layers.tracked_layers
+            if tracked.name == "layer_1"
+        )
+        route = [(1, 1), (1, 2), (2, 3)]
+        metrics = layer.compute(route, abs(routing_layers.transform.a))
+
+        assert metrics["layer_1_dist_km"] >= 0
+    finally:
+        routing_layers.close()
+
+
+def test_route_result_cached_properties_reuse_computed_values(
+    sample_layered_data,
+):
+    """RouteResult caches per-route lengths after first computation"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        route = [(1, 1), (1, 2), (2, 3)]
+        result = RouteResult(
+            routing_layers,
+            route,
+            optimized_objective=0.0,
+        )
+
+        first_length = result.total_path_length
+        assert isinstance(first_length, float)
+        second_length = result.total_path_length
+        assert second_length == first_length
+
+        first_lens = result._lens
+        assert np.allclose(result._lens, first_lens)
+    finally:
+        routing_layers.close()
+
+
+def test_route_result_cost_property_returns_value(sample_layered_data):
+    """RouteResult.cost multiplies cell costs by cached travel lengths"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        route = [(1, 1), (1, 2), (2, 3)]
+        result = RouteResult(
+            routing_layers,
+            route,
+            optimized_objective=0.0,
+        )
+
+        assert result.cost > 0
+    finally:
+        routing_layers.close()
+
+
+def test_characterized_layer_total_length_computation(sample_layered_data):
+    """CharacterizedLayer computes length-weighted costs for eager data"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    routing_layers = RoutingLayers(scenario, chunks=None).build()
+    try:
+        layer = next(
+            tracked
+            for tracked in routing_layers.tracked_layers
+            if tracked.name == "layer_1"
+        )
+        route = [(1, 1), (1, 2), (2, 3)]
+        metrics = layer.compute(route, abs(routing_layers.transform.a))
+
+        assert metrics["layer_1_cost"] > 0
+        assert metrics["layer_1_dist_km"] >= 0
+    finally:
+        routing_layers.close()
+
+
+def test_find_paths_exception_yields_no_routes(
+    sample_layered_data, monkeypatch
+):
+    """find_paths failures propagate as revrtLeastCostPathNotFoundError"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    def boom(**_):
+        msg = "boom"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr("revrt.routing.point_to_many.find_paths", boom)
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[
+            ((1, 1), [(1, 2)], {}),
+        ],
+        save_paths=False,
+    )
+
+    assert output == []
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        with pytest.raises(
+            revrtLeastCostPathNotFoundError, match="Unable to find path"
+        ):
+            point_to_many._compute_valid_path(
+                scenario,
+                routing_layers,
+                (1, 1),
+                [(1, 2)],
+            )
+    finally:
+        routing_layers.close()
 
 
 if __name__ == "__main__":
