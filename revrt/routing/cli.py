@@ -340,7 +340,9 @@ def _run_lcp(
         num_computed += len(out)
 
         if save_paths:
-            gpd.GeoDataFrame(out).to_file(out_fp, driver="GPKG", mode="a")
+            gpd.GeoDataFrame(out, geometry="geometry").to_file(
+                out_fp, driver="GPKG", mode="a"
+            )
         else:
             pd.DataFrame(out).to_csv(out_fp, mode="a")
 
