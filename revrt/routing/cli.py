@@ -285,7 +285,6 @@ def _run_lcp(
 
     if route_points.empty:
         logger.info("Found no paths to compute!")
-
         return
 
     with xr.open_dataset(cost_fpath, consolidated=False, engine="zarr") as ds:
