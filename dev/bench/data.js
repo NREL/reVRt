@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765393340536,
+  "lastUpdate": 1765393351317,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2183,6 +2183,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 291336463,
             "range": "± 3690487",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "568272ea3ac373fb824e9d7d2abafff4ee8851bf",
+          "message": "Make sure Rust-based `find_paths` function is included in docs (#170)\n\n* Update docstring\n\n* Add Section delimiter to template\n\n* Get function to be picked up by autodoc\n\n* Document reason for adjustment",
+          "timestamp": "2025-12-10T11:50:36-07:00",
+          "tree_id": "6f9386e42653158fee7bab585ccd27256225f5ee",
+          "url": "https://github.com/NREL/reVRt/commit/568272ea3ac373fb824e9d7d2abafff4ee8851bf"
+        },
+        "date": 1765393350830,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 77042763,
+            "range": "± 2901798",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 83936251,
+            "range": "± 1571914",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 118026271,
+            "range": "± 3635069",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 160812622,
+            "range": "± 6168810",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 448794626,
+            "range": "± 15871491",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 148834994,
+            "range": "± 2819155",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 151539428,
+            "range": "± 1968770",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 159878390,
+            "range": "± 1448130",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 188446979,
+            "range": "± 1821540",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 293489046,
+            "range": "± 11360578",
             "unit": "ns/iter"
           }
         ]
