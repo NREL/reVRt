@@ -15,6 +15,7 @@ from gaps.cli import CLICommandFromFunction
 from revrt.costs.config import parse_config
 from revrt.routing.point_to_many import find_all_routes, RoutingScenario
 from revrt.routing.utilities import map_to_costs
+from revrt.exceptions import revrtKeyError
 
 
 logger = logging.getLogger(__name__)
@@ -406,14 +407,15 @@ def _update_multipliers(layers, polarity, voltage, transmission_config):
 
     for layer in output_layers:
         if layer.pop("apply_row_mult", False):
-            row_multiplier = transmission_config["row_width"][voltage]
+            row_multiplier = _get_row_multiplier(transmission_config, voltage)
             layer["multiplier_scalar"] = (
                 layer.get("multiplier_scalar", 1) * row_multiplier
             )
 
         if layer.pop("apply_polarity_mult", False):
-            polarity_config = transmission_config["voltage_polarity_mult"]
-            polarity_multiplier = polarity_config[voltage][polarity]
+            polarity_multiplier = _get_polarity_multiplier(
+                transmission_config, voltage, polarity
+            )
             layer["multiplier_scalar"] = (
                 layer.get("multiplier_scalar", 1)
                 * polarity_multiplier
@@ -421,6 +423,63 @@ def _update_multipliers(layers, polarity, voltage, transmission_config):
             )
 
     return output_layers
+
+
+def _get_row_multiplier(transmission_config, voltage):
+    try:
+        row_widths = transmission_config["row_width"]
+    except KeyError as e:
+        msg = (
+            "`apply_row_mult` was set to `True`, but 'row_width' "
+            "not found in transmission config!"
+        )
+        raise revrtKeyError(msg) from e
+
+    try:
+        row_multiplier = row_widths["voltage"]
+    except KeyError as e:
+        msg = (
+            "`apply_row_mult` was set to `True`, but voltage ' "
+            f"{voltage}' not found in transmission config "
+            "'row_width' settings. Available voltages: "
+            f"{list(row_multiplier)}"
+        )
+        raise revrtKeyError(msg) from e
+
+    return row_multiplier
+
+
+def _get_polarity_multiplier(transmission_config, voltage, polarity):
+    try:
+        polarity_config = transmission_config["voltage_polarity_mult"]
+    except KeyError as e:
+        msg = (
+            "`apply_polarity_mult` was set to `True`, but "
+            "'voltage_polarity_mult' not found in transmission config!"
+        )
+        raise revrtKeyError(msg) from e
+
+    try:
+        polarity_voltages = polarity_config[voltage]
+    except KeyError as e:
+        msg = (
+            "`apply_polarity_mult` was set to `True`, but voltage ' "
+            f"{voltage}' not found in polarity config. Available voltages: "
+            f"{list(polarity_config)}"
+        )
+        raise revrtKeyError(msg) from e
+
+    try:
+        polarity_multiplier = polarity_voltages[polarity]
+    except KeyError as e:
+        msg = (
+            "`apply_polarity_mult` was set to `True`, but polarity ' "
+            f"{polarity}' not found in voltage config. Available polarities: "
+            f"{list(polarity_voltages)}"
+        )
+        raise revrtKeyError(msg) from e
+
+    return polarity_multiplier
 
 
 def _route_points_subset(route_table, sort_cols, split_params):
