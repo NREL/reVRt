@@ -1,14 +1,13 @@
 """reVRt routing CLI unit tests"""
 
 from pathlib import Path
-import math
 
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
 import geopandas as gpd
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
 from rasterio.transform import from_origin
 
 from revrt.utilities import LayeredFile
@@ -155,35 +154,6 @@ def test_compute_lcp_routes_generates_csv(
         "revrt.routing.cli.parse_config", lambda config=None: config
     )
 
-    captured_scenarios = []
-
-    def fake_find_all_routes(scenario, route_definitions, save_paths):
-        captured_scenarios.append(scenario)
-        outputs = []
-        for start, end_points, info in route_definitions:
-            end_row, end_col = end_points[0]
-            out = info.copy()
-            out.update(
-                {
-                    "start_row": start[0],
-                    "start_col": start[1],
-                    "end_row": end_row,
-                    "end_col": end_col,
-                    "cost": sum(
-                        layer.get("multiplier_scalar", 1)
-                        for layer in scenario.cost_layers
-                    ),
-                    "length_km": 0.001,
-                    "optimized_objective": 0.001,
-                }
-            )
-            outputs.append(out)
-        return outputs
-
-    monkeypatch.setattr(
-        "revrt.routing.cli.find_all_routes", fake_find_all_routes
-    )
-
     out_dir = tmp_path / "routing_outputs"
 
     cost_layers = [
@@ -219,15 +189,57 @@ def test_compute_lcp_routes_generates_csv(
 
     df = pd.read_csv(output_path)
     df = df[df["route_id"] != "route_id"].reset_index(drop=True)
-    df["cost"] = pd.to_numeric(df["cost"])
-    assert len(df) == len(routes)
-    expected_scalar = 1.5 + 2e-5 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
-    assert pytest.approx(expected_scalar) == df["cost"].iloc[0]
+    df = df.drop(columns=[c for c in df.columns if c.startswith("Unnamed")])
 
-    updated_layers = captured_scenarios[0].cost_layers
-    assert updated_layers[0]["multiplier_scalar"] == pytest.approx(1.5)
-    assert updated_layers[1]["multiplier_scalar"] == pytest.approx(
-        2e-5 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
+    numeric_cols = [
+        "cost",
+        "length_km",
+        "optimized_objective",
+        "layer_1_cost",
+        "layer_1_dist_km",
+        "layer_2_cost",
+        "layer_2_dist_km",
+    ]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col])
+
+    assert len(df) == len(routes)
+    assert set(df["route_id"]) == set(routes["route_id"])
+
+    with xr.open_dataset(
+        sample_layered_data, consolidated=False, engine="zarr"
+    ) as ds:
+        mapped_routes = map_to_costs(
+            routes.copy(), ds.rio.crs, ds.rio.transform(), ds.rio.shape
+        )
+
+    merged = df.merge(
+        mapped_routes[
+            [
+                "route_id",
+                "start_row",
+                "start_col",
+                "end_row",
+                "end_col",
+            ]
+        ],
+        on="route_id",
+        how="left",
+        suffixes=("", "_expected"),
+    )
+
+    for col in ["start_row", "start_col", "end_row", "end_col"]:
+        assert (
+            merged[col].astype(int) == merged[f"{col}_expected"].astype(int)
+        ).all()
+
+    assert np.allclose(
+        merged["cost"], merged["layer_1_cost"] + merged["layer_2_cost"]
+    )
+    assert np.all(merged["length_km"] > 0)
+    assert np.allclose(
+        merged["cost"], merged["optimized_objective"], rtol=1e-5
     )
 
 
@@ -292,31 +304,6 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
         lambda _: {existing_tuple},
     )
 
-    captured_scenarios = []
-
-    def fake_find_all_routes(scenario, route_definitions, save_paths):
-        captured_scenarios.append(scenario)
-        assert len(route_definitions) == 1
-        (start_row, start_col), end_points, info = route_definitions[0]
-        end_row, end_col = end_points[0]
-        return [
-            {
-                "route_id": info["route_id"],
-                "start_row": start_row,
-                "start_col": start_col,
-                "end_row": end_row,
-                "end_col": end_col,
-                "geometry": Point(0, 0),
-                "cost": math.pi,
-                "length_km": 0.002,
-                "optimized_objective": 0.002,
-            }
-        ]
-
-    monkeypatch.setattr(
-        "revrt.routing.cli.find_all_routes", fake_find_all_routes
-    )
-
     saved_calls = []
 
     def fake_to_file(self, path, driver=None, mode=None, **_kwargs):
@@ -348,10 +335,26 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
     assert saved_path == out_fp
     assert driver == "GPKG"
     assert mode == "a"
+    assert len(saved_gdf) == 1
     assert saved_gdf["route_id"].iloc[0] == routes.iloc[1]["route_id"]
 
-    updated_layers = captured_scenarios[0].cost_layers
-    assert updated_layers[0]["layer_name"] == "layer_1"
+    expected = mapped_routes.iloc[1]
+    assert int(saved_gdf["start_row"].iloc[0]) == int(expected["start_row"])
+    assert int(saved_gdf["start_col"].iloc[0]) == int(expected["start_col"])
+    assert int(saved_gdf["end_row"].iloc[0]) == int(expected["end_row"])
+    assert int(saved_gdf["end_col"].iloc[0]) == int(expected["end_col"])
+
+    cost_val = float(saved_gdf["cost"].iloc[0])
+    objective_val = float(saved_gdf["optimized_objective"].iloc[0])
+    length_val = float(saved_gdf["length_km"].iloc[0])
+
+    assert cost_val > 0
+    assert length_val > 0
+    assert objective_val == pytest.approx(cost_val, rel=1e-5)
+
+    geom = saved_gdf.geometry.iloc[0]
+    assert isinstance(geom, LineString)
+    assert len(geom.coords) >= 2
 
 
 def test_run_lcp_returns_immediately_when_no_routes(tmp_path):
