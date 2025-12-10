@@ -393,7 +393,7 @@ class RouteResult:
         self._routing_layers = routing_layers
         self._route = route
         self._optimized_objective = optimized_objective
-        self._lens = self._total_path_length = None
+        self.__lens = self._total_path_length = None
         self._by_layer_results = {}
         self._add_geom = add_geom
         self._attrs = attrs or {}
@@ -406,9 +406,9 @@ class RouteResult:
     @property
     def _lens(self):
         """array-like: Cached per-cell travel distances"""
-        if self._lens is None:
+        if self.__lens is None:
             self._compute_path_length()
-        return self._lens
+        return self.__lens
 
     @property
     def total_path_length(self):
@@ -498,7 +498,7 @@ class RouteResult:
 
     def _compute_path_length(self):
         """Compute the total length and cell by cell length of LCP"""
-        self._lens, self._total_path_length = _compute_lens(
+        self.__lens, self._total_path_length = _compute_lens(
             self._route, self.cell_size
         )
 
