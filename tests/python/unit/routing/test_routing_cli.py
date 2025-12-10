@@ -505,7 +505,13 @@ def test_update_multipliers_applies_row_and_polarity():
 def test_get_row_multiplier_missing_config():
     """_get_row_multiplier should raise when configuration keys are absent"""
 
-    with pytest.raises(revrtKeyError, match="'row_width'"):
+    with pytest.raises(
+        revrtKeyError,
+        match=(
+            r"`apply_row_mult` was set to `True`, but 'row_width' not found "
+            r"in transmission config"
+        ),
+    ):
         _get_row_multiplier({}, "138")
 
 
@@ -513,14 +519,27 @@ def test_get_row_multiplier_unknown_voltage():
     """_get_row_multiplier should surface available voltages on failure"""
 
     config = {"row_width": {"230": 1.2}}
-    with pytest.raises(revrtKeyError, match=r"Available voltages.*230"):
+    with pytest.raises(
+        revrtKeyError,
+        match=(
+            r"`apply_row_mult` was set to `True`, but voltage '\s*138' not "
+            r"found in transmission config 'row_width' settings. "
+            r"Available voltages: \['230'\]"
+        ),
+    ):
         _get_row_multiplier(config, "138")
 
 
 def test_get_polarity_multiplier_missing_config():
     """_get_polarity_multiplier should raise when multiplier section missing"""
 
-    with pytest.raises(revrtKeyError, match="voltage_polarity_mult"):
+    with pytest.raises(
+        revrtKeyError,
+        match=(
+            r"`apply_polarity_mult` was set to `True`, but "
+            r"'voltage_polarity_mult' not found in transmission config"
+        ),
+    ):
         _get_polarity_multiplier({}, "138", "ac")
 
 
@@ -528,7 +547,13 @@ def test_get_polarity_multiplier_unknown_voltage():
     """_get_polarity_multiplier should guard against unknown voltages"""
 
     config = {"voltage_polarity_mult": {"230": {"ac": 1.0}}}
-    with pytest.raises(revrtKeyError, match="Available voltages"):
+    with pytest.raises(
+        revrtKeyError,
+        match=(
+            r"`apply_polarity_mult` was set to `True`, but voltage '\s*138' "
+            r"not found in polarity config. Available voltages: \['230'\]"
+        ),
+    ):
         _get_polarity_multiplier(config, "138", "ac")
 
 
@@ -536,7 +561,13 @@ def test_get_polarity_multiplier_unknown_polarity():
     """_get_polarity_multiplier should guard against unknown polarities"""
 
     config = {"voltage_polarity_mult": {"138": {"dc": 1.0}}}
-    with pytest.raises(revrtKeyError, match="Available polarities"):
+    with pytest.raises(
+        revrtKeyError,
+        match=(
+            r"`apply_polarity_mult` was set to `True`, but polarity '\s*ac' "
+            r"not found in voltage config. Available polarities: \['dc'\]"
+        ),
+    ):
         _get_polarity_multiplier(config, "138", "ac")
 
 
