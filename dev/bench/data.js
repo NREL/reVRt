@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765352430944,
+  "lastUpdate": 1765393340536,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2099,6 +2099,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 298789484,
             "range": "± 6523528",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "03f1318d7da6ffd02564c061e291530bfcf781ea",
+          "message": "Update (#172)\n\n* Update\n\n* Update instructions\n\n* Minor template updates\n\n* New tasks\n\n* Explicit command\n\n* Update lockfile",
+          "timestamp": "2025-12-10T11:50:16-07:00",
+          "tree_id": "a1907b9252125938e771863c9b2e91110918eed7",
+          "url": "https://github.com/NREL/reVRt/commit/03f1318d7da6ffd02564c061e291530bfcf781ea"
+        },
+        "date": 1765393339612,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74530803,
+            "range": "± 782102",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 77469847,
+            "range": "± 858493",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 116423999,
+            "range": "± 3795138",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 160184643,
+            "range": "± 5892350",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 441689846,
+            "range": "± 11570161",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 149728472,
+            "range": "± 1686543",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 154334190,
+            "range": "± 789343",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 162301813,
+            "range": "± 1748285",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 192173207,
+            "range": "± 1351924",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 291336463,
+            "range": "± 3690487",
             "unit": "ns/iter"
           }
         ]
