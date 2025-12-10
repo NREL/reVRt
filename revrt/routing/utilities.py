@@ -22,11 +22,11 @@ def map_to_costs(route_points, crs, transform, shape):
     route_points : pandas.DataFrame
         Route definitions table with at least `start_lat`, `start_lon`,
         `end_lat`, and `end_lon` coordinate columns.
-    crs : str or pyproj.CRS
+    crs : str or pyproj.crs.CRS
         Coordinate reference system for the cost raster.
     transform : affine.Affine
         Rasterio affine transform giving pixel origin and resolution.
-    shape : tuple[int, int]
+    shape : tuple
         Raster height and width for bounds checking.
 
     Returns
