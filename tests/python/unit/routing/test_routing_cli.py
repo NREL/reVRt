@@ -134,9 +134,7 @@ def _build_route_table(layered_fp, rows_cols):
     return pd.DataFrame.from_records(records)
 
 
-def test_compute_lcp_routes_generates_csv(
-    sample_layered_data, tmp_path, monkeypatch
-):
+def test_compute_lcp_routes_generates_csv(sample_layered_data, tmp_path):
     """compute_lcp_routes should map points and persist CSV outputs"""
 
     routes = _build_route_table(
@@ -146,16 +144,7 @@ def test_compute_lcp_routes_generates_csv(
     route_table_fp = tmp_path / "route_table.csv"
     routes.to_csv(route_table_fp, index=False)
 
-    monkeypatch.setattr(
-        "revrt.routing.cli._route_points_subset",
-        lambda *_args, **_kwargs: routes,
-    )
-    monkeypatch.setattr(
-        "revrt.routing.cli.parse_config", lambda config=None: config
-    )
-
     out_dir = tmp_path / "routing_outputs"
-
     cost_layers = [
         {
             "layer_name": "layer_1",
@@ -182,6 +171,7 @@ def test_compute_lcp_routes_generates_csv(
         job_name="run",
         transmission_config=transmission_config,
         save_paths=False,
+        _split_params=(0, 1),
     )
 
     output_path = Path(result_fp)
@@ -244,7 +234,7 @@ def test_compute_lcp_routes_generates_csv(
 
 
 def test_compute_lcp_routes_returns_none_on_empty_indices(
-    sample_layered_data, tmp_path, monkeypatch
+    sample_layered_data, tmp_path
 ):
     """Ensure compute_lcp_routes short-circuits when route points are empty"""
 
@@ -253,20 +243,13 @@ def test_compute_lcp_routes_returns_none_on_empty_indices(
         route_table_fp, index=False
     )
 
-    monkeypatch.setattr(
-        "revrt.routing.cli._route_points_subset",
-        lambda *_, **__: pd.DataFrame([]),
-    )
-    monkeypatch.setattr(
-        "revrt.routing.cli.parse_config", lambda config=None: config
-    )
-
     result = compute_lcp_routes(
         cost_fpath=sample_layered_data,
         route_table=route_table_fp,
         cost_layers=[{"layer_name": "layer_1"}],
         out_dir=tmp_path,
         job_name="no_routes",
+        _split_params=(1000, 1),
     )
 
     assert result is None
@@ -390,12 +373,10 @@ def test_collect_existing_routes_csv(tmp_path):
     assert result == {(0, 1, 2, 3, "ac", "230")}
 
 
-def test_collect_existing_routes_gpkg(monkeypatch, tmp_path):
+def test_collect_existing_routes_gpkg(tmp_path):
     """_collect_existing_routes should support GeoPackage outputs"""
 
     gpkg_fp = tmp_path / "routes.gpkg"
-    gpkg_fp.touch()
-
     gdf = gpd.GeoDataFrame(
         {
             "start_row": [1],
@@ -407,8 +388,7 @@ def test_collect_existing_routes_gpkg(monkeypatch, tmp_path):
             "geometry": [Point(0, 0)],
         }
     )
-
-    monkeypatch.setattr("revrt.routing.cli.gpd.read_file", lambda _: gdf)
+    gdf.to_file(gpkg_fp, driver="GPKG")
 
     result = _collect_existing_routes(gpkg_fp)
     assert result == {(1, 2, 3, 4, "unknown", "unknown")}
@@ -421,9 +401,10 @@ def test_collect_existing_routes_when_missing(tmp_path):
     assert _collect_existing_routes(tmp_path / "missing.csv") == set()
 
 
-def test_route_points_subset_with_chunking(monkeypatch):
+def test_route_points_subset_with_chunking(tmp_path):
     """_route_points_subset should slice sorted features by chunk"""
 
+    test_fp = tmp_path / "features.csv"
     features = pd.DataFrame(
         {
             "start_lat": [5.0, 1.0, 3.0, 7.0],
@@ -431,16 +412,16 @@ def test_route_points_subset_with_chunking(monkeypatch):
         }
     )
 
-    monkeypatch.setattr("revrt.routing.cli.pd.read_csv", lambda _: features)
+    features.to_csv(test_fp, index=False)
 
     first_chunk = _route_points_subset(
-        "dummy", ["start_lat", "start_lon"], (0, 2)
+        test_fp, ["start_lat", "start_lon"], (0, 2)
     )
     assert first_chunk["start_lat"].tolist() == [1.0, 3.0]
     assert first_chunk["start_lon"].tolist() == [1.0, 2.0]
 
     second_chunk = _route_points_subset(
-        "dummy", ["start_lat", "start_lon"], (1, 2)
+        test_fp, ["start_lat", "start_lon"], (1, 2)
     )
     assert second_chunk["start_lat"].tolist() == [5.0, 7.0]
     assert second_chunk["start_lon"].tolist() == [0.0, 3.0]
