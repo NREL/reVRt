@@ -45,3 +45,7 @@ harness = false
 
 [lints]
 workspace = true
+
+[[test]]
+name = "revrt-integration-tests"
+path = "../../tests/rust/integration_tests.rs"

@@ -57,6 +57,7 @@ dev = [
   "ruff-lsp>=0.0.62,<0.0.63",
 ]
 test = [
+  "hypothesis>=6.0,<7",
   "pytest>=8.3.5,<9",
   "pytest-cases>=3.8.6,<4",
   "pytest-cov>=6.1.1,<7",
@@ -261,8 +262,10 @@ pip = ">=25.1.1,<26"
 pipreqs = ">=0.4.13,<0.5"
 ruff = ">=0.14.0,<0.15"
 ruff-lsp = ">=0.0.62,<0.0.63"
+rust-src = ">=1.90.0,<2"
 
 [tool.pixi.feature.test.dependencies]
+hypothesis = ">=6.140.4,<7"
 pytest = ">=8.3.5,<9"
 pytest-cases = ">=3.8.6,<4"
 pytest-cov = ">=6.1.1,<7"
