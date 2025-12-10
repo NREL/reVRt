@@ -143,7 +143,11 @@ def test_basic_single_route_layered_file_short_path(sample_layered_data):
     )
 
     output = find_all_routes(
-        scenario, route_definitions=[((1, 1), [(1, 2)])], save_paths=False
+        scenario,
+        route_definitions=[
+            ((1, 1), [(1, 2)], {}),
+        ],
+        save_paths=False,
     )
 
     assert len(output) == 1
@@ -163,8 +167,8 @@ def test_basic_single_route_layered_file(sample_layered_data):
     output = find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)]),
-            ((1, 2), [(2, 6)]),
+            ((1, 1), [(2, 6)], {}),
+            ((1, 2), [(2, 6)], {}),
         ],
         save_paths=False,
     )
@@ -196,7 +200,10 @@ def test_multi_layer_route_layered_file(sample_layered_data):
 
     output = find_all_routes(
         scenario,
-        route_definitions=[((1, 1), [(2, 6)]), ((1, 2), [(2, 6)])],
+        route_definitions=[
+            ((1, 1), [(2, 6)], {}),
+            ((1, 2), [(2, 6)], {}),
+        ],
         save_paths=False,
     )
 
@@ -256,15 +263,14 @@ def test_save_paths_returns_expected_geometry(sample_layered_data):
     output = find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)]),
-            ((1, 2), [(2, 6)]),
+            ((1, 1), [(2, 6)], {}),
+            ((1, 2), [(2, 6)], {}),
         ],
         save_paths=True,
     )
 
-    assert isinstance(output, gpd.GeoDataFrame)
+    assert isinstance(output, list)
     assert len(output) == 2
-    assert output.crs.to_string() == "EPSG:4326"
 
     expected_geometries = [
         [
@@ -312,9 +318,8 @@ def test_empty_route_definitions_returns_empty_dataframe(sample_layered_data):
         save_paths=False,
     )
 
-    assert isinstance(output, pd.DataFrame)
-    assert output.empty
-    assert list(output.columns) == []
+    assert isinstance(output, list)
+    assert not output
 
 
 def test_empty_route_definitions_returns_empty_geo_dataframe(
@@ -333,9 +338,8 @@ def test_empty_route_definitions_returns_empty_geo_dataframe(
         save_paths=True,
     )
 
-    assert isinstance(output, gpd.GeoDataFrame)
-    assert output.empty
-    assert list(output.columns) == []
+    assert isinstance(output, list)
+    assert not output
 
 
 def test_multi_layer_route_with_multiplier(sample_layered_data):
@@ -355,8 +359,8 @@ def test_multi_layer_route_with_multiplier(sample_layered_data):
     output = find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)]),
-            ((1, 2), [(2, 6)]),
+            ((1, 1), [(2, 6)], {}),
+            ((1, 2), [(2, 6)], {}),
         ],
         save_paths=False,
     )
@@ -434,7 +438,9 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
 
     output = find_all_routes(
         scenario,
-        route_definitions=[((1, 1), [(1, 2)])],
+        route_definitions=[
+            ((1, 1), [(1, 2)], {}),
+        ],
         save_paths=False,
     )
 
@@ -469,7 +475,9 @@ def test_routing_with_tracked_layers(sample_layered_data):
 
     output = find_all_routes(
         scenario,
-        route_definitions=[((1, 1), [(1, 2)])],
+        route_definitions=[
+            ((1, 1), [(1, 2)], {}),
+        ],
         save_paths=False,
     )
 
@@ -499,15 +507,19 @@ def test_start_point_on_barrier_returns_no_route(
 
     # (0, 3) in layer_1 is 0 -> treated as barrier
     output = find_all_routes(
-        scenario, route_definitions=[((0, 3), [(2, 6)])], save_paths=False
+        scenario,
+        route_definitions=[
+            ((0, 3), [(2, 6)], {}),
+        ],
+        save_paths=False,
     )
     assert_message_was_logged(
         "Start idx (0, 3) does not have a valid cost: -1.00 (must be > 0)!",
         "ERROR",
     )
 
-    assert isinstance(output, pd.DataFrame)
-    assert output.empty
+    assert isinstance(output, list)
+    assert not output
 
 
 def test_some_endpoints_include_barriers_but_one_valid(sample_layered_data):
@@ -521,7 +533,9 @@ def test_some_endpoints_include_barriers_but_one_valid(sample_layered_data):
     # include one barrier end (0,3) and one valid end (2,6)
     output = find_all_routes(
         scenario,
-        route_definitions=[((1, 1), [(0, 3), (2, 6)])],
+        route_definitions=[
+            ((1, 1), [(0, 3), (2, 6)], {}),
+        ],
         save_paths=False,
     )
 
@@ -546,7 +560,9 @@ def test_all_endpoints_are_barriers_returns_no_route(
 
     output = find_all_routes(
         scenario,
-        route_definitions=[((1, 1), [(0, 3), (0, 7)])],
+        route_definitions=[
+            ((1, 1), [(0, 3), (0, 7)], {}),
+        ],
         save_paths=False,
     )
     assert_message_was_logged(
@@ -554,8 +570,8 @@ def test_all_endpoints_are_barriers_returns_no_route(
         "ERROR",
     )
 
-    assert isinstance(output, pd.DataFrame)
-    assert output.empty
+    assert isinstance(output, list)
+    assert not output
 
 
 if __name__ == "__main__":
