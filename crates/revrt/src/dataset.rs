@@ -276,6 +276,7 @@ impl Dataset {
 
         // Calculate the average with center point (half grid + other half grid).
         // Also, apply the diagonal factor for the extra distance.
+        // Finally, add any invariant costs.
         let cost_to_neighbors = neighbors
             .iter()
             .zip(invariant_neighbors.iter())
@@ -291,9 +292,8 @@ impl Dataset {
                 } else {
                     v
                 };
-                ((ir, jr), scaled + inv_cost)
+                (ArrayIndex { i: *ir, j: *jr }, scaled + inv_cost)
             })
-            .map(|((ir, jr), v)| (ArrayIndex { i: *ir, j: *jr }, v))
             .collect::<Vec<_>>();
 
         trace!("Neighbors {:?}", cost_to_neighbors);
