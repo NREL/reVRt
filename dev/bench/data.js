@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765393351317,
+  "lastUpdate": 1765495586525,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2267,6 +2267,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 293489046,
             "range": "± 11360578",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5babf28a279b4c67e3c8014230607d6d27baaee1",
+          "message": "Add ability to specify a length-invariant cost layer (#173)\n\n* Drop unused `LazyChunk`\n\n* WIP\n\n* Document `is_invariant`\n\n* New function input\n\n* Minor adjustments\n\n* Move function to build layer out\n\n* Add function to get neighbor costs\n\n* Swap comment\n\n* `calculate_chunk_cost` now computes both length-dependent and invariant cost\n\n* Use new function\n\n* Update logic to handle invariant costs\n\n* Add test for invariant layers\n\n* Fix remaining tests\n\n* Fix typos",
+          "timestamp": "2025-12-11T16:15:18-07:00",
+          "tree_id": "7e3f4e5d7b231e9797e36bbe16f0b5b9f2af9523",
+          "url": "https://github.com/NREL/reVRt/commit/5babf28a279b4c67e3c8014230607d6d27baaee1"
+        },
+        "date": 1765495586035,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 151200424,
+            "range": "± 2749396",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 394223191,
+            "range": "± 4427113",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 252205056,
+            "range": "± 12248789",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 346872728,
+            "range": "± 16173587",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 677617257,
+            "range": "± 23161462",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 151632371,
+            "range": "± 2722177",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 156166759,
+            "range": "± 801691",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170798636,
+            "range": "± 1291066",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 220925020,
+            "range": "± 1953499",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 404054220,
+            "range": "± 8866692",
             "unit": "ns/iter"
           }
         ]
