@@ -396,8 +396,7 @@ mod tests {
         let path = samples::multi_variable_zarr();
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
-        let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
         let array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
