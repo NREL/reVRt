@@ -282,6 +282,18 @@ mod test_builder {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::dataset::{make_lazy_subset_for_tests, samples};
+    use std::sync::Arc;
+    use zarrs::array_subset::ArraySubset;
+    use zarrs::filesystem::FilesystemStore;
+    use zarrs::storage::ReadableListableStorage;
+
+    fn make_features_for_costs_tests() -> LazySubset<f32> {
+        let path = samples::multi_variable_zarr();
+        let store: ReadableListableStorage = Arc::new(FilesystemStore::new(&path).unwrap());
+        let subset = ArraySubset::new_with_start_shape(vec![0, 0, 0], vec![1, 2, 2]).unwrap();
+        make_lazy_subset_for_tests(store, subset)
+    }
 
     #[test]
     fn test_cost() {
@@ -305,5 +317,70 @@ mod test {
         assert_eq!(cost.cost_layers[4].multiplier_layer, None);
         assert_eq!(cost.cost_layers[4].multiplier_scalar, Some(100.0));
         assert_eq!(cost.cost_layers[4].is_invariant, Some(true));
+    }
+
+    #[test]
+    fn test_friction_only_returns_zeros() {
+        let mut features = make_features_for_costs_tests();
+
+        // friction-only (no `layer_name`) should return an empty cost array (zeros)
+        let json = r#"
+        {
+            "cost_layers": [
+                {"multiplier_layer": "B", "multiplier_scalar": -3.0}
+            ]
+        }
+        "#;
+
+        let cost_fn = CostFunction::from_json(json).unwrap();
+        let result = cost_fn.compute(&mut features, false);
+
+        assert_eq!(result.shape(), &[1, 2, 2]);
+        for v in result.iter() {
+            assert_eq!(*v, 0.0_f32);
+        }
+    }
+
+    #[test]
+    fn test_friction_clamp_with_cost_layer() {
+        use ndarray::Zip;
+
+        let mut features = make_features_for_costs_tests();
+
+        // cost layer A with a friction layer defined by B * -3.0
+        let json = r#"
+        {
+            "cost_layers": [
+                {"layer_name": "A"},
+                {"multiplier_layer": "B", "multiplier_scalar": -3.0}
+            ]
+        }
+        "#;
+
+        let cost_fn = CostFunction::from_json(json).unwrap();
+        let result = cost_fn.compute(&mut features, false);
+
+        let a = features.get("A").unwrap();
+        let b = features.get("B").unwrap();
+        Zip::from(&result)
+            .and(&a)
+            .and(&b)
+            .for_each(|r, a_item, b_item| {
+                // Build expected result: for each cell, friction = B * -3.0
+                // if friction < -1 => clamp to -1+1e-12
+                // result = A * (1 + friction_clamped)
+                let mut friction = b_item * -3.0;
+                if friction < -1.0 {
+                    friction = -1.0 + 1e-7;
+                }
+                let truth = a_item * (1.0 + friction);
+
+                if *a_item > 0.0_f32 {
+                    dbg!(r, a_item, b_item);
+                    assert!(*r > 0.0_f32);
+                }
+                let diff = (*r - truth).abs();
+                assert!(diff < 1e-6, "mismatch {} vs {} (diff={})", r, truth, diff);
+            });
     }
 }
