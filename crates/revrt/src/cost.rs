@@ -109,7 +109,7 @@ impl CostFunction {
 
         let cost = layers
             .into_iter()
-            .map(|layer| build_single_layer(layer, features))
+            .map(|layer| build_single_cost_layer(layer, features))
             .collect::<Vec<_>>();
 
         let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
@@ -136,7 +136,7 @@ fn empty_cost_array(
     ArrayD::<f32>::zeros(IxDyn(&shape))
 }
 
-fn build_single_layer(
+fn build_single_cost_layer(
     layer: CostLayer,
     features: &mut LazySubset<f32>,
 ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
