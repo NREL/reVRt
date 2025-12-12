@@ -9,7 +9,7 @@ use crate::dataset::LazySubset;
 use crate::error::Result;
 
 /// A multi-dimensional array representing cost data
-type CostArray = ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>;
+type CostArray = ndarray::Array<f32, ndarray::Dim<ndarray::IxDynImpl>>;
 
 #[derive(Clone, Debug, serde::Deserialize)]
 /// A cost function definition
