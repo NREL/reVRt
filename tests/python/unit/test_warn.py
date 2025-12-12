@@ -18,6 +18,7 @@ def test_warnings_log_message(warning_class, assert_message_was_logged):
     """Test that a raised warning logs message, if any"""
 
     warn(BASIC_WARNING_MESSAGE, warning_class)
+    assert_message_was_logged(warning_class.__name__, "WARNING")
     assert_message_was_logged(BASIC_WARNING_MESSAGE, "WARNING")
 
 

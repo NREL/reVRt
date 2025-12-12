@@ -14,7 +14,9 @@ class revrtError(Exception):
         """Init exception and broadcast message to logger"""
         super().__init__(*args, **kwargs)
         if args:
-            logger.error(str(args[0]), stacklevel=2)
+            logger.error(
+                "<%s> %s", self.__class__.__name__, args[0], stacklevel=2
+            )
 
 
 class revrtAttributeError(revrtError, AttributeError):

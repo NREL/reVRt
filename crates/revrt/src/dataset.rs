@@ -14,7 +14,7 @@ use zarrs::storage::{
 
 use crate::ArrayIndex;
 use crate::cost::CostFunction;
-use crate::error::Result;
+use crate::error::{Error, Result};
 pub(crate) use lazy_subset::LazySubset;
 
 /// Manages the features datasets and calculated total cost
@@ -65,15 +65,13 @@ impl Dataset {
 
         trace!("Creating a new group for the cost dataset");
         zarrs::group::GroupBuilder::new()
-            .build(swap.clone(), "/")
-            .unwrap()
-            .store_metadata()
-            .unwrap();
+            .build(swap.clone(), "/")?
+            .store_metadata()?;
 
         let entries = source
             .list()
             .expect("failed to list variables in source dataset");
-        let first_entry = entries
+        let first_entry_opt = entries
             .into_iter()
             .map(|entry| entry.to_string())
             .find(|entry| {
@@ -81,17 +79,34 @@ impl Dataset {
                 // Skip coordinate axes when selecting a representative variable for cost storage.
                 const EXCLUDES: [&str; 6] =
                     ["latitude", "longitude", "band", "x", "y", "spatial_ref"];
-                !name.ends_with(".json") && !EXCLUDES.iter().any(|needle| name.contains(needle))
-            })
-            .expect("no suitable variables found in source dataset");
-        let varname = first_entry.split('/').next().unwrap().to_string();
+                !name.ends_with(".json") && !EXCLUDES.iter().any(|needle| name == *needle)
+            });
+        let first_entry = match first_entry_opt {
+            Some(e) => e,
+            None => {
+                return Err(Error::IO(std::io::Error::other(format!(
+                    "no non-coordinate variables found in source dataset: {:?}",
+                    source.list().ok()
+                ))));
+            }
+        };
+
+        // Skip coordinate axes when selecting a representative variable for cost storage.
+        let varname = match first_entry.split('/').next() {
+            Some(name) => name,
+            None => {
+                return Err(Error::IO(std::io::Error::other(
+                    "Could not determine any variable names from source dataset",
+                )));
+            }
+        };
         debug!("Using '{}' to determine shape of cost data", varname);
-        let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
+        let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}"))?;
         let chunk_grid = tmp.chunk_grid();
         debug!("Chunk grid info: {:?}", &chunk_grid);
 
-        add_layer_to_data("cost_invariant", chunk_grid, &swap);
-        add_layer_to_data("cost", chunk_grid, &swap);
+        add_layer_to_data("cost_invariant", chunk_grid, &swap)?;
+        add_layer_to_data("cost", chunk_grid, &swap)?;
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
@@ -268,10 +283,11 @@ impl Dataset {
 
         // Calculate the average with center point (half grid + other half grid).
         // Also, apply the diagonal factor for the extra distance.
+        // Finally, add any invariant costs.
         let cost_to_neighbors = neighbors
             .iter()
             .zip(invariant_neighbors.iter())
-            .filter(|(((ir, jr), _), _)| !(*ir == i && *jr == j)) // no center point
+            .filter(|(((ir, jr), v), _)| !(*ir == i && *jr == j) && *v > 0.) // no center point and only positive costs
             .map(|(((ir, jr), v), ((inv_ir, inv_jr), inv_cost))| {
                 debug_assert_eq!((ir, jr), (inv_ir, inv_jr));
                 ((ir, jr), 0.5 * (v + center.1), inv_cost)
@@ -283,9 +299,8 @@ impl Dataset {
                 } else {
                     v
                 };
-                ((ir, jr), scaled + inv_cost)
+                (ArrayIndex { i: *ir, j: *jr }, scaled + inv_cost)
             })
-            .map(|((ir, jr), v)| (ArrayIndex { i: *ir, j: *jr }, v))
             .collect::<Vec<_>>();
 
         trace!("Neighbors {:?}", cost_to_neighbors);
@@ -352,29 +367,28 @@ fn add_layer_to_data(
     layer_name: &str,
     chunk_shape: &ChunkGrid,
     swap: &ReadableWritableListableStorage,
-) {
+) -> Result<()> {
     trace!("Creating an empty {} array", layer_name);
     let dataset_path = format!("/{layer_name}");
-    zarrs::array::ArrayBuilder::new_with_chunk_grid(
-        // cost_shape,
+    let builder = zarrs::array::ArrayBuilder::new_with_chunk_grid(
         chunk_shape.clone(),
         zarrs::array::DataType::Float32,
         zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
-    )
-    .build(swap.clone(), &dataset_path)
-    .unwrap()
-    .store_metadata()
-    .unwrap();
+    );
 
-    let array = zarrs::array::Array::open(swap.clone(), &dataset_path).unwrap();
+    let built = builder.build(swap.clone(), &dataset_path)?;
+    built.store_metadata()?;
+
+    let array = zarrs::array::Array::open(swap.clone(), &dataset_path)?;
     trace!("'{}' shape: {:?}", layer_name, array.shape().to_vec());
     trace!("'{}' chunk shape: {:?}", layer_name, array.chunk_grid());
 
     trace!(
         "Dataset contents after '{}' creation: {:?}",
         layer_name,
-        swap.list().unwrap()
+        swap.list()?
     );
+    Ok(())
 }
 
 #[cfg(test)]
@@ -388,14 +402,19 @@ mod tests {
         let path = samples::multi_variable_zarr();
         let cost_function =
             CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
-        let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
         let array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
         for point in test_points {
             let results = dataset.get_3x3(&point);
 
+            // index 0, 0 has a cost of 0 and should therefore be filtered out
+            assert!(
+                !results
+                    .iter()
+                    .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+            );
             let ArrayIndex { i: ci, j: cj } = point;
             let center_subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
                 0..1,
@@ -471,6 +490,12 @@ mod tests {
         for point in test_points {
             let results = dataset.get_3x3(&point);
 
+            // index 0, 0 has a cost of 0 and should therefore be filtered out
+            assert!(
+                !results
+                    .iter()
+                    .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+            );
             let ArrayIndex { i: ci, j: cj } = point;
             let center_subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
                 0..1,
@@ -545,13 +570,20 @@ mod tests {
 
         let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
 
+        // index 0, 0 has a cost of 0 and should therefore be filtered out
+        assert!(
+            !results
+                .iter()
+                .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+        );
+
         assert_eq!(results, vec![]);
     }
 
     #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 1.0), (1, 1, 1.5 * SQRT_2)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.5), (1, 0, 1.5 * SQRT_2), (1, 1, 2.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 1.), (0, 1, 1.5 * SQRT_2), (1, 1, 2.5)] ; "bottom left corner")]
-    #[test_case((1, 1), vec![(0, 0, 1.5 * SQRT_2), (0, 1, 2.), (1, 0, 2.5)] ; "bottom right corner")]
+    #[test_case((0, 1), vec![(1, 0, 1.5 * SQRT_2), (1, 1, 2.)] ; "top right corner")]
+    #[test_case((1, 0), vec![(0, 1, 1.5 * SQRT_2), (1, 1, 2.5)] ; "bottom left corner")]
+    #[test_case((1, 1), vec![(0, 1, 2.), (1, 0, 2.5)] ; "bottom right corner")]
     fn test_get_3x3_two_by_two_array((si, sj): (u64, u64), expected_output: Vec<(u64, u64, f32)>) {
         let path = samples::cost_as_index_zarr((2, 2), (2, 2));
         let cost_function =
@@ -560,6 +592,13 @@ mod tests {
             Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
+
+        // index 0, 0 has a cost of 0 and should therefore be filtered out
+        assert!(
+            !results
+                .iter()
+                .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+        );
 
         assert_eq!(
             results,
@@ -571,10 +610,10 @@ mod tests {
     }
 
     #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 1.5), (1, 1, 2.0 * SQRT_2)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.5), (0, 2, 1.5), (1, 0, 2.0 * SQRT_2), (1, 1, 2.5), (1, 2, 3. * SQRT_2)] ; "top middle")]
+    #[test_case((0, 1), vec![(0, 2, 1.5), (1, 0, 2.0 * SQRT_2), (1, 1, 2.5), (1, 2, 3. * SQRT_2)] ; "top middle")]
     #[test_case((0, 2), vec![(0, 1, 1.5), (1, 1, 3.0 * SQRT_2), (1, 2, 3.5)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 1.5), (0, 1, 2.0 * SQRT_2), (1, 1, 3.5), (2, 0, 4.5), (2, 1, 5.0 * SQRT_2)] ; "middle left")]
-    #[test_case((1, 1), vec![(0, 0, 2.0 * SQRT_2), (0, 1, 2.5), (0, 2, 3.0 * SQRT_2), (1, 0, 3.5), (1, 2, 4.5), (2, 0, 5.0 * SQRT_2), (2, 1, 5.5), (2, 2, 6.0 * SQRT_2)] ; "middle middle")]
+    #[test_case((1, 0), vec![(0, 1, 2.0 * SQRT_2), (1, 1, 3.5), (2, 0, 4.5), (2, 1, 5.0 * SQRT_2)] ; "middle left")]
+    #[test_case((1, 1), vec![(0, 1, 2.5), (0, 2, 3.0 * SQRT_2), (1, 0, 3.5), (1, 2, 4.5), (2, 0, 5.0 * SQRT_2), (2, 1, 5.5), (2, 2, 6.0 * SQRT_2)] ; "middle middle")]
     #[test_case((1, 2), vec![(0, 1, 3.0 * SQRT_2), (0, 2, 3.5), (1, 1, 4.5), (2, 1, 6.0 * SQRT_2), (2, 2, 6.5)] ; "middle right")]
     #[test_case((2, 0), vec![(1, 0, 4.5), (1, 1, 5.0 * SQRT_2), (2, 1, 6.5)] ; "bottom left corner")]
     #[test_case((2, 1), vec![(1, 0, 5.0 * SQRT_2), (1, 1, 5.5), (1, 2, 6.0 * SQRT_2), (2, 0, 6.5), (2, 2, 7.5)] ; "bottom middle")]
@@ -591,6 +630,13 @@ mod tests {
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
 
+        // index 0, 0 has a cost of 0 and should therefore be filtered out
+        assert!(
+            !results
+                .iter()
+                .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+        );
+
         assert_eq!(
             results,
             expected_output
@@ -601,10 +647,10 @@ mod tests {
     }
 
     #[test_case((0, 0), vec![(0, 1, 0.5), (1, 0, 2.), (1, 1, 2.5 * SQRT_2)] ; "top left corner")]
-    #[test_case((0, 1), vec![(0, 0, 0.5), (0, 2, 1.5), (1, 0, 2.5 * SQRT_2), (1, 1, 3.), (1, 2, 3.5 * SQRT_2)] ; "top left edge")]
+    #[test_case((0, 1), vec![(0, 2, 1.5), (1, 0, 2.5 * SQRT_2), (1, 1, 3.), (1, 2, 3.5 * SQRT_2)] ; "top left edge")]
     #[test_case((0, 2), vec![(0, 1, 1.5), (0, 3, 2.5), (1, 1, 3.5 * SQRT_2), (1, 2, 4.), (1, 3, 4.5 * SQRT_2)] ; "top right edge")]
     #[test_case((0, 3), vec![(0, 2, 2.5), (1, 2, 4.5 * SQRT_2), (1, 3, 5.)] ; "top right corner")]
-    #[test_case((1, 0), vec![(0, 0, 2.), (0, 1, 2.5 * SQRT_2), (1, 1, 4.5), (2, 0, 6.), (2, 1, 6.5 * SQRT_2)] ; "left top edge")]
+    #[test_case((1, 0), vec![(0, 1, 2.5 * SQRT_2), (1, 1, 4.5), (2, 0, 6.), (2, 1, 6.5 * SQRT_2)] ; "left top edge")]
     #[test_case((1, 3), vec![(0, 2, 4.5 * SQRT_2), (0, 3, 5.), (1, 2, 6.5), (2, 2, 8.5 * SQRT_2), (2, 3, 9.)] ; "right top edge")]
     #[test_case((2, 0), vec![(1, 0, 6.), (1, 1, 6.5 * SQRT_2), (2, 1, 8.5), (3, 0, 10.), (3, 1, 10.5 * SQRT_2)] ; "left bottom edge")]
     #[test_case((2, 3), vec![(1, 2, 8.5 * SQRT_2), (1, 3, 9.), (2, 2, 10.5), (3, 2, 12.5 * SQRT_2), (3, 3, 13.)] ; "right bottom edge")]
@@ -623,6 +669,13 @@ mod tests {
             Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
+
+        // index 0, 0 has a cost of 0 and should therefore be filtered out
+        assert!(
+            !results
+                .iter()
+                .any(|(ArrayIndex { i, j }, _)| *i == 0 && *j == 0)
+        );
 
         assert_eq!(
             results,
