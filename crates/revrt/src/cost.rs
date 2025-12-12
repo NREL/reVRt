@@ -31,7 +31,7 @@ pub(crate) struct CostFunction {
 /// through the cell. Instead, the value of the layer is added once, right
 /// when the path enters the cell.
 struct CostLayer {
-    layer_name: String,
+    layer_name: Option<String>,
     #[builder(setter(strip_option), default)]
     multiplier_scalar: Option<f32>,
     #[builder(setter(strip_option, into), default)]
@@ -88,9 +88,18 @@ impl CostFunction {
             features.subset()
         );
 
-        let layers: Vec<&CostLayer> = self
-            .cost_layers
+        let mut cost_layers = Vec::with_capacity(self.cost_layers.len());
+        let mut friction_layers = Vec::with_capacity(self.cost_layers.len());
+
+        self.cost_layers
             .iter()
+            .for_each(|layer| match &layer.layer_name {
+                Some(_) => cost_layers.push(layer.clone()),
+                None => friction_layers.push(layer.clone()),
+            });
+
+        let layers: Vec<CostLayer> = cost_layers
+            .into_iter()
             .filter(|layer| layer.is_invariant.unwrap_or(false) == is_invariant)
             .collect();
 
@@ -128,10 +137,12 @@ fn empty_cost_array(
 }
 
 fn build_single_layer(
-    layer: &CostLayer,
+    layer: CostLayer,
     features: &mut LazySubset<f32>,
 ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-    let layer_name = &layer.layer_name;
+    let layer_name = &layer
+        .layer_name
+        .expect("Cost layers should have the `layer_name` key set");
     trace!("Layer name: {}", layer_name);
 
     let mut cost = features
@@ -200,14 +211,14 @@ mod test_builder {
     #[test]
     fn costlayer() {
         let layer = CostLayerBuilder::default()
-            .layer_name("A".to_string())
+            .layer_name(Some("A".to_string()))
             .multiplier_scalar(2.0)
             .multiplier_layer("B")
             .is_invariant(false)
             .build()
             .unwrap();
 
-        assert_eq!(layer.layer_name, "A");
+        assert_eq!(layer.layer_name, Some("A".to_string()));
         assert_eq!(layer.multiplier_scalar, Some(2.0));
         assert_eq!(layer.multiplier_layer, Some("B".to_string()));
         assert_eq!(layer.is_invariant, Some(false));
@@ -216,11 +227,11 @@ mod test_builder {
     #[test]
     fn defaults() {
         let layer = CostLayerBuilder::default()
-            .layer_name("A".to_string())
+            .layer_name(Some("A".to_string()))
             .build()
             .unwrap();
 
-        assert_eq!(layer.layer_name, "A");
+        assert_eq!(layer.layer_name, Some("A".to_string()));
         assert_eq!(layer.multiplier_scalar, None);
         assert_eq!(layer.multiplier_layer, None);
         assert_eq!(layer.is_invariant, None);
@@ -237,19 +248,19 @@ mod test {
         let cost = CostFunction::from_json(&json).unwrap();
 
         assert_eq!(cost.cost_layers.len(), 5);
-        assert_eq!(cost.cost_layers[0].layer_name, "A");
+        assert_eq!(cost.cost_layers[0].layer_name, Some("A".to_string()));
         assert_eq!(cost.cost_layers[0].is_invariant, None);
-        assert_eq!(cost.cost_layers[1].layer_name, "B");
+        assert_eq!(cost.cost_layers[1].layer_name, Some("B".to_string()));
         assert_eq!(cost.cost_layers[1].multiplier_scalar, Some(100.0));
         assert_eq!(cost.cost_layers[1].is_invariant, None);
-        assert_eq!(cost.cost_layers[2].layer_name, "A");
+        assert_eq!(cost.cost_layers[2].layer_name, Some("A".to_string()));
         assert_eq!(cost.cost_layers[2].multiplier_layer, Some("B".to_string()));
         assert_eq!(cost.cost_layers[2].is_invariant, None);
-        assert_eq!(cost.cost_layers[3].layer_name, "C");
+        assert_eq!(cost.cost_layers[3].layer_name, Some("C".to_string()));
         assert_eq!(cost.cost_layers[3].multiplier_layer, Some("A".to_string()));
         assert_eq!(cost.cost_layers[3].multiplier_scalar, Some(2.0));
         assert_eq!(cost.cost_layers[3].is_invariant, None);
-        assert_eq!(cost.cost_layers[4].layer_name, "C");
+        assert_eq!(cost.cost_layers[4].layer_name, Some("C".to_string()));
         assert_eq!(cost.cost_layers[4].multiplier_layer, None);
         assert_eq!(cost.cost_layers[4].multiplier_scalar, Some(100.0));
         assert_eq!(cost.cost_layers[4].is_invariant, Some(true));
