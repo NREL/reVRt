@@ -392,6 +392,18 @@ fn add_layer_to_data(
 }
 
 #[cfg(test)]
+// Make a LazySubset from a source and array subset to be used in tests
+//
+/// # Returns
+/// An initialized LazySubset<f32> instance.
+pub(crate) fn make_lazy_subset_for_tests(
+    source: ReadableListableStorage,
+    subset: zarrs::array_subset::ArraySubset,
+) -> LazySubset<f32> {
+    LazySubset::new(source, subset)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::f32::consts::SQRT_2;
