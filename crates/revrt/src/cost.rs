@@ -8,6 +8,9 @@ use tracing::{debug, trace};
 use crate::dataset::LazySubset;
 use crate::error::Result;
 
+/// A multi-dimensional array representing cost data
+type CostArray = ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>;
+
 #[derive(Clone, Debug, serde::Deserialize)]
 /// A cost function definition
 ///
@@ -77,11 +80,7 @@ impl CostFunction {
     /// # Returns
     /// A 2D array containing the cost for the subset covered by the input
     /// features.
-    pub(crate) fn compute(
-        &self,
-        features: &mut LazySubset<f32>,
-        is_invariant: bool,
-    ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+    pub(crate) fn compute(&self, features: &mut LazySubset<f32>, is_invariant: bool) -> CostArray {
         debug!(
             "Calculating (is_invariant={}) cost for ({})",
             is_invariant,
@@ -98,34 +97,34 @@ impl CostFunction {
                 None => friction_layers.push(layer.clone()),
             });
 
-        let layers: Vec<CostLayer> = cost_layers
+        let cost_layers: Vec<CostLayer> = cost_layers
             .into_iter()
             .filter(|layer| layer.is_invariant.unwrap_or(false) == is_invariant)
             .collect();
 
-        if layers.is_empty() {
+        if cost_layers.is_empty() {
             return empty_cost_array(features);
         }
 
-        let cost = layers
+        let cost_data = cost_layers
             .into_iter()
             .map(|layer| build_single_cost_layer(layer, features))
             .collect::<Vec<_>>();
 
-        let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
-        let stack = stack(Axis(0), &views).unwrap();
-        //let cost = stack![Axis(3), &cost];
-        trace!("Stack shape: {:?}", stack.shape());
-        let cost = stack.sum_axis(Axis(0));
-        trace!("Stack shape: {:?}", stack.shape());
+        let friction_data = friction_layers
+            .into_iter()
+            .map(|layer| build_single_friction_layer(layer, features))
+            .collect::<Vec<_>>();
 
-        cost
+        let final_friction_layer = reduce_layers(friction_data);
+
+        // routing surface is: final_cost_layer * (1 + final_friction_layer)
+        reduce_layers(cost_data)
+            * (ArrayD::<f32>::ones(IxDyn(final_friction_layer.shape())) + final_friction_layer)
     }
 }
 
-fn empty_cost_array(
-    features: &LazySubset<f32>,
-) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+fn empty_cost_array(features: &LazySubset<f32>) -> CostArray {
     let shape: Vec<usize> = features
         .subset()
         .shape()
@@ -136,10 +135,7 @@ fn empty_cost_array(
     ArrayD::<f32>::zeros(IxDyn(&shape))
 }
 
-fn build_single_cost_layer(
-    layer: CostLayer,
-    features: &mut LazySubset<f32>,
-) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+fn build_single_cost_layer(layer: CostLayer, features: &mut LazySubset<f32>) -> CostArray {
     let layer_name = &layer
         .layer_name
         .expect("Cost layers should have the `layer_name` key set");
@@ -173,6 +169,34 @@ fn build_single_cost_layer(
         // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
     }
     cost
+}
+
+fn build_single_friction_layer(layer: CostLayer, features: &mut LazySubset<f32>) -> CostArray {
+    trace!("Building friction layer: {:?}", layer);
+
+    let multiplier_layer_name = layer
+        .multiplier_layer
+        .expect("Friction layers MUST specify a `multiplier_layer`");
+
+    let mut friction = features
+        .get(&multiplier_layer_name)
+        .expect("Multiplier layer not found in features");
+
+    if let Some(multiplier_scalar) = layer.multiplier_scalar {
+        trace!("\t- Layer has multiplier scalar {}", multiplier_scalar);
+        friction *= multiplier_scalar;
+    }
+
+    friction
+}
+
+fn reduce_layers(data: Vec<CostArray>) -> CostArray {
+    let views: Vec<_> = data.iter().map(|a| a.view()).collect();
+    let stack = stack(Axis(0), &views).unwrap();
+    trace!("Stack shape: {:?}", stack.shape());
+    let final_layer = stack.sum_axis(Axis(0));
+    trace!("Stack shape: {:?}", stack.shape());
+    final_layer
 }
 
 #[cfg(test)]
