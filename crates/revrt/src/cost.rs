@@ -111,15 +111,32 @@ impl CostFunction {
             .map(|layer| build_single_cost_layer(layer, features))
             .collect::<Vec<_>>();
 
+        let final_cost_layer = reduce_layers(cost_data);
+
         let friction_data = friction_layers
             .into_iter()
             .map(|layer| build_single_friction_layer(layer, features))
             .collect::<Vec<_>>();
 
-        let final_friction_layer = reduce_layers(friction_data);
+        let mut final_friction_layer = match friction_data.is_empty() {
+            true => ArrayD::<f32>::zeros(IxDyn(final_cost_layer.shape())),
+            false => reduce_layers(friction_data),
+        };
+
+        // Ensure friction does not go below -1. If any values are below -1,
+        // emit a warning and clamp them to -1 so the routing surface
+        // calculation (1 + friction) does not produce negative cost values
+        final_friction_layer.mapv_inplace(|v| {
+            if v < -1.0 {
+                tracing::warn!("Friction layer contains values < -1; clamping to -1");
+                -1.0 + 1e-12
+            } else {
+                v
+            }
+        });
 
         // routing surface is: final_cost_layer * (1 + final_friction_layer)
-        reduce_layers(cost_data)
+        final_cost_layer
             * (ArrayD::<f32>::ones(IxDyn(final_friction_layer.shape())) + final_friction_layer)
     }
 }
