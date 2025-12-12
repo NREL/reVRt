@@ -14,7 +14,7 @@ use zarrs::storage::{
 
 use crate::ArrayIndex;
 use crate::cost::CostFunction;
-use crate::error::Result;
+use crate::error::{Error, Result};
 pub(crate) use lazy_subset::LazySubset;
 
 /// Manages the features datasets and calculated total cost
@@ -65,15 +65,13 @@ impl Dataset {
 
         trace!("Creating a new group for the cost dataset");
         zarrs::group::GroupBuilder::new()
-            .build(swap.clone(), "/")
-            .unwrap()
-            .store_metadata()
-            .unwrap();
+            .build(swap.clone(), "/")?
+            .store_metadata()?;
 
         let entries = source
             .list()
             .expect("failed to list variables in source dataset");
-        let first_entry = entries
+        let first_entry_opt = entries
             .into_iter()
             .map(|entry| entry.to_string())
             .find(|entry| {
@@ -82,19 +80,28 @@ impl Dataset {
                 const EXCLUDES: [&str; 6] =
                     ["latitude", "longitude", "band", "x", "y", "spatial_ref"];
                 !name.ends_with(".json") && !EXCLUDES.iter().any(|needle| name == *needle)
-            })
-            .unwrap_or_else(|| {
-                panic!(
-                    "no non-coordinate variables found in source dataset: {:?}",
-                    source
-                        .list()
-                        .unwrap_or_else(|err| panic!("failed to list dataset entries: {err}"))
-                )
             });
+        let first_entry = match first_entry_opt {
+            Some(e) => e,
+            None => {
+                return Err(Error::IO(std::io::Error::other(format!(
+                    "no non-coordinate variables found in source dataset: {:?}",
+                    source.list().ok()
+                ))));
+            }
+        };
+
         // Skip coordinate axes when selecting a representative variable for cost storage.
-        let varname = first_entry.split('/').next().unwrap().to_string();
+        let varname = match first_entry.split('/').next() {
+            Some(name) => name,
+            None => {
+                return Err(Error::IO(std::io::Error::other(
+                    "Could not determine any variable names from source dataset",
+                )));
+            }
+        };
         debug!("Using '{}' to determine shape of cost data", varname);
-        let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}")).unwrap();
+        let tmp = zarrs::array::Array::open(source.clone(), &format!("/{varname}"))?;
         let chunk_grid = tmp.chunk_grid();
         debug!("Chunk grid info: {:?}", &chunk_grid);
 

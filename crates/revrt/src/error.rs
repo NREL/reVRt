@@ -9,6 +9,9 @@ pub enum Error {
     ZarrsArrayCreate(#[from] zarrs::array::ArrayCreateError),
 
     #[error(transparent)]
+    ZarrsGroupCreate(#[from] zarrs::group::GroupCreateError),
+
+    #[error(transparent)]
     ZarrsStorage(#[from] zarrs::storage::StorageError),
 
     #[allow(dead_code)]
