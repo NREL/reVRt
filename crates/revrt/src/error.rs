@@ -5,6 +5,12 @@ pub enum Error {
     #[error(transparent)]
     IO(#[from] std::io::Error),
 
+    #[error(transparent)]
+    ZarrsArrayCreate(#[from] zarrs::array::ArrayCreateError),
+
+    #[error(transparent)]
+    ZarrsStorage(#[from] zarrs::storage::StorageError),
+
     #[allow(dead_code)]
     #[error("Undefined error")]
     // Used during development while it is not clear a category of error

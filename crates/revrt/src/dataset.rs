@@ -98,8 +98,8 @@ impl Dataset {
         let chunk_grid = tmp.chunk_grid();
         debug!("Chunk grid info: {:?}", &chunk_grid);
 
-        add_layer_to_data("cost_invariant", chunk_grid, &swap);
-        add_layer_to_data("cost", chunk_grid, &swap);
+        add_layer_to_data("cost_invariant", chunk_grid, &swap)?;
+        add_layer_to_data("cost", chunk_grid, &swap)?;
 
         let cost_chunk_idx = ndarray::Array2::from_elem(
             (
@@ -360,29 +360,28 @@ fn add_layer_to_data(
     layer_name: &str,
     chunk_shape: &ChunkGrid,
     swap: &ReadableWritableListableStorage,
-) {
+) -> Result<()> {
     trace!("Creating an empty {} array", layer_name);
     let dataset_path = format!("/{layer_name}");
-    zarrs::array::ArrayBuilder::new_with_chunk_grid(
-        // cost_shape,
+    let builder = zarrs::array::ArrayBuilder::new_with_chunk_grid(
         chunk_shape.clone(),
         zarrs::array::DataType::Float32,
         zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
-    )
-    .build(swap.clone(), &dataset_path)
-    .unwrap()
-    .store_metadata()
-    .unwrap();
+    );
 
-    let array = zarrs::array::Array::open(swap.clone(), &dataset_path).unwrap();
+    let built = builder.build(swap.clone(), &dataset_path)?;
+    built.store_metadata()?;
+
+    let array = zarrs::array::Array::open(swap.clone(), &dataset_path)?;
     trace!("'{}' shape: {:?}", layer_name, array.shape().to_vec());
     trace!("'{}' chunk shape: {:?}", layer_name, array.chunk_grid());
 
     trace!(
         "Dataset contents after '{}' creation: {:?}",
         layer_name,
-        swap.list().unwrap()
+        swap.list()?
     );
+    Ok(())
 }
 
 #[cfg(test)]
