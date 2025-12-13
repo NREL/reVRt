@@ -708,6 +708,67 @@ def test_length_invariant_layer_costs_ignore_path_length(
         routing_layers.close()
 
 
+def test_length_invariant_layers_sum_raw_values(sample_layered_data):
+    """Length invariant layers sum raw cell values without distance scaling"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_1"},
+            {"layer_name": "layer_2", "is_invariant": True},
+        ],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[
+            ((1, 1), [(2, 6)], {}),
+        ],
+        save_paths=True,
+    )
+
+    assert len(output) == 1
+    route = output[0]
+
+    with xr.open_dataset(
+        sample_layered_data,
+        consolidated=False,
+        engine="zarr",
+    ) as ds:
+        layer_two = ds["layer_2"].isel(band=0)
+        x_coords = ds["x"].values
+        y_coords = ds["y"].values
+        xs, ys = route["geometry"].xy
+        route_indices = [
+            (
+                int(np.argmin(np.abs(y_coords - y_val))),
+                int(np.argmin(np.abs(x_coords - x_val))),
+            )
+            for x_val, y_val in zip(xs, ys, strict=True)
+        ]
+        expected_invariant_cost = sum(
+            layer_two.isel(y=row, x=col).item()
+            for row, col in route_indices[1:]
+        )
+
+    assert route["layer_2_cost"] == pytest.approx(
+        expected_invariant_cost,
+        rel=1e-6,
+    )
+    assert route["cost"] == pytest.approx(
+        route["layer_1_cost"] + expected_invariant_cost,
+        rel=1e-6,
+    )
+    assert route["layer_2_dist_km"] == pytest.approx(
+        route["length_km"],
+        rel=1e-6,
+    )
+    assert route["cost"] == pytest.approx(
+        route["optimized_objective"],
+        rel=1e-5,
+    )
+
+
 def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
     """Soft barriers convert impassable cells to large positive costs"""
 

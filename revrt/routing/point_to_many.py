@@ -385,7 +385,7 @@ class CharacterizedLayer:
             layer_data = da.asarray(layer_data)
 
         if self.is_length_invariant:
-            layer_cost = da.sum(layer_data)
+            layer_cost = da.sum(layer_data[1:])
         else:
             layer_cost = da.sum(layer_data * lens)
 
@@ -475,7 +475,7 @@ class RouteResult:
             y=xr.DataArray(rows, dims="points"),
             x=xr.DataArray(cols, dims="points"),
         )
-        invariant_cost = da.sum(inv_cell_costs)
+        invariant_cost = da.sum(inv_cell_costs[1:])
 
         # Multiple distance travel through cell by cost and sum it!
         return (cost + invariant_cost).compute()
