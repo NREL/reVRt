@@ -264,9 +264,7 @@ class RoutingLayers:
             "mask", layer_info.get("multiplier_layer")
         )
         if multiplier_layer_name:
-            cost *= self._extract_layer(
-                multiplier_layer_name, is_friction=is_friction
-            )
+            cost *= self._extract_layer(multiplier_layer_name)
 
         cost *= layer_info.get("multiplier_scalar", 1)
         return cost
