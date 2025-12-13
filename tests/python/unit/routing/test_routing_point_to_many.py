@@ -781,7 +781,7 @@ def test_length_invariant_hidden_and_friction_layers(sample_layered_data):
                 "layer_name": "layer_5",
                 "multiplier_scalar": 100,
                 "include_in_final_cost": False,
-                "include_in_report": False,
+                "include_in_report": True,
             },
         ],
         friction_layers=[
@@ -826,8 +826,15 @@ def test_length_invariant_hidden_and_friction_layers(sample_layered_data):
         rel=1e-6,
     )
     assert route["optimized_objective"] > route["cost"]
-    assert "layer_5_cost" not in route
-    assert "layer_5_dist_km" not in route
+
+    assert route["layer_5_cost"] == pytest.approx(
+        170.71068,
+        rel=1e-6,
+    )
+    assert route["layer_5_dist_km"] == pytest.approx(
+        0.0017071,
+        rel=1e-4,
+    )
     assert list(route["geometry"].coords) == [
         (1.5, 5.5),
         (2.5, 4.5),
