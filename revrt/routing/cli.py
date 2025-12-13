@@ -79,6 +79,10 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
               this layer is length invariant (i.e. should NOT be
               multiplied by path length; values should be $). Default is
               ``False``.
+            - "include_in_final_cost": (OPTIONAL) Boolean flag
+              indicating whether this layer should contribute to the
+              final cost output for each route in the LCP table.
+              Default is ``True``.
             - "include_in_report": (OPTIONAL) Boolean flag indicating
               whether the costs and distances for this layer should be
               output in the final LCP table. Default is ``True``.

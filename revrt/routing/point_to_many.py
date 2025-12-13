@@ -19,7 +19,7 @@ from revrt.exceptions import (
     revrtKeyError,
     revrtLeastCostPathNotFoundError,
 )
-from revrt.warn import revrtWarning
+from revrt.warn import revrtWarning, revrtDeprecationWarning
 
 logger = logging.getLogger(__name__)
 LCP_AGG_COST_LAYER_NAME = "lcp_agg_costs"
@@ -81,7 +81,33 @@ class RoutingScenario:
     @cached_property
     def cl_as_json(self):
         """str: JSON string describing configured cost layers"""
-        return json.dumps({"cost_layers": self.cost_layers})
+        return json.dumps({"cost_layers": list(self._all_layers_for_rust())})
+
+    def _all_layers_for_rust(self):
+        """Cost and friction layers formatted for Rust ingestion"""
+        for layer in self.cost_layers:
+            out_layer = layer.copy()
+            out_layer.pop("include_in_report", None)
+            out_layer.pop("include_in_final_cost", None)
+            yield out_layer
+
+        for layer in self.friction_layers:
+            out_layer = layer.copy()
+            if "layer_name" in out_layer:
+                msg = (
+                    "Specifying `layer_name` for a friction layer is "
+                    "deprecated! The default behavior of friction layers is "
+                    "to be multiplied to the aggregated cost layer. Please "
+                    "remove this key in order to silence this warning."
+                )
+                warn(msg, revrtDeprecationWarning)
+                out_layer.pop("layer_name")
+
+            if "mask" in out_layer:
+                out_layer["multiplier_layer"] = out_layer.pop("mask")
+
+            out_layer.pop("include_in_report", None)
+            yield out_layer
 
 
 class RoutingLayers:
@@ -111,7 +137,6 @@ class RoutingLayers:
             consolidated=False,
             engine="zarr",
         )
-        self.li_cost_layer_map = {}
         self.tracked_layers = []
 
         self.transform = self._layer_fh.rio.transform()
@@ -121,6 +146,7 @@ class RoutingLayers:
 
         self.cost = None
         self.li_cost = None
+        self.untracked_cost = None
         self.final_routing_layer = None
 
     def __repr__(self):
@@ -163,16 +189,19 @@ class RoutingLayers:
         """Build out the main cost layer"""
         self.cost = da.zeros(self._full_shape, dtype=np.float32)
         self.li_cost = da.zeros(self._full_shape, dtype=np.float32)
+        self.untracked_cost = da.zeros(self._full_shape, dtype=np.float32)
         for layer_info in self.routing_scenario.cost_layers:
             layer_name = layer_info["layer_name"]
             is_li = layer_info.get("is_invariant", False)
             cost = self._extract_and_scale_layer(layer_info)
 
-            if is_li:
-                self.li_cost += cost
-                self.li_cost_layer_map[layer_name] = cost
+            if layer_info.get("include_in_final_cost", True):
+                if is_li:
+                    self.li_cost += cost
+                else:
+                    self.cost += cost
             else:
-                self.cost += cost
+                self.untracked_cost += cost
 
             if layer_info.get("include_in_report", True):
                 self.tracked_layers.append(
@@ -191,13 +220,18 @@ class RoutingLayers:
     def _build_final_routing_layer(self):
         """Build out the routing array"""
         self.final_routing_layer = self.cost.copy()
+        self.final_routing_layer += self.untracked_cost
         self.final_routing_layer += self.li_cost
 
         friction_costs = da.zeros(self._full_shape, dtype=np.float32)
         for layer_info in self.routing_scenario.friction_layers:
-            layer_name = layer_info["layer_name"]
+            layer_name = (
+                layer_info["mask"]
+                if "mask" in layer_info
+                else layer_info["multiplier_layer"]
+            )
             friction_layer = self._extract_and_scale_layer(
-                layer_info, allow_cl=True
+                layer_info, is_friction=True
             )
             if layer_info.get("include_in_report", False):
                 self.tracked_layers.append(
@@ -219,24 +253,26 @@ class RoutingLayers:
             self.final_routing_layer,
         ) + (self.cost * 0)
 
-    def _extract_and_scale_layer(self, layer_info, allow_cl=False):
+    def _extract_and_scale_layer(self, layer_info, is_friction=False):
         """Extract layer based on name and scale according to input"""
-        cost = self._extract_layer(layer_info["layer_name"], allow_cl=allow_cl)
+        if is_friction:
+            cost = self.final_routing_layer.copy()
+        else:
+            cost = self._extract_layer(layer_info["layer_name"])
 
-        multiplier_layer_name = layer_info.get("multiplier_layer")
+        multiplier_layer_name = layer_info.get(
+            "mask", layer_info.get("multiplier_layer")
+        )
         if multiplier_layer_name:
             cost *= self._extract_layer(
-                multiplier_layer_name, allow_cl=allow_cl
+                multiplier_layer_name, is_friction=is_friction
             )
 
         cost *= layer_info.get("multiplier_scalar", 1)
         return cost
 
-    def _extract_layer(self, layer_name, allow_cl=False):
+    def _extract_layer(self, layer_name):
         """Extract layer based on name"""
-        if allow_cl and layer_name == LCP_AGG_COST_LAYER_NAME:
-            return self.final_routing_layer.copy()
-
         self._verify_layer_exists(layer_name)
         return self._layer_fh[layer_name].isel(band=0).astype(np.float32)
 
@@ -425,9 +461,16 @@ class RouteResult:
             y=xr.DataArray(rows, dims="points"),
             x=xr.DataArray(cols, dims="points"),
         )
+        cost = da.sum(cell_costs * self._lens)
+
+        inv_cell_costs = self._routing_layers.li_cost.isel(
+            y=xr.DataArray(rows, dims="points"),
+            x=xr.DataArray(cols, dims="points"),
+        )
+        invariant_cost = da.sum(inv_cell_costs)
 
         # Multiple distance travel through cell by cost and sum it!
-        return da.sum(cell_costs * self._lens).astype(np.float32).compute()
+        return (cost + invariant_cost).compute()
 
     @property
     def end_lat(self):
