@@ -193,7 +193,7 @@ class RoutingLayers:
         for layer_info in self.routing_scenario.cost_layers:
             layer_name = layer_info["layer_name"]
             is_li = layer_info.get("is_invariant", False)
-            cost = self._extract_and_scale_layer(layer_info)
+            cost = self._extract_and_scale_cost_layer(layer_info)
             cost.values = da.where(cost > 0, cost, 0)
 
             if layer_info.get("include_in_final_cost", True):
@@ -222,35 +222,27 @@ class RoutingLayers:
         """Build out the routing array"""
         self.final_routing_layer = self.cost.copy()
         self.final_routing_layer += self.untracked_cost
-        self.final_routing_layer += self.li_cost
 
-        friction_costs = da.zeros(self._full_shape, dtype=np.float32)
+        frictions = da.zeros(self._full_shape, dtype=np.float32)
         for layer_info in self.routing_scenario.friction_layers:
             layer_name = (
                 layer_info["mask"]
                 if "mask" in layer_info
                 else layer_info["multiplier_layer"]
             )
-            friction_layer = self._extract_and_scale_layer(
-                layer_info, is_friction=True
+            friction_layer = self._extract_and_scale_friction_layer(
+                layer_name, layer_info
             )
             if layer_info.get("include_in_report", False):
                 self.tracked_layers.append(
                     CharacterizedLayer(layer_name, friction_layer)
                 )
 
-            friction_costs += friction_layer
+            frictions += friction_layer
 
-        # Add frictions to costs; make sure final routing cost never
-        # goes negative as a result of adding frictions
-        # Must happen at end of loop so that "lcp_agg_cost"
-        # remains constant
-        self.final_routing_layer.values = da.where(
-            (self.final_routing_layer > 0)
-            & (da.abs(friction_costs) >= self.final_routing_layer),
-            1e-7,
-            self.final_routing_layer + friction_costs,
-        )
+        frictions = da.where(frictions <= -1, -1.0 + 1e-7, frictions)
+        self.final_routing_layer *= 1 + frictions
+        self.final_routing_layer += self.li_cost
 
         max_val = (
             da.max(self.final_routing_layer) * self.SOFT_BARRIER_MULTIPLIER
@@ -261,12 +253,9 @@ class RoutingLayers:
             self.final_routing_layer,
         )
 
-    def _extract_and_scale_layer(self, layer_info, is_friction=False):
+    def _extract_and_scale_cost_layer(self, layer_info):
         """Extract layer based on name and scale according to input"""
-        if is_friction:
-            cost = self.final_routing_layer.copy() + self.untracked_cost
-        else:
-            cost = self._extract_layer(layer_info["layer_name"])
+        cost = self._extract_layer(layer_info["layer_name"])
 
         multiplier_layer_name = layer_info.get(
             "mask", layer_info.get("multiplier_layer")
@@ -274,6 +263,19 @@ class RoutingLayers:
         if multiplier_layer_name:
             cost *= self._extract_layer(multiplier_layer_name)
 
+        cost *= layer_info.get("multiplier_scalar", 1)
+        return cost
+
+    def _extract_and_scale_friction_layer(self, mask_layer_name, layer_info):
+        """Extract layer based on name and scale according to input"""
+        if not mask_layer_name:
+            msg = (
+                "Friction layers must specify a 'mask' or "
+                "'multiplier_layer' key!"
+            )
+            raise revrtKeyError(msg)
+
+        cost = self._extract_layer(mask_layer_name)
         cost *= layer_info.get("multiplier_scalar", 1)
         return cost
 
