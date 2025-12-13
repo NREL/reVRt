@@ -11,7 +11,6 @@ from revrt.routing import point_to_many
 from revrt.utilities import LayeredFile
 from revrt.routing.point_to_many import (
     find_all_routes,
-    LCP_AGG_COST_LAYER_NAME,
     RouteResult,
     RoutingLayers,
     RoutingScenario,
@@ -105,7 +104,7 @@ def sample_layered_data(tmp_path_factory):
                 [0, 0, 0, 1, 1, 1, 1, 1],
                 [0, 0, 0, 1, 1, 1, 1, 1],
                 [0, 0, 0, 1, 1, 1, 1, 1],
-                [0, 1, 1, 1, 0, 0, 0, 0],
+                [1, 1, 1, 1, 0, 0, 0, 0],
                 [0, 0, 0, 1, 0, 0, 1, 0],
                 [0, 0, 0, 1, 0, 1, 1, 0],
                 [0, 0, 0, 1, 0, 0, 0, 0],
@@ -591,7 +590,7 @@ def test_routing_scenario_repr_contains_fields(sample_layered_data):
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
         cost_layers=[{"layer_name": "layer_1"}],
-        friction_layers=[{"layer_name": "layer_2"}],
+        friction_layers=[{"mask": "layer_2"}],
         cost_multiplier_layer="layer_3",
         cost_multiplier_scalar=1.5,
     )
@@ -753,15 +752,16 @@ def test_friction_layers_and_lcp_agg_costs(sample_layered_data):
         cost_fpath=sample_layered_data,
         cost_layers=[
             {"layer_name": "layer_1", "include_in_report": False},
-        ],
-        friction_layers=[
             {
                 "layer_name": "layer_2",
                 "multiplier_scalar": 0.5,
                 "include_in_report": True,
+                "include_in_final_cost": False,
             },
+        ],
+        friction_layers=[
             {
-                "layer_name": LCP_AGG_COST_LAYER_NAME,
+                "mask": "layer_3",
                 "multiplier_scalar": 0.1,
             },
         ],
@@ -781,6 +781,113 @@ def test_friction_layers_and_lcp_agg_costs(sample_layered_data):
         assert final_value > base_value
     finally:
         routing_layers.close()
+
+
+def test_friction_layer_influences_objective_without_reporting(
+    sample_layered_data,
+):
+    """Friction layers alter routing objective without affecting reports"""
+
+    base_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    friction_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[
+            {
+                "mask": "layer_4",
+                "multiplier_scalar": 0.5,
+            }
+        ],
+    )
+
+    base_output = find_all_routes(
+        base_scenario,
+        route_definitions=[
+            ((1, 1), [(2, 6)], {}),
+        ],
+        save_paths=False,
+    )
+
+    assert len(base_output) == 1
+    base_route = base_output[0]
+
+    friction_output = find_all_routes(
+        friction_scenario,
+        route_definitions=[
+            ((1, 1), [(2, 6)], {}),
+        ],
+        save_paths=False,
+    )
+
+    assert len(friction_output) == 1
+    friction_route = friction_output[0]
+
+    # Friction is unavoidable, so cost and path should be roughly the same
+    assert np.allclose(base_route["cost"], friction_route["cost"])
+    assert (
+        friction_route["optimized_objective"]
+        > base_route["optimized_objective"]
+    )
+    assert "layer_2_cost" not in friction_route
+    assert "layer_2_dist_km" not in friction_route
+
+
+def test_friction_layer_influences_objective(sample_layered_data):
+    """Friction layers alter routing objective without affecting reports"""
+
+    base_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    friction_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[
+            {
+                "mask": "layer_5",
+                "multiplier_scalar": 1000,
+            }
+        ],
+    )
+
+    base_output = find_all_routes(
+        base_scenario,
+        route_definitions=[
+            ((1, 1), [(3, 5)], {}),
+        ],
+        save_paths=True,
+    )
+
+    assert len(base_output) == 1
+    base_route = base_output[0]
+
+    friction_output = find_all_routes(
+        friction_scenario,
+        route_definitions=[
+            ((1, 1), [(3, 5)], {}),
+        ],
+        save_paths=True,
+    )
+
+    assert len(friction_output) == 1
+    friction_route = friction_output[0]
+
+    # Friction path is shorter but more expensive
+    assert friction_route["cost"] > base_route["cost"]
+    assert friction_route["cost"] < 1000
+    assert friction_route["length_km"] < base_route["length_km"]
+    assert (
+        friction_route["optimized_objective"]
+        > base_route["optimized_objective"]
+    )
+
+    assert "layer_5_cost" not in friction_route
+    assert "layer_5_dist_km" not in friction_route
 
 
 def test_route_result_build_warns_on_attr_mismatch(
