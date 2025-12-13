@@ -880,6 +880,7 @@ def test_friction_layer_influences_objective(sample_layered_data):
     # Friction path is shorter but more expensive
     assert friction_route["cost"] > base_route["cost"]
     assert friction_route["cost"] < 1000
+    assert friction_route["optimized_objective"] > 1000
     assert friction_route["length_km"] < base_route["length_km"]
     assert (
         friction_route["optimized_objective"]
