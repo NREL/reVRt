@@ -107,10 +107,10 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
               dictionary in the transmission config, otherwise an error
               will be thrown.
 
-              ..IMPORTANT::
-                The multiplier in this config is assumed to be in units
-                of million $ per mile and will be converted to
-                $ per pixel before being applied to the layer!.
+              .. IMPORTANT::
+                 The multiplier in this config is assumed to be in units
+                 of "million $ per mile" and will be converted to
+                 "$ per pixel" before being applied to the layer!
 
               Default is ``False``.
 
@@ -175,10 +175,10 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
               dictionary in the transmission config, otherwise an error
               will be thrown.
 
-              ..IMPORTANT::
-                The multiplier in this config is assumed to be in units
-                of million $ per mile and will be converted to
-                $ per pixel before being applied to the layer!.
+              .. IMPORTANT::
+                 The multiplier in this config is assumed to be in units
+                 of "million $ per mile" and will be converted to
+                 "$ per pixel" before being applied to the layer!
 
               Default is ``False``.
 
