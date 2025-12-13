@@ -769,6 +769,76 @@ def test_length_invariant_layers_sum_raw_values(sample_layered_data):
     )
 
 
+def test_length_invariant_hidden_and_friction_layers(sample_layered_data):
+    """Combined layer settings preserve cost reporting expectations"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_1"},
+            {"layer_name": "layer_2", "is_invariant": True},
+            {
+                "layer_name": "layer_5",
+                "multiplier_scalar": 100,
+                "include_in_final_cost": False,
+                "include_in_report": False,
+            },
+        ],
+        friction_layers=[
+            {
+                "mask": "layer_4",
+                "multiplier_scalar": 0.5,
+            },
+        ],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[
+            ((1, 1), [(2, 6)], {}),
+        ],
+        save_paths=True,
+    )
+
+    assert len(output) == 1
+    route = output[0]
+
+    assert route["length_km"] == pytest.approx(
+        0.00682842712474619,
+        rel=1e-6,
+    )
+    assert route["layer_2_dist_km"] == pytest.approx(
+        route["length_km"],
+        rel=1e-6,
+    )
+    assert route["layer_1_cost"] == pytest.approx(26.156855, rel=1e-6)
+    assert route["layer_2_cost"] == pytest.approx(18.0)
+    assert route["cost"] == pytest.approx(
+        route["layer_1_cost"] + route["layer_2_cost"],
+        rel=1e-6,
+    )
+    assert route["cost"] == pytest.approx(
+        44.15685424949238,
+        rel=1e-6,
+    )
+    assert route["optimized_objective"] == pytest.approx(
+        276.3262939453125,
+        rel=1e-6,
+    )
+    assert route["optimized_objective"] > route["cost"]
+    assert "layer_5_cost" not in route
+    assert "layer_5_dist_km" not in route
+    assert list(route["geometry"].coords) == [
+        (1.5, 5.5),
+        (2.5, 4.5),
+        (3.5, 3.5),
+        (4.5, 3.5),
+        (5.5, 3.5),
+        (6.5, 3.5),
+        (6.5, 4.5),
+    ]
+
+
 def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
     """Soft barriers convert impassable cells to large positive costs"""
 
