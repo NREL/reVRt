@@ -125,8 +125,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         each route to determine the final cost.
 
         .. IMPORTANT::
-           All negative values of each cost layer are set to 0 before
-           summation. If a pixel has a final cost of 0, it is treated
+           If a pixel has a final cost of :math:`\leq 0`, it is treated
            as a barrier (i.e. no paths can ever cross this pixels).
 
     out_dir : path-like
@@ -151,6 +150,12 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
 
         .. NOTE:: :math:`\sum_{j} f_j` is always clamped to be
            :math:`\gt -1` to prevent zero or negative routing costs.
+           In other words, :math:`(1 + \sum_{j} f_j) > 0` always holds.
+           This means friction can scale costs to/away from zero but
+           never cause the sign of the cost layer to flip (even if
+           friction values themselves are negative). This means all
+           "barrier" pixels (i.e. cost value :math:`\leq 0`) will remain
+           barriers after friction is applied.
 
         Each item in this list should be a dictionary containing the
         following keys:
