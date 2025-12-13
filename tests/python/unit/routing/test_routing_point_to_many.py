@@ -891,6 +891,59 @@ def test_friction_layer_influences_objective(sample_layered_data):
     assert "layer_5_dist_km" not in friction_route
 
 
+def test_include_in_final_cost_false_behaves_like_friction(
+    sample_layered_data,
+):
+    """Non-final cost layers steer routing but stay out of reports"""
+
+    base_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    base_route = find_all_routes(
+        base_scenario,
+        route_definitions=[
+            ((1, 1), [(3, 5)], {}),
+        ],
+        save_paths=True,
+    )[0]
+
+    penalized_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_1"},
+            {
+                "layer_name": "layer_5",
+                "multiplier_scalar": 1000,
+                "include_in_final_cost": False,
+                "include_in_report": False,
+            },
+        ],
+    )
+
+    penalized_route = find_all_routes(
+        penalized_scenario,
+        route_definitions=[
+            ((1, 1), [(3, 5)], {}),
+        ],
+        save_paths=True,
+    )[0]
+
+    assert not base_route["geometry"].equals(penalized_route["geometry"])
+    assert (
+        penalized_route["optimized_objective"]
+        > base_route["optimized_objective"]
+    )
+    assert penalized_route["optimized_objective"] > penalized_route["cost"]
+    assert penalized_route["cost"] < 1000
+    assert penalized_route["cost"] == pytest.approx(
+        penalized_route["layer_1_cost"],
+        rel=1e-6,
+    )
+    assert "layer_5_cost" not in penalized_route
+
+
 def test_route_result_build_warns_on_attr_mismatch(
     sample_layered_data, assert_message_was_logged
 ):
