@@ -55,10 +55,10 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         Path to CSV file defining the start and
         end points of all routes. Must have the following columns:
 
-            "start_lat": Stating point latitude
-            "start_lon": Stating point longitude
-            "end_lat": Ending point latitude
-            "end_lon": Ending point longitude
+            - "start_lat": Stating point latitude
+            - "start_lon": Stating point longitude
+            - "end_lat": Ending point latitude
+            - "end_lon": Ending point longitude
 
     cost_layers : list
         List of dictionaries defining the layers that are summed to
