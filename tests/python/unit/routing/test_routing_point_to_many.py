@@ -113,6 +113,22 @@ def sample_layered_data(tmp_path_factory):
         dtype=np.float32,
     )
 
+    # fmt: off
+    layer_6 = np.array(
+        [
+            [
+                [-1, -1, -1, -1, -1, -1, -1, -1],
+                [ 0, -1, -1, -1, -1, -1, -1,  0],  # noqa: E201, E241
+                [ 0, -1, -1, -1, -1, -1, -1,  3],  # noqa: E201, E241
+                [ 1, -1, -1, -1, -1, -1, -1,  1],  # noqa: E201, E241
+                [ 1, -1, -1, -1, -1, -1, -1,  1],  # noqa: E201, E241
+                [ 1, -1, -1, -1, -1, -1, -1,  1],  # noqa: E201, E241
+                [ 0,  1,  1,  1,  1,  1,  1,  1],  # noqa: E201, E241
+            ]
+        ],
+        dtype=np.float32,
+    )
+
     for ind, routing_layer in enumerate(
         [
             layer_1,
@@ -120,6 +136,7 @@ def sample_layered_data(tmp_path_factory):
             layer_3,
             layer_4,
             layer_5,
+            layer_6,
         ],
         start=1,
     ):
@@ -504,26 +521,31 @@ def test_routing_with_tracked_layers(sample_layered_data):
     assert route["layer_3_min"] == pytest.approx(2.0)
 
 
+@pytest.mark.parametrize("use_friction", [True, False])
 def test_start_point_on_barrier_returns_no_route(
-    sample_layered_data, assert_message_was_logged
+    sample_layered_data, assert_message_was_logged, use_friction
 ):
     """If the start point is on a barrier (cost <= 0) no route is returned"""
 
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
-        cost_layers=[{"layer_name": "layer_1"}],
+        cost_layers=[{"layer_name": "layer_6"}],
     )
+    if use_friction:
+        scenario.friction_layers = [
+            {"mask": "layer_5", "multiplier_scalar": -10}
+        ]
 
-    # (0, 3) in layer_1 is 0 -> treated as barrier
+    # (3, 1) in layer_6 is -1 -> treated as barrier
     output = find_all_routes(
         scenario,
         route_definitions=[
-            ((0, 3), [(2, 6)], {}),
+            ((3, 1), [(2, 6)], {}),
         ],
         save_paths=False,
     )
     assert_message_was_logged(
-        "Start idx (0, 3) does not have a valid cost: -1.00 (must be > 0)!",
+        "Start idx (3, 1) does not have a valid cost: 0.00 (must be > 0)!",
         "ERROR",
     )
 
@@ -860,7 +882,7 @@ def test_friction_layer_influences_objective(sample_layered_data):
         route_definitions=[
             ((1, 1), [(3, 5)], {}),
         ],
-        save_paths=True,
+        save_paths=False,
     )
 
     assert len(base_output) == 1
@@ -871,7 +893,7 @@ def test_friction_layer_influences_objective(sample_layered_data):
         route_definitions=[
             ((1, 1), [(3, 5)], {}),
         ],
-        save_paths=True,
+        save_paths=False,
     )
 
     assert len(friction_output) == 1
@@ -885,6 +907,118 @@ def test_friction_layer_influences_objective(sample_layered_data):
     assert (
         friction_route["optimized_objective"]
         > base_route["optimized_objective"]
+    )
+
+    assert "layer_5_cost" not in friction_route
+    assert "layer_5_dist_km" not in friction_route
+
+
+def test_negative_friction_layer_influences_objective(sample_layered_data):
+    """Friction layers alter routing objective without affecting reports"""
+
+    base_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    friction_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[
+            {
+                "mask": "layer_5",
+                "multiplier_scalar": -10,
+            }
+        ],
+    )
+
+    base_output = find_all_routes(
+        base_scenario,
+        route_definitions=[
+            ((1, 1), [(2, 6)], {}),
+        ],
+        save_paths=True,
+    )
+
+    assert len(base_output) == 1
+    base_route = base_output[0]
+
+    friction_output = find_all_routes(
+        friction_scenario,
+        route_definitions=[
+            ((1, 1), [(2, 6)], {}),
+        ],
+        save_paths=True,
+    )
+
+    assert len(friction_output) == 1
+    friction_route = friction_output[0]
+
+    # Friction path is shorter but more expensive
+    assert friction_route["cost"] > base_route["cost"]
+    assert friction_route["cost"] > 0
+    assert friction_route["optimized_objective"] < 5
+    assert friction_route["length_km"] < base_route["length_km"]
+    assert (
+        friction_route["optimized_objective"]
+        < base_route["optimized_objective"]
+    )
+
+    assert "layer_5_cost" not in friction_route
+    assert "layer_5_dist_km" not in friction_route
+
+
+def test_negative_friction_layer_does_not_go_thru_barrier(sample_layered_data):
+    """Friction layers alter routing objective without affecting reports"""
+
+    base_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_6"}],
+    )
+
+    friction_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_6"}],
+        friction_layers=[
+            {
+                "mask": "layer_5",
+                "multiplier_scalar": -10,
+            }
+        ],
+    )
+
+    base_output = find_all_routes(
+        base_scenario,
+        route_definitions=[
+            ((4, 0), [(2, 7)], {}),
+        ],
+        save_paths=True,
+    )
+
+    assert len(base_output) == 1
+    base_route = base_output[0]
+
+    friction_output = find_all_routes(
+        friction_scenario,
+        route_definitions=[
+            ((4, 0), [(2, 7)], {}),
+        ],
+        save_paths=True,
+    )
+
+    assert len(friction_output) == 1
+    friction_route = friction_output[0]
+
+    # Friction path is shorter but more expensive
+    assert friction_route["cost"] == pytest.approx(base_route["cost"])
+    assert friction_route["cost"] > 0
+    assert friction_route["length_km"] == pytest.approx(
+        base_route["length_km"]
+    )
+    assert friction_route["geometry"].equals(base_route["geometry"])
+    assert (
+        friction_route["optimized_objective"]
+        < base_route["optimized_objective"]
     )
 
     assert "layer_5_cost" not in friction_route
@@ -1136,6 +1270,30 @@ def test_find_paths_exception_yields_no_routes(
             )
     finally:
         routing_layers.close()
+
+
+def test_negative_cost_path_returns_no_route(sample_layered_data):
+    """If all points between start and end are negative, return no route"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_6"},
+            {"layer_name": "layer_4", "multiplier_scalar": -3},
+        ],
+        friction_layers=[{"mask": "layer_5", "multiplier_scalar": -10}],
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[
+            ((4, 0), [(2, 7)], {}),
+        ],
+        save_paths=False,
+    )
+
+    assert isinstance(output, list)
+    assert not output
 
 
 if __name__ == "__main__":

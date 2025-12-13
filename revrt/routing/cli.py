@@ -118,6 +118,17 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
 
               Default is ``False``.
 
+        The summed layers define the cost routing surface, which
+        determines the cost output for each route. Specifically, the
+        cost at each pixel is multiplied by the length that the route
+        takes through the pixel, and all of these values are summed for
+        each route to determine the final cost.
+
+        .. IMPORTANT::
+           All negative values of each cost layer are set to 0 before
+           summation. If a pixel has a final cost of 0, it is treated
+           as a barrier (i.e. no paths can ever cross this pixels).
+
     out_dir : path-like
         Directory where routing outputs should be written.
     job_name : str

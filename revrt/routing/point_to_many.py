@@ -194,6 +194,7 @@ class RoutingLayers:
             layer_name = layer_info["layer_name"]
             is_li = layer_info.get("is_invariant", False)
             cost = self._extract_and_scale_layer(layer_info)
+            cost.values = da.where(cost > 0, cost, 0)
 
             if layer_info.get("include_in_final_cost", True):
                 if is_li:
@@ -240,23 +241,30 @@ class RoutingLayers:
 
             friction_costs += friction_layer
 
+        # Add frictions to costs; make sure final routing cost never
+        # goes negative as a result of adding frictions
         # Must happen at end of loop so that "lcp_agg_cost"
         # remains constant
-        self.final_routing_layer += friction_costs
+        self.final_routing_layer.values = da.where(
+            (self.final_routing_layer > 0)
+            & (da.abs(friction_costs) >= self.final_routing_layer),
+            1e-7,
+            self.final_routing_layer + friction_costs,
+        )
 
         max_val = (
             da.max(self.final_routing_layer) * self.SOFT_BARRIER_MULTIPLIER
         )
-        self.final_routing_layer = da.where(
+        self.final_routing_layer.values = da.where(
             self.final_routing_layer <= 0,
             -1 if self.routing_scenario.use_hard_barrier else max_val,
             self.final_routing_layer,
-        ) + (self.cost * 0)
+        )
 
     def _extract_and_scale_layer(self, layer_info, is_friction=False):
         """Extract layer based on name and scale according to input"""
         if is_friction:
-            cost = self.final_routing_layer.copy()
+            cost = self.final_routing_layer.copy() + self.untracked_cost
         else:
             cost = self._extract_layer(layer_info["layer_name"])
 
@@ -624,25 +632,25 @@ def _compute_valid_path(
             cost_layers=routing_scenario.cl_as_json,
             start=[start_point],
             end=end_points,
-        )[0]
+        )
     except Exception as ex:
         msg = (
             f"Unable to find path from {start_point} any of {end_points}: {ex}"
         )
-        logger.exception(msg)
-
         raise revrtLeastCostPathNotFoundError(msg) from ex
 
-    return route_result
+    if not route_result:
+        msg = f"Unable to find path from {start_point} any of {end_points}"
+        raise revrtLeastCostPathNotFoundError(msg)
+
+    return route_result[0]
 
 
 def _validate_starting_point(routing_layers, start_point):
     """Raise when the starting cell lacks a positive traversal cost"""
     start_row, start_col = start_point
     start_cost = (
-        routing_layers.final_routing_layer.isel(y=start_row, x=start_col)
-        .compute()
-        .item()
+        routing_layers.cost.isel(y=start_row, x=start_col).compute().item()
     )
 
     if start_cost <= 0:
@@ -656,7 +664,7 @@ def _validate_starting_point(routing_layers, start_point):
 def _validate_end_points(routing_layers, end_points):
     """Raise when no end cell provides a positive traversal cost"""
     end_rows, end_cols = np.array(end_points).T
-    end_costs = routing_layers.final_routing_layer.isel(
+    end_costs = routing_layers.cost.isel(
         y=xr.DataArray(end_rows, dims="points"),
         x=xr.DataArray(end_cols, dims="points"),
     )
