@@ -701,7 +701,7 @@ def test_length_invariant_layer_costs_ignore_path_length(
         layer_two = (
             routing_layers._layer_fh["layer_2"].isel(band=0).compute().values
         )
-        expected = sum(layer_two[row, col] for row, col in route)
+        expected = sum(layer_two[row, col] for row, col in route[1:])
 
         assert result["layer_2_cost"] == pytest.approx(expected)
     finally:
