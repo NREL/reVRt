@@ -381,7 +381,7 @@ class CharacterizedLayer:
         lens, __ = _compute_lens(route, cell_size)
 
         layer_data = getattr(layer_values, "data", layer_values)
-        if not isinstance(layer_data, da.Array):
+        if not isinstance(layer_data, da.Array):  # pragma: no cover
             layer_data = da.asarray(layer_data)
 
         if self.is_length_invariant:
