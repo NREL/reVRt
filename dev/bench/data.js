@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765909066539,
+  "lastUpdate": 1765928803143,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2435,6 +2435,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 393090418,
             "range": "± 6307322",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "62d88378b4ab8f8f102a5471c41dbd5b58048620",
+          "message": "Support friction layers (#180)\n\n* Update\n\n* Update\n\n* Update lockfile\n\n* Add new exception type\n\n* Add another error type\n\n* Log class names\n\n* Update tests to check for name\n\n* Update logic to look for shape dataset\n\n* Add first few tests for routing\n\n* Routing WIP!!\n\n* More tests\n\n* Add test\n\n* Add test\n\n* Fix typo\n\n* Fix bug\n\n* Add tracked layers test\n\n* Add geometry test\n\n* A few more tests\n\n* Add `__init__.py` to module\n\n* Updates\n\n* Don't allow negative costs\n\n* Add tests for invalid start/end costs\n\n* Check for error message logs\n\n* Add routing utility tests\n\n* Add utilities module\n\n* Update docstrings\n\n* Add first pass of cli file\n\n* Minor updates\n\n* Connect first routing CLI\n\n* Add changes to points logic\n\n* Minor docstring updates\n\n* Update\n\n* Partially fix tests\n\n* Fix tests\n\n* Add docstrings\n\n* Minor updates\n\n* Fix docs\n\n* No extra log\n\n* Fix recursion error\n\n* Add tests\n\n* MVP routing CLI tests\n\n* Minor refactor\n\n* Minor formatting\n\n* update tests\n\n* Update tests\n\n* Update lockfile\n\n* MInor formatting\n\n* Update instructions\n\n* Break out dictionary extraction\n\n* Minor update\n\n* Docstrings\n\n* Add a few tests\n\n* Update\n\n* Minor fix\n\n* More messages\n\n* Use `da.max`\n\n* Fix rust tests\n\n* Minor refactor\n\n* Much lower memory limit\n\n* `add_layer_to_data` now returns `Result` object\n\n* More error types\n\n* Layer name is now optional\n\n* mInor rename\n\n* Add friction logic\n\n* Don't allow friction to go below -1\n\n* Update type\n\n* Make `LazySubset` initializable in tests\n\n* Up precision on tiny non-zero factor\n\n* Add tests for friction input\n\n* Add test for creating a dataset layer from cost, friction, and invariant layers\n\n* Update documentation\n\n* Update docs\n\n* Minor doc updates\n\n* Fix friction logic\n\n* Fix bug\n\n* Add some friction tests\n\n* Minor update\n\n* Add test for `include_in_final_cost=False`\n\n* Extra test\n\n* Refactor frictions logic to match rust side\n\n* Update documentation\n\n* Add test for invariant layer\n\n* Add test\n\n* MInor update to tests\n\n* Fix up tests\n\n* Don't check coverage for defensive code\n\n* Minor fix\n\n* Add a few tests\n\n* Remove instructions\n\n* Remove scratch files",
+          "timestamp": "2025-12-16T16:35:42-07:00",
+          "tree_id": "7cbdb381264c930461c20e57be823eabf5ed0f9f",
+          "url": "https://github.com/NREL/reVRt/commit/62d88378b4ab8f8f102a5471c41dbd5b58048620"
+        },
+        "date": 1765928802594,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 147224373,
+            "range": "± 2234322",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 235990431,
+            "range": "± 1598179",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 250600274,
+            "range": "± 15365838",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 347673974,
+            "range": "± 15482060",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 669413469,
+            "range": "± 15726196",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 148609393,
+            "range": "± 2372838",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 154557682,
+            "range": "± 1063862",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170385560,
+            "range": "± 1255956",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 221567011,
+            "range": "± 2083418",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 399744061,
+            "range": "± 5524159",
             "unit": "ns/iter"
           }
         ]
