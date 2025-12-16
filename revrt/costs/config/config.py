@@ -54,7 +54,7 @@ class TransmissionConfig(UserDict):
         config : str or dict, optional
             Dictionary of transmission cost configuration values, or
             path to JSON/JSON5 file containing this dictionary. The
-            dictionary should have the following keys:
+            dictionary should have a subset of the following keys:
 
                 - base_line_costs
                 - iso_lookup
@@ -65,6 +65,8 @@ class TransmissionConfig(UserDict):
                 - power_to_voltage
                 - transformer_costs
                 - upgrade_substation_costs
+                - voltage_polarity_mult
+                - row_width
 
             Each of these keys should point to another dictionary or
             path to JSON/JSON5 file containing a dictionary of
