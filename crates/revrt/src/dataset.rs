@@ -803,4 +803,63 @@ mod tests {
             );
         }
     }
+
+    #[test_case(r#"{"cost_layers": [{"layer_name": "B"}]}"# ; "zero layer")]
+    #[test_case(r#"{"cost_layers": [{"layer_name": "C"}]}"# ; "negative layer")]
+    fn test_get_3x3_with_hard_barriered_layers(json: &str) {
+        let path = samples::specific_layers_zarr((3, 3), (3, 3), 0_f32, -1_f32);
+        let cost_function = CostFunction::from_json(json).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 1_000, true).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: 1, j: 1 });
+        assert!(
+            results.is_empty(),
+            "Found data with `use_hard_barrier=true`"
+        );
+    }
+
+    #[test_case(r#"{"cost_layers": [{"layer_name": "B"}]}"# ; "zero layer")]
+    #[test_case(r#"{"cost_layers": [{"layer_name": "C"}]}"# ; "negative layer")]
+    fn test_get_3x3_with_soft_barrier_layers(json: &str) {
+        let path = samples::specific_layers_zarr((3, 3), (3, 3), 0_f32, -1_f32);
+        let cost_function = CostFunction::from_json(json).unwrap();
+        let dataset =
+            Dataset::open(path, cost_function, 1_000, false).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: 1, j: 1 });
+        assert_eq!(results.len(), 8);
+
+        let mut expected: Vec<(ArrayIndex, f32)> = vec![];
+        for ir in 0..3u64 {
+            for jr in 0..3u64 {
+                if ir == 1 && jr == 1 {
+                    continue; // skip center
+                }
+
+                let mut averaged = SOFT_BARRIER_COST;
+                if ir != 1 && jr != 1 {
+                    averaged *= std::f32::consts::SQRT_2;
+                }
+                expected.push((ArrayIndex { i: ir, j: jr }, averaged));
+            }
+        }
+
+        for (idx, val) in expected {
+            let found = results
+                .iter()
+                .find(|(ai, _)| ai.i == idx.i && ai.j == idx.j);
+            assert!(found.is_some(), "Missing neighbor {:?} in results", idx);
+            let actual = found.unwrap().1;
+            let diff = (actual - val).abs();
+            assert!(
+                diff < 1e-5,
+                "mismatch for {:?}: actual={} expected={} diff={}",
+                idx,
+                actual,
+                val,
+                diff
+            );
+        }
+    }
 }
