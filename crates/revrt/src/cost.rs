@@ -126,14 +126,10 @@ impl CostFunction {
         // Ensure friction does not go below -1. If any values are below -1,
         // emit a warning and clamp them to -1 so the routing surface
         // calculation (1 + friction) does not produce negative cost values
-        final_friction_layer.mapv_inplace(|v| {
-            if v <= -1.0 {
-                tracing::warn!("Friction layer contains values <= -1; clamping to -1");
-                -1.0 + 1e-7
-            } else {
-                v
-            }
-        });
+        if final_friction_layer.iter().any(|v| *v <= -1.0) {
+            tracing::warn!("Friction layer contains values <= -1; clamping to -1");
+            final_friction_layer.mapv_inplace(|v| if v <= -1.0 { -1.0 + 1e-7 } else { v });
+        }
 
         // routing surface is: final_cost_layer * (1 + final_friction_layer)
         final_cost_layer
