@@ -413,8 +413,8 @@ fn add_layer_to_data(
 }
 
 #[cfg(test)]
-// Make a LazySubset from a source and array subset to be used in tests
-//
+/// Make a LazySubset from a source and array subset to be used in tests
+///
 /// # Returns
 /// An initialized LazySubset<f32> instance.
 pub(crate) fn make_lazy_subset_for_tests(
