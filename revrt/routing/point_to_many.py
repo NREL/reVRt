@@ -228,7 +228,7 @@ class RoutingLayers:
             layer_name = (
                 layer_info["mask"]
                 if "mask" in layer_info
-                else layer_info["multiplier_layer"]
+                else layer_info.get("multiplier_layer")
             )
             friction_layer = self._extract_and_scale_friction_layer(
                 layer_name, layer_info
