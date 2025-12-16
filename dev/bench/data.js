@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765495586525,
+  "lastUpdate": 1765909066539,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2351,6 +2351,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 404054220,
             "range": "± 8866692",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc6fa7a4e927210806100040d495a14ddd564621",
+          "message": "MVP routing module (#175)\n\n* Update\n\n* Update\n\n* Update lockfile\n\n* Add new exception type\n\n* Add another error type\n\n* Log class names\n\n* Update tests to check for name\n\n* Update logic to look for shape dataset\n\n* Add first few tests for routing\n\n* Routing WIP!!\n\n* More tests\n\n* Add test\n\n* Add test\n\n* Fix typo\n\n* Fix bug\n\n* Add tracked layers test\n\n* Add geometry test\n\n* A few more tests\n\n* Add `__init__.py` to module\n\n* Updates\n\n* Don't allow negative costs\n\n* Add tests for invalid start/end costs\n\n* Check for error message logs\n\n* Add routing utility tests\n\n* Add utilities module\n\n* Update docstrings\n\n* Add first pass of cli file\n\n* Minor updates\n\n* Connect first routing CLI\n\n* Add changes to points logic\n\n* Minor docstring updates\n\n* Update\n\n* Partially fix tests\n\n* Fix tests\n\n* Add docstrings\n\n* Minor updates\n\n* Fix docs\n\n* No extra log\n\n* Fix recursion error\n\n* Add tests\n\n* MVP routing CLI tests\n\n* Minor refactor\n\n* Minor formatting\n\n* update tests\n\n* Update tests\n\n* Update lockfile\n\n* MInor formatting\n\n* Update instructions\n\n* Break out dictionary extraction\n\n* Minor update\n\n* Docstrings\n\n* Add a few tests\n\n* Update\n\n* Minor fix\n\n* More messages\n\n* Use `da.max`\n\n* Fix rust tests\n\n* Minor refactor\n\n* Much lower memory limit\n\n* `add_layer_to_data` now returns `Result` object\n\n* More error types",
+          "timestamp": "2025-12-16T11:06:07-07:00",
+          "tree_id": "a587210e6d6be6f86041893e7ffd13c4bc2a5ccb",
+          "url": "https://github.com/NREL/reVRt/commit/bc6fa7a4e927210806100040d495a14ddd564621"
+        },
+        "date": 1765909065264,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 153680260,
+            "range": "± 2155880",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 249656581,
+            "range": "± 4164764",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 257663339,
+            "range": "± 13391185",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 351655872,
+            "range": "± 19189789",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 670152022,
+            "range": "± 14375139",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 149937294,
+            "range": "± 3084645",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 154585717,
+            "range": "± 668529",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 168396833,
+            "range": "± 1077170",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 215981483,
+            "range": "± 4181876",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 393090418,
+            "range": "± 6307322",
             "unit": "ns/iter"
           }
         ]
