@@ -157,7 +157,14 @@ pub(crate) fn cost_as_index_zarr((ni, nj): (u64, u64), (ci, cj): (u64, u64)) -> 
     tmp_path.keep()
 }
 
-/// Create a zarr store with specific layers for testing cost, friction, and length-invariant layers
+/// Create a zarr store with specific layers for testing
+///
+/// The specific layers that are added are cost (values are index 1-9),
+/// friction (via user-specified values), and length-invariant layers
+/// (via user-specified values). The layer mapping is as follows:
+/// /A: cost layer
+/// /B: friction layer
+/// /C: length-invariant layer
 pub(crate) fn specific_layers_zarr(
     (ni, nj): (u64, u64),
     (ci, cj): (u64, u64),
