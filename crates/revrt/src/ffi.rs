@@ -65,6 +65,14 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// cache_size : int, default=250_000_000
 ///     Cache size to use for computation, in bytes.
 ///     By default, `250,000,000` (250MB).
+/// use_hard_barrier : bool, default=True
+///     Option ignore all cells with :math:`\leq 0` cost values.
+///     If `True`, these cells are treated as hard barriers that
+///     cannot be crossed, meaning the algorithm will not return
+///     any paths if an endpoint is completely enclosed by them.
+///     If `False`, these cells are assigned a large friction value
+///     so that they can be crossed as quickly as possible and
+///     still yield paths. By default, `True`.
 ///
 /// Returns
 /// -------
@@ -74,7 +82,7 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     route goes through and the second element is the final
 ///     route cost.
 #[pyfunction]
-#[pyo3(signature = (zarr_fp, cost_layers, start, end, cache_size=250_000_000))]
+#[pyo3(signature = (zarr_fp, cost_layers, start, end, cache_size=250_000_000, use_hard_barrier=true))]
 #[allow(clippy::type_complexity)]
 fn find_paths(
     zarr_fp: PathBuf,
@@ -82,13 +90,21 @@ fn find_paths(
     start: Vec<(u64, u64)>,
     end: Vec<(u64, u64)>,
     cache_size: u64,
+    use_hard_barrier: bool,
 ) -> Result<Vec<(Vec<(u64, u64)>, f32)>> {
     let start: Vec<ArrayIndex> = start
         .into_iter()
         .map(|(i, j)| ArrayIndex { i, j })
         .collect();
     let end: Vec<ArrayIndex> = end.into_iter().map(|(i, j)| ArrayIndex { i, j }).collect();
-    let paths = resolve(zarr_fp, &cost_layers, cache_size, &start, end)?;
+    let paths = resolve(
+        zarr_fp,
+        &cost_layers,
+        cache_size,
+        &start,
+        end,
+        use_hard_barrier,
+    )?;
     Ok(paths
         .into_iter()
         .map(|(path, cost)| (path.into_iter().map(Into::into).collect(), cost))
