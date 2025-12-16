@@ -634,6 +634,7 @@ def _compute_valid_path(
             cost_layers=routing_scenario.cl_as_json,
             start=[start_point],
             end=end_points,
+            use_hard_barrier=routing_scenario.use_hard_barrier,
         )
     except Exception as ex:
         msg = (
