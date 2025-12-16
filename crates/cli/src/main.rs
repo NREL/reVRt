@@ -54,7 +54,7 @@ fn main() {
     trace!("User given dataset: {:?}", cli.dataset);
 
     assert_eq!(cli.start.len(), 2);
-    let start = &revrt::ArrayIndex::new(cli.start[0] as u64, cli.start[1] as u64);
+    let start = revrt::ArrayIndex::new(cli.start[0] as u64, cli.start[1] as u64);
     trace!("Starting point: {:?}", start);
 
     assert_eq!(cli.end.len(), 2);
@@ -65,8 +65,9 @@ fn main() {
         cli.dataset,
         &cli.cost_function,
         250_000_000,
-        &[start.clone()],
+        &[start],
         end,
+        true,
     )
     .unwrap();
     println!("Results: {:?}", result);
