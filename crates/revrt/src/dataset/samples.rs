@@ -156,3 +156,65 @@ pub(crate) fn cost_as_index_zarr((ni, nj): (u64, u64), (ci, cj): (u64, u64)) -> 
 
     tmp_path.keep()
 }
+
+/// Create a zarr store with specific layers for testing cost, friction, and length-invariant layers
+pub(crate) fn specific_layers_zarr(
+    (ni, nj): (u64, u64),
+    (ci, cj): (u64, u64),
+    friction_layer_weight: f32,
+    invariant_layer_cost: f32,
+) -> std::path::PathBuf {
+    let tmp_path = tempfile::TempDir::new().unwrap();
+
+    let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
+        zarrs::filesystem::FilesystemStore::new(tmp_path.path())
+            .expect("could not open filesystem store"),
+    );
+
+    zarrs::group::GroupBuilder::new()
+        .build(store.clone(), "/")
+        .unwrap()
+        .store_metadata()
+        .unwrap();
+
+    // A: 1..=9
+    let a_vals: Vec<f32> = (1..=(ni * nj)).map(|x| x as f32).collect();
+    let a_data: Array3<f32> =
+        ndarray::Array::from_shape_vec((1, ni.try_into().unwrap(), nj.try_into().unwrap()), a_vals)
+            .unwrap();
+
+    // B: friction weights, make uniform so center and neighbors share same friction
+    let b_vals: Vec<f32> = vec![friction_layer_weight; ni as usize * nj as usize];
+    let b_data: Array3<f32> =
+        ndarray::Array::from_shape_vec((1, ni.try_into().unwrap(), nj.try_into().unwrap()), b_vals)
+            .unwrap();
+
+    // C: invariant layer, constant value 10.0
+    let c_vals: Vec<f32> = vec![invariant_layer_cost; ni as usize * nj as usize];
+    let c_data: Array3<f32> =
+        ndarray::Array::from_shape_vec((1, ni.try_into().unwrap(), nj.try_into().unwrap()), c_vals)
+            .unwrap();
+
+    for (path, data) in [("/A", a_data), ("/B", b_data), ("/C", c_data)] {
+        let array = zarrs::array::ArrayBuilder::new(
+            vec![1, ni, nj], // array shape
+            vec![1, ci, cj], // regular chunk shape
+            zarrs::array::DataType::Float32,
+            zarrs::array::FillValue::from(zarrs::array::ZARR_NAN_F32),
+        )
+        .dimension_names(["band", "y", "x"].into())
+        .build(store.clone(), path)
+        .unwrap();
+
+        array.store_metadata().unwrap();
+
+        array
+            .store_chunks_ndarray(
+                &zarrs::array_subset::ArraySubset::new_with_ranges(&[0..1, 0..1, 0..1]),
+                data,
+            )
+            .unwrap();
+    }
+
+    tmp_path.keep()
+}

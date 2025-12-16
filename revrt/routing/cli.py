@@ -44,7 +44,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     use_hard_barrier=False,
     _split_params=None,
 ):
-    """Run least-cost path routing for pairs of points
+    r"""Run least-cost path routing for pairs of points
 
     Parameters
     ----------
@@ -55,15 +55,15 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         Path to CSV file defining the start and
         end points of all routes. Must have the following columns:
 
-            "start_lat": Stating point latitude
-            "start_lon": Stating point longitude
-            "end_lat": Ending point latitude
-            "end_lon": Ending point longitude
+            - "start_lat": Stating point latitude
+            - "start_lon": Stating point longitude
+            - "end_lat": Ending point latitude
+            - "end_lon": Ending point longitude
 
     cost_layers : list
-        List of H5 layers that are summed to determine total costs
-        raster used for routing. Costs and distances for each individual
-        layer are also reported as requested (e.g. wet and dry costs).
+        List of dictionaries defining the layers that are summed to
+        determine total costs raster used for routing. Each layer is
+        pre-processed before summation according to the user input.
         Each dict in the list should have the following keys:
 
             - "layer_name": (REQUIRED) Name of layer in layered file
@@ -79,6 +79,10 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
               this layer is length invariant (i.e. should NOT be
               multiplied by path length; values should be $). Default is
               ``False``.
+            - "include_in_final_cost": (OPTIONAL) Boolean flag
+              indicating whether this layer should contribute to the
+              final cost output for each route in the LCP table.
+              Default is ``True``.
             - "include_in_report": (OPTIONAL) Boolean flag indicating
               whether the costs and distances for this layer should be
               output in the final LCP table. Default is ``True``.
@@ -107,36 +111,62 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
               dictionary in the transmission config, otherwise an error
               will be thrown.
 
-              ..IMPORTANT::
-                The multiplier in this config is assumed to be in units
-                of million $ per mile and will be converted to
-                $ per pixel before being applied to the layer!.
+              .. IMPORTANT::
+                 The multiplier in this config is assumed to be in units
+                 of "million $ per mile" and will be converted to
+                 "$ per pixel" before being applied to the layer!
 
               Default is ``False``.
+
+        The summed layers define the cost routing surface, which
+        determines the cost output for each route. Specifically, the
+        cost at each pixel is multiplied by the length that the route
+        takes through the pixel, and all of these values are summed for
+        each route to determine the final cost.
+
+        .. IMPORTANT::
+           If a pixel has a final cost of :math:`\leq 0`, it is treated
+           as a barrier (i.e. no paths can ever cross this pixels).
 
     out_dir : path-like
         Directory where routing outputs should be written.
     job_name : str
         Label used to name the generated output file.
     friction_layers : list, optional
-        Layers to be added to costs to influence routing but NOT
-        reported in final cost (i.e. friction, barriers, etc.). Each
-        item in this list should be a dictionary containing the
+        Layers to be multiplied onto the aggregated cost layer to
+        influence routing but NOT be reported in final cost
+        (i.e. friction, barriers, etc.). These layers are first
+        aggregated, and then the aggregated friction layer is applied
+        to the aggregated cost. The cost at each pixel is therefore
+        computed as:
+
+        .. math::
+
+            C = (\sum_{i} c_i) * (1 + \sum_{j} f_j)
+
+        where :math:`C` is the final cost at each pixel, :math:`c_i` are
+        the individual cost layers, and :math:`f_j` are the individual
+        friction layers.
+
+        .. NOTE:: :math:`\sum_{j} f_j` is always clamped to be
+           :math:`\gt -1` to prevent zero or negative routing costs.
+           In other words, :math:`(1 + \sum_{j} f_j) > 0` always holds.
+           This means friction can scale costs to/away from zero but
+           never cause the sign of the cost layer to flip (even if
+           friction values themselves are negative). This means all
+           "barrier" pixels (i.e. cost value :math:`\leq 0`) will remain
+           barriers after friction is applied.
+
+        Each item in this list should be a dictionary containing the
         following keys:
 
-            - "layer_name": (REQUIRED) Name of layer in layered file
-              containing routing data. This can also be "lcp_agg_costs",
-              which represents the layer built out using the
-              `cost_layers` input.
-            - "multiplier_layer": (OPTIONAL) Name of layer in layered
-              file containing spatially explicit multiplier values to
-              apply to this routing layer before summing it with the
-              others. Default is ``None``. This can also be
-              "lcp_agg_costs", which represents the layer built out
-              using the `cost_layers` input.
+            - "multiplier_layer" or "mask": (REQUIRED) Name of layer in
+              layered file containing the spatial friction multipliers
+              or mask that will be turned into the friction multipliers
+              by applying the `multiplier_scalar`.
             - "multiplier_scalar": (OPTIONAL) Scalar value to multiply
-              this layer by before summing it with the others. Default
-              is ``1``.
+              the spatial friction layer by before using it as a
+              multiplier on the aggregated costs. Default is ``1``.
             - "include_in_report": (OPTIONAL) Boolean flag indicating
               whether the routing and distances for this layer should be
               output in the final LCP table. Default is ``False``.
@@ -165,10 +195,10 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
               dictionary in the transmission config, otherwise an error
               will be thrown.
 
-              ..IMPORTANT::
-                The multiplier in this config is assumed to be in units
-                of million $ per mile and will be converted to
-                $ per pixel before being applied to the layer!.
+              .. IMPORTANT::
+                 The multiplier in this config is assumed to be in units
+                 of "million $ per mile" and will be converted to
+                 "$ per pixel" before being applied to the layer!
 
               Default is ``False``.
 

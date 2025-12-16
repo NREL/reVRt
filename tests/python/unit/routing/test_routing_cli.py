@@ -311,7 +311,7 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
             "voltage_polarity_mult": {"138": {"ac": 1.0}},
         },
         cost_multiplier_scalar=1,
-        friction_layers=[{"layer_name": "layer_2", "apply_row_mult": True}],
+        friction_layers=[{"mask": "layer_2", "apply_row_mult": True}],
         tracked_layers={"layer_3": "max"},
         use_hard_barrier=True,
     )
@@ -336,7 +336,7 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
 
     assert cost_val > 0
     assert length_val > 0
-    assert objective_val == pytest.approx(cost_val, rel=1e-5)
+    assert objective_val > cost_val
 
     geom = saved_gdf.geometry.iloc[0]
     assert isinstance(geom, LineString)

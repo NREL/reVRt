@@ -392,6 +392,18 @@ fn add_layer_to_data(
 }
 
 #[cfg(test)]
+// Make a LazySubset from a source and array subset to be used in tests
+//
+/// # Returns
+/// An initialized LazySubset<f32> instance.
+pub(crate) fn make_lazy_subset_for_tests(
+    source: ReadableListableStorage,
+    subset: zarrs::array_subset::ArraySubset,
+) -> LazySubset<f32> {
+    LazySubset::new(source, subset)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::f32::consts::SQRT_2;
@@ -684,5 +696,88 @@ mod tests {
                 .map(|(i, j, v)| (ArrayIndex { i, j }, v))
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn test_get_3x3_with_invariant_and_friction_layers() {
+        // Define cost function: A normal, C invariant, friction from B * 0.5
+        let json = r#"
+        {
+        "cost_layers": [
+            {"layer_name": "A"},
+            {"layer_name": "C", "is_invariant": true},
+            {"multiplier_layer": "B", "multiplier_scalar": 0.5}
+            ]
+        }
+        "#;
+
+        let path = samples::specific_layers_zarr((3, 3), (3, 3), 0.2_f32, 10.0_f32);
+        let cost_function = CostFunction::from_json(json).unwrap();
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
+
+        // Request center neighbors
+        let point = ArrayIndex { i: 1, j: 1 };
+        let results = dataset.get_3x3(&point);
+
+        // Build expected results: for each neighbor (excluding center),
+        // averaged = 0.5 * (A_neighbor + A_center)
+        // if diagonal => averaged *= sqrt(2)
+        // total_before_friction = averaged + C_neighbor
+        // friction = B_neighbor * 0.5
+        // expected = total_before_friction * (1 + friction)
+
+        let a_array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
+        let b_array = zarrs::array::Array::open(dataset.source.clone(), "/B").unwrap();
+        let c_array = zarrs::array::Array::open(dataset.source.clone(), "/C").unwrap();
+
+        let mut expected: Vec<(ArrayIndex, f32)> = vec![];
+        let center_subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[0..1, 1..2, 1..2]);
+        let center_a: f32 = a_array
+            .retrieve_array_subset_elements(&center_subset)
+            .unwrap()[0];
+
+        for ir in 0..3u64 {
+            for jr in 0..3u64 {
+                if ir == 1 && jr == 1 {
+                    continue; // skip center
+                }
+                let subset = zarrs::array_subset::ArraySubset::new_with_ranges(&[
+                    0..1,
+                    ir..(ir + 1),
+                    jr..(jr + 1),
+                ]);
+                let a_n: f32 = a_array.retrieve_array_subset_elements(&subset).unwrap()[0];
+                let b_n: f32 = b_array.retrieve_array_subset_elements(&subset).unwrap()[0];
+                let c_n: f32 = c_array.retrieve_array_subset_elements(&subset).unwrap()[0];
+
+                let mut averaged = 0.5_f32 * (a_n + center_a);
+                if ir != 1 && jr != 1 {
+                    averaged *= std::f32::consts::SQRT_2;
+                }
+                let total_before = averaged + c_n;
+                let friction = b_n * 0.5_f32;
+                let expected_val = total_before * (1.0_f32 + friction);
+                expected.push((ArrayIndex { i: ir, j: jr }, expected_val));
+            }
+        }
+
+        // Compare results: lengths and per-item approx equality
+        assert_eq!(results.len(), expected.len());
+        for (idx, val) in expected {
+            let found = results
+                .iter()
+                .find(|(ai, _)| ai.i == idx.i && ai.j == idx.j);
+            assert!(found.is_some(), "Missing neighbor {:?} in results", idx);
+            let actual = found.unwrap().1;
+            let diff = (actual - val).abs();
+            assert!(
+                diff < 1e-5,
+                "mismatch for {:?}: actual={} expected={} diff={}",
+                idx,
+                actual,
+                val,
+                diff
+            );
+        }
     }
 }

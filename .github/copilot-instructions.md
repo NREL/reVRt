@@ -106,7 +106,6 @@ that is only used for development (tests, linting, docs, etc.).
 
 ## 6. Docstring Guidelines (Python)
 - Use numpy-style docstrings; first line must omit a trailing period.
-- Avoid type hints.
 - Keep docstring length to 72 characters per line.
 - Never include a period (".") at the end of the first line of docstrings.
 - Do not add a short summary to __init__ methods. Instead, keep the line blank
