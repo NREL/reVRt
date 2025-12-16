@@ -58,7 +58,9 @@ def sample_large_layered_data(tmp_path_factory):
 
 
 @pytest.mark.parametrize("use_hard_barrier", [True, False])
-def test_soft_barrier(sample_large_layered_data, use_hard_barrier):
+def test_soft_barrier_with_large_dataset(
+    sample_large_layered_data, use_hard_barrier
+):
     """Test that soft barriers work as expected in point-to-many routing"""
     scenario = RoutingScenario(
         cost_fpath=sample_large_layered_data,

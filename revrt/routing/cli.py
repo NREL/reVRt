@@ -126,7 +126,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
 
         .. IMPORTANT::
            If a pixel has a final cost of :math:`\leq 0`, it is treated
-           as a barrier (i.e. no paths can ever cross this pixels).
+           as a barrier (i.e. no paths can ever cross this pixel).
 
     out_dir : path-like
         Directory where routing outputs should be written.
