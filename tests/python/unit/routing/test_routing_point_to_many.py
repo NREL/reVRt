@@ -16,7 +16,7 @@ from revrt.routing.point_to_many import (
     RoutingScenario,
 )
 from revrt.exceptions import revrtKeyError, revrtLeastCostPathNotFoundError
-from revrt.warn import revrtWarning
+from revrt.warn import revrtWarning, revrtDeprecationWarning
 
 
 @pytest.fixture(scope="module")
@@ -943,6 +943,29 @@ def test_friction_layers_and_lcp_agg_costs(sample_layered_data):
         routing_layers.close()
 
 
+def test_friction_layer_include_in_report_adds_tracker(sample_layered_data):
+    """Friction layers flagged for reports extend tracked layers"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[
+            {
+                "mask": "layer_4",
+                "multiplier_scalar": 0.5,
+                "include_in_report": True,
+            }
+        ],
+    )
+
+    routing_layers = RoutingLayers(scenario).build()
+    try:
+        tracked_names = {layer.name for layer in routing_layers.tracked_layers}
+        assert "layer_4" in tracked_names
+    finally:
+        routing_layers.close()
+
+
 def test_friction_layer_influences_objective_without_reporting(
     sample_layered_data,
 ):
@@ -1432,6 +1455,72 @@ def test_negative_cost_path_returns_no_route(sample_layered_data):
 
     assert isinstance(output, list)
     assert not output
+
+
+def test_friction_layer_with_layer_name_warns(sample_layered_data):
+    """Layer name on friction layer drops with deprecation warning"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[
+            {
+                "layer_name": "legacy_friction",
+                "mask": "layer_4",
+            }
+        ],
+    )
+
+    with pytest.warns(revrtDeprecationWarning) as warning_record:
+        layers_for_rust = list(scenario._all_layers_for_rust())
+
+    assert len(warning_record) == 1
+    friction_payload = layers_for_rust[-1]
+    assert "layer_name" not in friction_payload
+    assert friction_payload["multiplier_layer"] == "layer_4"
+
+
+def test_friction_layer_with_multiplier_layer_only(sample_layered_data):
+    """Friction layers support multiplier layer without mask"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[
+            {
+                "multiplier_layer": "layer_4",
+                "multiplier_scalar": 0.25,
+            }
+        ],
+    )
+
+    layers_for_rust = list(scenario._all_layers_for_rust())
+    friction_payload = layers_for_rust[-1]
+    assert friction_payload["multiplier_layer"] == "layer_4"
+    assert "mask" not in friction_payload
+
+
+def test_friction_layer_requires_mask(sample_layered_data):
+    """Friction layer build enforces presence of mask metadata"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[{"multiplier_scalar": 5}],
+    )
+
+    routing_layers = RoutingLayers(scenario)
+    try:
+        with pytest.raises(
+            revrtKeyError,
+            match=(
+                "Friction layers must specify a 'mask' or "
+                "'multiplier_layer' key!"
+            ),
+        ):
+            routing_layers.build()
+    finally:
+        routing_layers.close()
 
 
 if __name__ == "__main__":
