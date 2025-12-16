@@ -66,7 +66,7 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     Cache size to use for computation, in bytes.
 ///     By default, `250,000,000` (250MB).
 /// use_hard_barrier : bool, default=True
-///     Option ignore all cells with :math:`\leq 0` cost values.
+///     Option to ignore all cells with :math:`\leq 0` cost values.
 ///     If `True`, these cells are treated as hard barriers that
 ///     cannot be crossed, meaning the algorithm will not return
 ///     any paths if an endpoint is completely enclosed by them.
