@@ -129,6 +129,22 @@ def sample_layered_data(tmp_path_factory):
         dtype=np.float32,
     )
 
+    # fmt: off
+    layer_7 = np.array(
+        [
+            [
+                [-1, -1, -1, -1, -1, -1, -1, -1],
+                [-1, -1, -1, -1, -1, -1, -1, -1],
+                [-1, -1, -1, -1, -1, -1, -1, -1],
+                [-1, -1, -1, -1, -1, -1, -1, -1],
+                [ 8, -1, -1, -1, -1,  4, -1, -1],  # noqa: E201, E241
+                [-1, -1, -1, -1, -1, -1, -1, -1],
+                [-1, -1, -1, -1, -1, -1, -1, -1],
+            ]
+        ],
+        dtype=np.float32,
+    )
+
     for ind, routing_layer in enumerate(
         [
             layer_1,
@@ -137,6 +153,7 @@ def sample_layered_data(tmp_path_factory):
             layer_4,
             layer_5,
             layer_6,
+            layer_7,
         ],
         start=1,
     ):
@@ -846,39 +863,6 @@ def test_length_invariant_hidden_and_friction_layers(sample_layered_data):
     ]
 
 
-def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
-    """Soft barriers convert impassable cells to large positive costs"""
-
-    hard_scenario = RoutingScenario(
-        cost_fpath=sample_layered_data,
-        cost_layers=[{"layer_name": "layer_1"}],
-        use_hard_barrier=True,
-    )
-    hard_layers = RoutingLayers(hard_scenario).build()
-    try:
-        hard_value = (
-            hard_layers.final_routing_layer.isel(y=0, x=3).compute().item()
-        )
-    finally:
-        hard_layers.close()
-
-    soft_scenario = RoutingScenario(
-        cost_fpath=sample_layered_data,
-        cost_layers=[{"layer_name": "layer_1"}],
-        use_hard_barrier=False,
-    )
-    soft_layers = RoutingLayers(soft_scenario).build()
-    try:
-        soft_value = (
-            soft_layers.final_routing_layer.isel(y=0, x=3).compute().item()
-        )
-        assert hard_value == -1
-        assert soft_value > 0
-        assert soft_value > abs(hard_value)
-    finally:
-        soft_layers.close()
-
-
 def test_tracked_layers_invalid_configs_warn(
     sample_layered_data, assert_message_was_logged
 ):
@@ -1521,6 +1505,68 @@ def test_friction_layer_requires_mask(sample_layered_data):
             routing_layers.build()
     finally:
         routing_layers.close()
+
+
+def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
+    """Soft barriers convert impassable cells to large positive costs"""
+
+    hard_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        use_hard_barrier=True,
+    )
+    hard_layers = RoutingLayers(hard_scenario).build()
+    try:
+        hard_value = (
+            hard_layers.final_routing_layer.isel(y=0, x=3).compute().item()
+        )
+    finally:
+        hard_layers.close()
+
+    soft_scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        use_hard_barrier=False,
+    )
+    soft_layers = RoutingLayers(soft_scenario).build()
+    try:
+        soft_value = (
+            soft_layers.final_routing_layer.isel(y=0, x=3).compute().item()
+        )
+        assert hard_value == -1
+        assert soft_value > 0
+        assert soft_value > abs(hard_value)
+    finally:
+        soft_layers.close()
+
+
+@pytest.mark.parametrize("use_hard_barrier", [True, False])
+def test_soft_barrier(sample_layered_data, use_hard_barrier):
+    """Test that soft barriers work as expected in point-to-many routing"""
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_7"}],
+        use_hard_barrier=use_hard_barrier,
+    )
+
+    output = find_all_routes(
+        scenario,
+        route_definitions=[
+            ((4, 0), [(4, 5)], {}),
+        ],
+        save_paths=True,
+    )
+    if use_hard_barrier:
+        assert isinstance(output, list)
+        assert not output
+    else:
+        assert len(output) == 1
+        route = output[0]
+        assert route["cost"] == pytest.approx(6)
+        assert route["length_km"] == pytest.approx(0.005)
+        x, y = route["geometry"].xy
+        assert np.allclose(x, np.linspace(0.5, 5.5, num=6))
+        assert np.allclose(y, 2.5)
 
 
 if __name__ == "__main__":
