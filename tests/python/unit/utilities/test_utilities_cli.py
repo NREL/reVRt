@@ -1,13 +1,14 @@
 """Tests for CLI utility commands"""
 
 from pathlib import Path
-from types import SimpleNamespace
+import json
 
+import pytest
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pytest
 import rasterio
+import xarray as xr
 from rasterio.transform import from_origin
 from shapely.geometry import LineString, Point, Polygon
 
@@ -16,32 +17,8 @@ from revrt.utilities import cli
 from revrt.warn import revrtWarning
 
 
-def _capture_to_file(monkeypatch):
-    capture = {}
-
-    def _writer(self, path, driver=None, index=True, **kwargs):
-        capture["frame"] = self.copy()
-        capture["path"] = Path(path)
-        capture["driver"] = driver
-        capture["index"] = index
-        capture["kwargs"] = kwargs
-
-    monkeypatch.setattr(gpd.GeoDataFrame, "to_file", _writer, raising=False)
-    return capture
-
-
-@pytest.fixture
-def noop_to_crs(monkeypatch):
-    """Provide noop CRS conversion for GeoDataFrames"""
-
-    def _noop(self, crs):
-        self.crs = crs
-        return self
-
-    monkeypatch.setattr(gpd.GeoDataFrame, "to_crs", _noop, raising=False)
-
-
 def _write_template_raster(path):
+    """Helper function to write a template raster for tests"""
     transform = from_origin(0, 1, 1, 1)
 
     with rasterio.open(
@@ -56,6 +33,28 @@ def _write_template_raster(path):
         transform=transform,
     ) as dataset:
         dataset.write(np.ones((1, 1), dtype=np.uint8), 1)
+
+
+def _write_template_zarr(path):
+    """Helper function to write a template Zarr file for tests"""
+    data = xr.DataArray(
+        np.zeros((1, 2, 2), dtype=np.uint8),
+        coords={"band": [1], "y": [1.0, 0.0], "x": [0.0, 1.0]},
+        dims=("band", "y", "x"),
+        name="layer",
+    )
+    data = data.rio.write_crs("EPSG:4326")
+    data = data.rio.write_transform(from_origin(0, 2, 1, 1))
+    data = data.rio.set_spatial_dims(x_dim="x", y_dim="y")
+    data = data.rio.write_coordinate_system()
+    dataset = data.to_dataset()
+    dataset = dataset.rio.set_spatial_dims(x_dim="x", y_dim="y")
+    dataset["layer"] = dataset["layer"].rio.write_crs("EPSG:4326")
+    dataset["layer"] = dataset["layer"].rio.write_transform(
+        from_origin(0, 2, 1, 1)
+    )
+    dataset["layer"] = dataset["layer"].rio.write_coordinate_system()
+    dataset.to_zarr(path)
 
 
 def test_layers_from_file_selects_specific_layers(monkeypatch, tmp_path):
@@ -118,7 +117,7 @@ def test_preprocess_layers_from_file_config(tmp_path):
     assert processed["_out_layer_dir"] == str(out_dir)
 
 
-def test_convert_pois_to_lines_creates_fake_trans_line(monkeypatch, tmp_path):
+def test_convert_pois_to_lines_creates_fake_trans_line(tmp_path):
     """Validate POI conversion includes fake transmission entry"""
 
     template = tmp_path / "template.tif"
@@ -135,26 +134,22 @@ def test_convert_pois_to_lines_creates_fake_trans_line(monkeypatch, tmp_path):
         }
     ).to_csv(poi_csv, index=False)
 
-    capture = _capture_to_file(monkeypatch)
-    cli.convert_pois_to_lines(poi_csv, template, tmp_path / "out.gpkg")
+    out_file = tmp_path / "out.gpkg"
+    cli.convert_pois_to_lines(poi_csv, template, out_file)
 
-    frame = capture["frame"]
-    assert capture["driver"] == "GPKG"
+    frame = gpd.read_file(out_file)
     assert set(frame["category"]) == {"Substation", "TransLine"}
     assert 9999 in frame["gid"].tolist()
 
 
-def test_map_ss_to_rr_filters_low_voltage(monkeypatch, tmp_path, noop_to_crs):
+def test_map_ss_to_rr_filters_low_voltage(tmp_path):
     """Ensure low voltage substations are dropped with warning"""
-    features_path = tmp_path / "features.gpkg"
-    regions_path = tmp_path / "regions.gpkg"
-    out_file = tmp_path / "subs.gpkg"
 
     features = gpd.GeoDataFrame(
         {
             "category": ["Substation", "Substation", "Line", "Line"],
             "gid": [1, 2, 10, 11],
-            "trans_gids": ["[10]", [11], None, None],
+            "trans_gids": [json.dumps([10]), json.dumps([11]), None, None],
             "voltage": [0, 0, 115, 34],
         },
         geometry=[
@@ -165,7 +160,6 @@ def test_map_ss_to_rr_filters_low_voltage(monkeypatch, tmp_path, noop_to_crs):
         ],
         crs="EPSG:4326",
     )
-
     regions = gpd.GeoDataFrame(
         {"region_id": ["A", "B"]},
         geometry=[
@@ -175,17 +169,12 @@ def test_map_ss_to_rr_filters_low_voltage(monkeypatch, tmp_path, noop_to_crs):
         crs="EPSG:4326",
     )
 
-    def _reader(path):
-        if Path(path) == features_path:
-            return features.copy()
-        if Path(path) == regions_path:
-            return regions.copy()
-        msg = "Unexpected read path"
-        raise AssertionError(msg)
+    features_path = tmp_path / "features.gpkg"
+    regions_path = tmp_path / "regions.gpkg"
+    features.to_file(features_path, driver="GPKG")
+    regions.to_file(regions_path, driver="GPKG")
 
-    monkeypatch.setattr(cli.gpd, "read_file", _reader)
-    capture = _capture_to_file(monkeypatch)
-
+    out_file = tmp_path / "subs.gpkg"
     with pytest.warns(revrtWarning):
         cli.map_ss_to_rr(
             features_path,
@@ -194,23 +183,21 @@ def test_map_ss_to_rr_filters_low_voltage(monkeypatch, tmp_path, noop_to_crs):
             out_file=out_file,
         )
 
-    frame = capture["frame"]
+    frame = gpd.read_file(out_file)
     assert frame["gid"].tolist() == [1]
     assert frame["region_id"].tolist() == ["A"]
     assert frame.loc[0, "min_volts"] == 115
     assert frame.loc[0, "max_volts"] == 115
 
 
-def test_map_ss_to_rr_without_drops(monkeypatch, tmp_path, noop_to_crs):
+def test_map_ss_to_rr_without_drops(tmp_path):
     """Ensure substations remain when voltage threshold is met"""
-    features_path = tmp_path / "features.gpkg"
-    regions_path = tmp_path / "regions.gpkg"
 
     features = gpd.GeoDataFrame(
         {
             "category": ["Substation", "Substation", "Line", "Line"],
             "gid": [1, 2, 10, 11],
-            "trans_gids": ["[10]", [11], None, None],
+            "trans_gids": [json.dumps([10]), json.dumps([11]), None, None],
             "voltage": [0, 0, 115, 230],
         },
         geometry=[
@@ -221,7 +208,6 @@ def test_map_ss_to_rr_without_drops(monkeypatch, tmp_path, noop_to_crs):
         ],
         crs="EPSG:4326",
     )
-
     regions = gpd.GeoDataFrame(
         {"region_id": ["A", "B"]},
         geometry=[
@@ -231,30 +217,26 @@ def test_map_ss_to_rr_without_drops(monkeypatch, tmp_path, noop_to_crs):
         crs="EPSG:4326",
     )
 
-    def _reader(path):
-        if Path(path) == features_path:
-            return features.copy()
-        if Path(path) == regions_path:
-            return regions.copy()
-        msg = "Unexpected read path"
-        raise AssertionError(msg)
+    features_path = tmp_path / "features.gpkg"
+    regions_path = tmp_path / "regions.gpkg"
+    out_file = tmp_path / "remaining_subs.gpkg"
 
-    monkeypatch.setattr(cli.gpd, "read_file", _reader)
-    capture = _capture_to_file(monkeypatch)
+    features.to_file(features_path, driver="GPKG")
+    regions.to_file(regions_path, driver="GPKG")
 
     cli.map_ss_to_rr(
         features_path,
         regions_path,
         "region_id",
-        out_file=tmp_path / "remaining_subs.gpkg",
+        out_file=out_file,
     )
 
-    frame = capture["frame"]
+    frame = gpd.read_file(out_file)
     assert frame["gid"].tolist() == [1, 2]
     assert frame["region_id"].tolist() == ["A", "B"]
 
 
-def test_ss_from_conn_csv(monkeypatch, tmp_path):
+def test_ss_from_conn_csv(tmp_path):
     """Validate CSV extraction filters null records"""
     csv_path = tmp_path / "connections.csv"
     pd.DataFrame(
@@ -266,35 +248,36 @@ def test_ss_from_conn_csv(monkeypatch, tmp_path):
         }
     ).to_csv(csv_path, index=False)
 
-    capture = _capture_to_file(monkeypatch)
-    cli.ss_from_conn(str(csv_path), "region_id", str(tmp_path / "out.gpkg"))
+    out_file = tmp_path / "out.gpkg"
+    cli.ss_from_conn(str(csv_path), "region_id", str(out_file))
 
-    frame = capture["frame"]
-    assert capture["driver"] == "GPKG"
+    frame = gpd.read_file(out_file)
     assert len(frame) == 1
-    assert str(frame["poi_gid"].dtype) == "Int64"
+    assert pd.api.types.is_integer_dtype(frame["poi_gid"])
 
 
-def test_ss_from_conn_gpkg(monkeypatch):
+def test_ss_from_conn_gpkg(tmp_path):
     """Validate GeoPackage extraction matches CSV logic"""
 
-    data = gpd.GeoDataFrame(
+    connections = gpd.GeoDataFrame(
         {
             "poi_gid": [1],
             "poi_lat": [10.0],
             "poi_lon": [100.0],
             "region_id": ["A"],
-        }
+        },
+        geometry=[Point(100.0, 10.0)],
+        crs="EPSG:4326",
     )
 
-    def _reader(path):
-        return data.copy()
+    connections_path = tmp_path / "connections.gpkg"
+    out_file = tmp_path / "out.gpkg"
+    connections.to_file(connections_path, driver="GPKG")
 
-    monkeypatch.setattr(cli.gpd, "read_file", _reader)
-    capture = _capture_to_file(monkeypatch)
-    cli.ss_from_conn("connections.gpkg", "region_id", "out.gpkg")
+    cli.ss_from_conn(str(connections_path), "region_id", str(out_file))
 
-    assert len(capture["frame"]) == 1
+    frame = gpd.read_file(out_file)
+    assert len(frame) == 1
 
 
 def test_ss_from_conn_invalid_extension():
@@ -304,12 +287,8 @@ def test_ss_from_conn_invalid_extension():
         cli.ss_from_conn("connections.txt", "region_id", "out.gpkg")
 
 
-def test_add_rr_to_nn_with_zarr_template(monkeypatch, tmp_path, noop_to_crs):
+def test_add_rr_to_nn_with_zarr_template(tmp_path):
     """Ensure add_rr_to_nn reads CRS from Zarr template"""
-
-    network_path = tmp_path / "network.gpkg"
-    regions_path = tmp_path / "regions.gpkg"
-    template_path = tmp_path / "template.zarr"
 
     network = gpd.GeoDataFrame(
         {"value": [1, 2]},
@@ -325,50 +304,29 @@ def test_add_rr_to_nn_with_zarr_template(monkeypatch, tmp_path, noop_to_crs):
         crs="EPSG:4326",
     )
 
-    def _reader(path):
-        if Path(path) == network_path:
-            return network.copy()
-        if Path(path) == regions_path:
-            return regions.copy()
-        msg = "Unexpected read path"
-        raise AssertionError(msg)
+    network_path = tmp_path / "network.gpkg"
+    regions_path = tmp_path / "regions.gpkg"
+    template_path = tmp_path / "template.zarr"
+    out_file = tmp_path / "out.gpkg"
 
-    class _Dataset:
-        def __init__(self, crs):
-            self.rio = SimpleNamespace(crs=crs)
+    network.to_file(network_path, driver="GPKG")
+    regions.to_file(regions_path, driver="GPKG")
+    _write_template_zarr(template_path)
 
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-    monkeypatch.setattr(cli.gpd, "read_file", _reader)
-    monkeypatch.setattr(
-        cli.xr, "open_dataset", lambda *_, **__: _Dataset("EPSG:4326")
-    )
-
-    capture = _capture_to_file(monkeypatch)
     cli.add_rr_to_nn(
         network_path,
         regions_path,
         "region",
         crs_template_file=template_path,
-        out_file=tmp_path / "out.gpkg",
+        out_file=out_file,
     )
 
-    frame = capture["frame"]
+    frame = gpd.read_file(out_file)
     assert frame["region"].tolist() == ["west", "east"]
 
 
-def test_add_rr_to_nn_with_existing_region_column(
-    monkeypatch, tmp_path, noop_to_crs
-):
+def test_add_rr_to_nn_with_existing_region_column(tmp_path):
     """Validate add_rr_to_nn warns when region column exists"""
-
-    network_path = tmp_path / "network.gpkg"
-    regions_path = tmp_path / "regions.gpkg"
-    template_path = tmp_path / "template.zarr"
 
     network = gpd.GeoDataFrame(
         {"region": ["existing", "existing"]},
@@ -381,35 +339,14 @@ def test_add_rr_to_nn_with_existing_region_column(
         crs="EPSG:4326",
     )
 
-    def _reader(path):
-        if Path(path) == network_path:
-            return network.copy()
-        if Path(path) == regions_path:
-            return regions.copy()
-        msg = "Unexpected read path"
-        raise AssertionError(msg)
+    network_path = tmp_path / "network.gpkg"
+    regions_path = tmp_path / "regions.gpkg"
+    template_path = tmp_path / "template.zarr"
+    out_file = tmp_path / "out.gpkg"
 
-    class _Dataset:
-        def __init__(self, crs):
-            self.rio = SimpleNamespace(crs=crs)
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-    monkeypatch.setattr(cli.gpd, "read_file", _reader)
-    monkeypatch.setattr(
-        cli.xr, "open_dataset", lambda *_, **__: _Dataset("EPSG:4326")
-    )
-
-    written = []
-
-    def _writer(self, path, driver=None, index=True, **kwargs):
-        written.append(path)
-
-    monkeypatch.setattr(gpd.GeoDataFrame, "to_file", _writer, raising=False)
+    network.to_file(network_path, driver="GPKG")
+    regions.to_file(regions_path, driver="GPKG")
+    _write_template_zarr(template_path)
 
     with pytest.warns(revrtWarning):
         cli.add_rr_to_nn(
@@ -417,18 +354,14 @@ def test_add_rr_to_nn_with_existing_region_column(
             regions_path,
             "region",
             crs_template_file=template_path,
-            out_file=tmp_path / "out.gpkg",
+            out_file=out_file,
         )
 
-    assert not written
+    assert not out_file.exists()
 
 
-def test_add_rr_to_nn_with_tif_template(monkeypatch, tmp_path, noop_to_crs):
+def test_add_rr_to_nn_with_tif_template(tmp_path):
     """Ensure add_rr_to_nn reads CRS from GeoTIFF template"""
-
-    network_path = tmp_path / "network.gpkg"
-    regions_path = tmp_path / "regions.gpkg"
-    template_path = tmp_path / "template.tif"
 
     network = gpd.GeoDataFrame(
         {"value": [1]},
@@ -441,46 +374,29 @@ def test_add_rr_to_nn_with_tif_template(monkeypatch, tmp_path, noop_to_crs):
         crs="EPSG:4326",
     )
 
-    def _reader(path):
-        if Path(path) == network_path:
-            return network.copy()
-        if Path(path) == regions_path:
-            return regions.copy()
-        msg = "Unexpected read path"
-        raise AssertionError(msg)
+    network_path = tmp_path / "network.gpkg"
+    regions_path = tmp_path / "regions.gpkg"
+    template_path = tmp_path / "template.tif"
+    out_file = tmp_path / "out.gpkg"
 
-    class _Geo:
-        def __init__(self, crs):
-            self.rio = SimpleNamespace(crs=crs)
+    network.to_file(network_path, driver="GPKG")
+    regions.to_file(regions_path, driver="GPKG")
+    _write_template_raster(template_path)
 
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-    monkeypatch.setattr(cli.gpd, "read_file", _reader)
-    monkeypatch.setattr(
-        cli.rioxarray, "open_rasterio", lambda *_, **__: _Geo("EPSG:4326")
-    )
-
-    capture = _capture_to_file(monkeypatch)
     cli.add_rr_to_nn(
         network_path,
         regions_path,
         "region",
         crs_template_file=template_path,
-        out_file=tmp_path / "out.gpkg",
+        out_file=out_file,
     )
 
-    assert capture["frame"]["region"].tolist() == ["west"]
+    frame = gpd.read_file(out_file)
+    assert frame["region"].tolist() == ["west"]
 
 
-def test_add_rr_to_nn_default_output_path(monkeypatch, tmp_path, noop_to_crs):
+def test_add_rr_to_nn_default_output_path(tmp_path):
     """Ensure add_rr_to_nn uses default output path when omitted"""
-
-    network_path = tmp_path / "network.gpkg"
-    regions_path = tmp_path / "regions.gpkg"
 
     network = gpd.GeoDataFrame(
         {"value": [1]},
@@ -493,20 +409,16 @@ def test_add_rr_to_nn_default_output_path(monkeypatch, tmp_path, noop_to_crs):
         crs="EPSG:4326",
     )
 
-    def _reader(path):
-        if Path(path) == network_path:
-            return network.copy()
-        if Path(path) == regions_path:
-            return regions.copy()
-        msg = "Unexpected read path"
-        raise AssertionError(msg)
+    network_path = tmp_path / "network.gpkg"
+    regions_path = tmp_path / "regions.gpkg"
 
-    monkeypatch.setattr(cli.gpd, "read_file", _reader)
+    network.to_file(network_path, driver="GPKG")
+    regions.to_file(regions_path, driver="GPKG")
 
-    capture = _capture_to_file(monkeypatch)
     cli.add_rr_to_nn(network_path, regions_path, "region")
 
-    assert capture["path"] == tmp_path / "network.gpkg"
+    frame = gpd.read_file(network_path)
+    assert frame["region"].tolist() == ["west"]
 
 
 if __name__ == "__main__":
