@@ -7,7 +7,206 @@ use high-resolution geospatial layers with spatially-distinct
 or any other quantity that you may wish to study.
 
 The optimal route is always computed through a single layer, but
-this layer may be composed of several customizable components.
+this layer may be composed of several customizable components:
+**Cost Layers**, **Friction layers**, and **Barrier Layers**.
 In the following sections, we break down each of these components
 and how you can use them to build out the scenario that you are
 interested in studying.
+
+## Cost Layers
+
+Cost Layers are the core routing layer used by ``reVRt``. The
+aggregate of these layers is the main driver for the optimal
+route solution returned by the code. These layers should represent
+the total cost (dollar or otherwise) to cross a single pixel
+edge-to-edge (**not** diagonally). ``reVRt`` internally adjusts
+these cost values if the path goes diagonally through the pixel.
+
+
+### Building cost layers
+A single cost layer could be defined as follows:
+
+```JSON
+{
+    "layer_name": "my_cost_layer",
+    "multiplier_layer": "my_bool_layer",
+    "multiplier_scalar": 1.04  // adjust for inflation
+}
+```
+
+This would create a cost layer from ``"my_cost_layer"``, which would
+have a mask layer applied to it (``"my_bool_layer"``) along with a
+scalar that would adjust the costs (in this case for inflation).
+There are several more options you can include for a single layer;
+they are all documented
+[here]("https://nrel.github.io/reVRt/_cli/reVRt.html#revrt-route-points:~:text=cost_layerslist").
+
+For maximum flexibility, you can specify multiple such layers that all
+aggregate to form the final routing cost layer:
+
+```JSON
+"cost_layers": [
+    {
+        "layer_name": "my_cost_layer",
+        "multiplier_layer": "my_bool_layer",
+        "multiplier_scalar": 1.04  // adjust for inflation
+    },
+    {
+        "layer_name": "local_costs_mask",
+        "multiplier_scalar": 10000  // cost (per pixel) to route through a local town
+    },
+    ...
+]
+```
+
+Each cost layer is built independently, and they are all summed at the
+end to create the cost routing layer. Output routes strive to minimize
+the total sum of the values in this layer along the output route.
+
+### Invalid costs
+One of the restrictions of the routing algorithm is that all costs must
+be strictly positive.
+
+
+## Friction Layers
+Friction layer behave similarly to cost layers, except that **their
+contribution is not included in the output costs**. Therefore you can
+use friction layers to influence the "shape" of the final route without
+including any the friction values in the output cost.
+
+### Contribution to Routing
+Friction is added to the cost routing layer using the following equation:
+
+```math
+    R = C * (1 + F)
+```
+
+where $R$ is the final routing layer, $C$ is the cost layer built in the
+previous section, and $F$ is the built-out friction layer (see below for
+details on building a friction layer).
+
+Based on this formulation, we can see that positive friction values can
+be used to strongly discentivise routes through certain pixels. On the
+other hand, friction values near ``-1`` can be used to represent incentives
+(e.g. routing along an existing right-of-way). ``reVRt`` ensures that
+individual friction values are $\gt -1$ (i.e. $(1 + F) > 0$ is upheld),
+so the cost values themselves can never flip signs.
+
+### Building friction layers
+Friction layers are built similarly to cost layers. A single friction
+layer could be defined as follows:
+
+```JSON
+{
+    "multiplier_layer": "my_friction_region",
+    "multiplier_scalar": 10  // moderately avoid
+}
+```
+
+One major difference is that there is no ``"layer_name"`` input, since
+the friction layer itself is being multiplied onto the final cost routing
+layer (see the section above). As before, there are several more options
+you can include for a single friction layer; they are all documented
+[here]("https://nrel.github.io/reVRt/_cli/reVRt.html#revrt-route-points:~:text=friction_layerslist").
+
+For maximum flexibility, you can specify multiple friction layers that all
+aggregate to form the final friction layer:
+
+```JSON
+"friction_layers": [
+    {
+        "multiplier_layer": "my_friction_region",
+        "multiplier_scalar": 10  // moderately avoid
+    },
+    {
+        "multiplier_layer": "really_avoid_this",
+        "multiplier_scalar": 1000  // strongly discentivise
+    },
+    {
+        "multiplier_layer": "highway_mask",
+        "multiplier_scalar": -0.5  // encourage routing here
+    },
+    ...
+]
+```
+As mentioned before, the friction multiplier can be negative values in
+order to incentivize routing along certain pixels. You can specify multiple
+such layers. ``reVRt`` processes each layer individually and then aggregates
+everything to determine the final friction layer. After the aggregation, all
+friction values are clamped to be $\gt -1$, such that friction can never
+create invalid cost values in the cost layer.
+
+## Barrier Layers
+Barrier layers represent pixels that routes must not cross. Unlike frictions,
+which can be crossed with a great penalty, barrier pixels will block a route
+completely (unless you explicitly disable this using ranked barrier layers,
+as described below).
+
+### Building barrier layers
+Barrier layers are geospatial layers just like costs or frictions that are
+paired with a threshold value. Any pixel in the barrier layer at or above
+the threshold value will be treated as a barrier that cannot be crossed by
+a route. For example, this configuration:
+
+```JSON
+    {"layer_name": "slope", "threshold": 15}
+```
+
+would tell the routing algorithm that any pixels with a value $\ge 15$ in the
+``slope`` layer should be completely avoided. As with all the other layers, you
+can specify multiple barriers to be considered during routing:
+
+```JSON
+"barrier_layers": [
+    {"layer_name": "slope", "threshold": 15},
+    {"layer_name": "barrier_bool_mask", "threshold": 1},
+    ...
+]
+```
+
+You can also repeat barrier layer entires with different threshold values; this
+becomes useful when applying soft barriers.
+
+### Soft Barriers
+If a route you are interested is impossible to create because of the barrier
+layers that you have specified, ``reVRt`` will return an empty result (no route).
+Sometimes it's desirable to relax one or more barrier layer assumptions in order
+to get some sort of route result.
+
+To do this, ``reVRt`` allows you to rank barriers by importance. When a route
+can not be determined, ``reVRt`` will drop the lowest-ranking barrier layer and
+attempt to re-compute the route. This process is repeated until a route is found
+or all barrier layers with a rank have been dropped.
+
+To specify that a layer can be dropped in order to compute a route (i.e. a soft
+barrier), you have to provide a ``barrier_importance`` ranking, like so:
+
+```JSON
+"barrier_layers": [
+    {"layer_name": "slope", "threshold": 15, "barrier_importance": 10},
+    {"layer_name": "barrier_bool_mask", "threshold": 1, "barrier_importance": 1},
+    ...
+]
+```
+
+With the configuration above, ``reVRt`` will first attempt to compute a route by
+applying both ``slope`` and ``barrier_bool_mask`` barriers. If a route cannot be
+determined, the ``barrier_bool_mask`` layer will be dropped, since it ranks lower
+than the ``slope`` layer. If a route is still not found with only the ``slope``
+barrier, it will be dropped as well.
+
+You can also specify that a barrier should never be dropped by leaving out the
+``barrier_importance`` key altogether. This can be combined with soft barriers:
+
+```JSON
+"barrier_layers": [
+    {"layer_name": "slope", "threshold": 15, "barrier_importance": 10},
+    {"layer_name": "barrier_bool_mask", "threshold": 1, "barrier_importance": 1},
+    {"layer_name": "important_barrier", "threshold": 0},
+    ...
+]
+```
+
+With this configuration, ``reVRt`` will drop the ``slope`` and ``barrier_bool_mask``
+layers to try to find a route, but will always keep the ``important_barrier`` layer
+as a barrier.
