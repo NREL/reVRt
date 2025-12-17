@@ -90,23 +90,33 @@ def test_layers_from_file_selects_specific_layers(tmp_path):
             assert compress.lower() == "lzw"
 
 
-def test_layers_from_file_extracts_all_layers(monkeypatch, tmp_path):
+def test_layers_from_file_extracts_all_layers(tmp_path):
     """Ensure layers_from_file calls extract_all_layers when needed"""
 
-    expected = {"one": tmp_path / "one.tif"}
+    template = tmp_path / "template.tif"
+    _write_template_raster(template)
 
-    class DummyLayeredFile:
-        def __init__(self, path):
-            self.path = path
+    layered_path = tmp_path / "input.zarr"
+    layered = LayeredFile(layered_path)
+    layered.create_new(template, overwrite=True, chunk_x=1, chunk_y=1)
 
-        def extract_all_layers(self, out_dir, **kwargs):
-            assert out_dir == tmp_path
-            assert not kwargs
-            return expected
+    values = {"one": 1, "two": 3}
+    for layer, fill_value in values.items():
+        data = np.full((1, 1, 1), fill_value, dtype=np.uint8)
+        layered.write_layer(data, layer)
 
-    monkeypatch.setattr(cli, "LayeredFile", DummyLayeredFile)
-    result = cli.layers_from_file("input.zarr", tmp_path)
-    assert result == [str(tmp_path / "one.tif")]
+    result = cli.layers_from_file(layered_path, tmp_path)
+
+    expected_paths = {layer: tmp_path / f"{layer}.tif" for layer in values}
+    assert sorted(result) == sorted(
+        str(path) for path in expected_paths.values()
+    )
+
+    for layer, fill_value in values.items():
+        tif_path = expected_paths[layer]
+        assert tif_path.exists()
+        with rasterio.open(tif_path) as dataset:
+            assert dataset.read(1)[0, 0] == fill_value
 
 
 def test_preprocess_layers_from_file_config(tmp_path):
