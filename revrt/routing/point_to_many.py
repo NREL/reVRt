@@ -81,7 +81,12 @@ class RoutingScenario:
     @cached_property
     def cl_as_json(self):
         """str: JSON string describing configured cost layers"""
-        return json.dumps({"cost_layers": list(self._all_layers_for_rust())})
+        return json.dumps(
+            {
+                "cost_layers": list(self._all_layers_for_rust()),
+                "ignore_null_costs": self.use_hard_barrier,
+            }
+        )
 
     def _all_layers_for_rust(self):
         """Cost and friction layers formatted for Rust ingestion"""
@@ -634,7 +639,6 @@ def _compute_valid_path(
             cost_layers=routing_scenario.cl_as_json,
             start=[start_point],
             end=end_points,
-            use_hard_barrier=routing_scenario.use_hard_barrier,
         )
     except Exception as ex:
         msg = (

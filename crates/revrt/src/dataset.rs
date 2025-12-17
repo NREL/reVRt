@@ -816,7 +816,7 @@ mod tests {
         let results = dataset.get_3x3(&ArrayIndex { i: 1, j: 1 });
         assert!(
             results.is_empty(),
-            "Found data with `use_hard_barrier=true`"
+            "Found data with `ignore_null_costs=true`"
         );
     }
 
