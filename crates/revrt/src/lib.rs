@@ -71,7 +71,7 @@ pub fn bench_minimalist(
             {"layer_name": "A", "multiplier_layer": "B"},
             {"layer_name": "C", "multiplier_layer": "A", "multiplier_scalar": 2}
             ],
-        "ignore_null_costs": true
+        "ignore_invalid_costs": true
     }"#
     .to_string();
     let cost_function = CostFunction::from_json(&cost_json).unwrap();
@@ -138,7 +138,7 @@ mod tests {
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(1.0);
         let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_null_costs": true}"#,
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
         )
         .unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
@@ -161,7 +161,7 @@ mod tests {
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(1.0);
         let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_null_costs": true}"#,
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
         )
         .unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
@@ -192,7 +192,7 @@ mod tests {
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(cost_array_fill);
         let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_null_costs": true}"#,
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
         )
         .unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
@@ -221,7 +221,7 @@ mod tests {
     fn routing_many_to_many() {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
         let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_null_costs": true}"#,
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
         )
         .unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
@@ -255,7 +255,7 @@ mod tests {
     fn routing_many_to_one() {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
         let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_null_costs": true}"#,
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
         )
         .unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
@@ -327,7 +327,7 @@ mod tests {
             .unwrap();
 
         let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_null_costs": true}"#,
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
         )
         .unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();

@@ -84,7 +84,7 @@ class RoutingScenario:
         return json.dumps(
             {
                 "cost_layers": list(self._all_layers_for_rust()),
-                "ignore_null_costs": self.ignore_invalid_costs,
+                "ignore_invalid_costs": self.ignore_invalid_costs,
             }
         )
 

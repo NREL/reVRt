@@ -33,7 +33,7 @@ def validate_single_var(data, start, end, tmp_path):
 
     cost_definition = {
         "cost_layers": [{"layer_name": "test_costs"}],
-        "ignore_null_costs": True,
+        "ignore_invalid_costs": True,
     }
     results = find_paths(
         zarr_fp=test_cost_fp,

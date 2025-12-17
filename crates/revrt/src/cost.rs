@@ -21,7 +21,7 @@ type CostArray = ndarray::Array<f32, ndarray::Dim<ndarray::IxDynImpl>>;
 pub(crate) struct CostFunction {
     cost_layers: Vec<CostLayer>,
     /// Option to completely ignore <=0 cost cells
-    pub(crate) ignore_null_costs: bool,
+    pub(crate) ignore_invalid_costs: bool,
 }
 
 #[derive(Builder, Clone, Debug, serde::Deserialize)]
@@ -232,7 +232,7 @@ pub(crate) mod sample {
                 {"layer_name": "C", "multiplier_scalar": 100,
                     "is_invariant": true}
             ],
-            "ignore_null_costs": true
+            "ignore_invalid_costs": true
         }
         "#
         .to_string()
@@ -328,7 +328,7 @@ mod test {
             "cost_layers": [
                 {"multiplier_layer": "B", "multiplier_scalar": -3.0}
             ],
-            "ignore_null_costs": true
+            "ignore_invalid_costs": true
         }
         "#;
 
@@ -354,7 +354,7 @@ mod test {
                 {"layer_name": "A"},
                 {"multiplier_layer": "B", "multiplier_scalar": -3.0}
             ],
-            "ignore_null_costs": true
+            "ignore_invalid_costs": true
         }
         "#;
 

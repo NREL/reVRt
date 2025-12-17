@@ -39,7 +39,7 @@ def test_basic_single_route(tmp_path):
 
     cost_definition = {
         "cost_layers": [{"layer_name": "test_costs"}],
-        "ignore_null_costs": True,
+        "ignore_invalid_costs": True,
     }
     results = find_paths(
         zarr_fp=test_cost_fp,

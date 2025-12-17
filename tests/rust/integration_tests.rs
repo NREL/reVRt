@@ -15,7 +15,7 @@ fn basic_routing_in_data() {
         layers_path.to_str().expect("test data path is valid UTF-8"),
         r#"{
             "cost_layers": [{"layer_name": "tie_line_costs_102MW"}],
-            "ignore_null_costs": true
+            "ignore_invalid_costs": true
         }"#,
         250_000_000,
         std::slice::from_ref(start),
