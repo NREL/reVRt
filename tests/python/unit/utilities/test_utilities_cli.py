@@ -53,32 +53,41 @@ def _write_template_zarr(path):
     template_tif.unlink(missing_ok=True)
 
 
-def test_layers_from_file_selects_specific_layers(monkeypatch, tmp_path):
+def test_layers_from_file_selects_specific_layers(tmp_path):
     """Ensure layers_from_file extracts chosen layers"""
 
-    recorded = {}
+    template = tmp_path / "template.tif"
+    _write_template_raster(template)
 
-    class DummyLayeredFile:
-        def __init__(self, path):
-            recorded["path"] = path
+    layered_path = tmp_path / "input.zarr"
+    layered = LayeredFile(layered_path)
+    layered.create_new(template, overwrite=True, chunk_x=1, chunk_y=1)
 
-        def extract_layers(self, layer_map, **kwargs):
-            recorded["layers"] = layer_map
-            recorded["kwargs"] = kwargs
+    values = {
+        "alpha": np.ones((1, 1, 1), dtype=np.uint8),
+        "beta": np.full((1, 1, 1), 2, dtype=np.uint8),
+    }
+    for layer, data in values.items():
+        layered.write_layer(data, layer)
 
-    monkeypatch.setattr(cli, "LayeredFile", DummyLayeredFile)
+    layers_to_extract = list(values)
     result = cli.layers_from_file(
-        "input.zarr",
+        layered_path,
         tmp_path,
-        layers=["alpha", "beta"],
+        layers=layers_to_extract,
         profile_kwargs={"compress": "LZW"},
     )
 
-    assert recorded["path"] == "input.zarr"
-    assert recorded["layers"]["alpha"] == tmp_path / "alpha.tif"
-    assert recorded["kwargs"] == {"compress": "LZW"}
+    expected = [tmp_path / f"{layer}.tif" for layer in layers_to_extract]
+    assert result == [str(path) for path in expected]
 
-    assert result == [str(tmp_path / "alpha.tif"), str(tmp_path / "beta.tif")]
+    for layer, expected_value in zip(layers_to_extract, (1, 2), strict=True):
+        tif_path = tmp_path / f"{layer}.tif"
+        assert tif_path.exists()
+        with rasterio.open(tif_path) as dataset:
+            assert dataset.read(1)[0, 0] == expected_value
+            compress = dataset.profile.get("compress", "")
+            assert compress.lower() == "lzw"
 
 
 def test_layers_from_file_extracts_all_layers(monkeypatch, tmp_path):
