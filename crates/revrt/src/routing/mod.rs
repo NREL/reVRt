@@ -26,9 +26,8 @@ impl Routing {
         store_path: P,
         cost_function: crate::cost::CostFunction,
         cache_size: u64,
-        use_hard_barrier: bool,
     ) -> Result<Self> {
-        let scenario = Scenario::new(store_path, cost_function, cache_size, use_hard_barrier)?;
+        let scenario = Scenario::new(store_path, cost_function, cache_size)?;
 
         Ok(Self {
             scenario,

@@ -20,6 +20,8 @@ type CostArray = ndarray::Array<f32, ndarray::Dim<ndarray::IxDynImpl>>;
 /// layers that are summed together (per grid point) to give the total cost.
 pub(crate) struct CostFunction {
     cost_layers: Vec<CostLayer>,
+    /// Option to completely ignore <=0 cost cells
+    pub(crate) ignore_null_costs: bool,
 }
 
 #[derive(Builder, Clone, Debug, serde::Deserialize)]
@@ -229,7 +231,8 @@ pub(crate) mod sample {
                     "multiplier_layer": "A"},
                 {"layer_name": "C", "multiplier_scalar": 100,
                     "is_invariant": true}
-            ]
+            ],
+            "ignore_null_costs": true
         }
         "#
         .to_string()
@@ -324,7 +327,8 @@ mod test {
         {
             "cost_layers": [
                 {"multiplier_layer": "B", "multiplier_scalar": -3.0}
-            ]
+            ],
+            "ignore_null_costs": true
         }
         "#;
 
@@ -349,7 +353,8 @@ mod test {
             "cost_layers": [
                 {"layer_name": "A"},
                 {"multiplier_layer": "B", "multiplier_scalar": -3.0}
-            ]
+            ],
+            "ignore_null_costs": true
         }
         "#;
 

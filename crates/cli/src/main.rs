@@ -67,7 +67,6 @@ fn main() {
         250_000_000,
         &[start],
         end,
-        true,
     )
     .unwrap();
     println!("Results: {:?}", result);

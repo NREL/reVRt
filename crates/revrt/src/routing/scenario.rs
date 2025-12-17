@@ -30,17 +30,11 @@ impl Scenario {
         store_path: P,
         cost_function: crate::cost::CostFunction,
         cache_size: u64,
-        use_hard_barrier: bool,
     ) -> Result<Self> {
         trace!("Opening scenario with: {:?}", store_path.as_ref());
 
         let features = Features::new(&store_path)?;
-        let dataset = crate::dataset::Dataset::open(
-            store_path,
-            cost_function.clone(),
-            cache_size,
-            use_hard_barrier,
-        )?;
+        let dataset = crate::dataset::Dataset::open(store_path, cost_function.clone(), cache_size)?;
 
         Ok(Self {
             dataset,
