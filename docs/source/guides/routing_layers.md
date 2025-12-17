@@ -65,8 +65,8 @@ the total sum of the values in this layer along the output route.
 
 ### Invalid costs
 One of the restrictions of the routing algorithm is that all costs must
-be strictly positive. Negative or zero costs are not allowed (we call them
-"invalid" costs).
+be strictly positive. Negative, zero, or NaN costs are not allowed (we
+call them "invalid" costs).
 
 In an ideal world, all the input cost data would have values $\gt 0$ to
 satisfy this requirement. Unfortunately, real-world data is rarely
