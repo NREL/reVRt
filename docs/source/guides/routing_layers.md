@@ -65,7 +65,29 @@ the total sum of the values in this layer along the output route.
 
 ### Invalid costs
 One of the restrictions of the routing algorithm is that all costs must
-be strictly positive.
+be strictly positive. Negative or zero costs are not allowed (we call them
+"invalid" costs).
+
+In an ideal world, all the input cost data would have values $\gt 0$ to
+satisfy this requirement. Unfortunately, real-world data is rarely
+comprehensive enough to have a valid cost estimate across an entire domain.
+This problem is particularly amplified when working with high-resolution data
+across a large extent like CONUS.
+
+To reduce headaches for users, ``reVRt`` has two options to handle cost values
+$\leq 0$. The first (and default) option is to ignore these cells entirely. This
+means routes cannot pass through them (they act as a quasi-barrier, but within
+the cost layer itself). This is likely the behavior that the vast majority of
+users will want, since these "invalid" costs often occur at the edge of the
+domain anyways.
+
+Sometimes, however, the presence of invalid costs can prevent a route from being
+completed (imagine a start point completely surrounded by invalid costs, either
+locally or further into the domain). In these rare cases, it might be useful to
+allow routes to be formed over the invalid costs in order to get any result back.
+In this cases, users may specify ``ignore_invalid_costs: false`` in their
+configuration, and ``reVRt`` will allow routes to pass over these invalid cost
+pixels, minimizing the route's exposure to them.
 
 
 ## Friction Layers
