@@ -1,4 +1,4 @@
-# Routing Layer Concepts
+# Routing Layer Concept Model
 
 ``reVRt`` is designed to help you compute an "optimal" route from
 ``A`` to ``B``. To define what we mean by ``optimal``, we use
