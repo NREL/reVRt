@@ -1,6 +1,10 @@
 """Tests for CLI utility commands"""
 
+import csv
 import json
+import os
+import platform
+import traceback
 from pathlib import Path
 
 import pytest
@@ -8,13 +12,24 @@ import rasterio
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+import rioxarray
+import xarray as xr
 from rasterio.transform import from_origin
 from shapely.geometry import LineString, Point, Polygon
 
-from revrt.exceptions import revrtValueError
+from revrt._cli import main
 from revrt.utilities import cli
+from revrt.exceptions import revrtValueError
 from revrt.utilities.handlers import LayeredFile
 from revrt.warn import revrtWarning
+
+
+def _cli_error_message(result):
+    """Return CLI error message for assertion context"""
+
+    if not result.exc_info:
+        return ""
+    return "".join(traceback.format_exception(*result.exc_info))
 
 
 def _write_template_raster(path):
@@ -434,6 +449,338 @@ def test_add_rr_to_nn_default_output_path(tmp_path):
 
     frame = gpd.read_file(network_path)
     assert frame["region"].tolist() == ["west"]
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_layers_to_file_command(cli_runner, tmp_path, sample_tiff_fp):
+    """Ensure layers-to-file CLI writes expected layers"""
+
+    doubled_tiff = tmp_path / "sample_doubled.tif"
+    with rioxarray.open_rasterio(sample_tiff_fp) as base:
+        doubled = base.copy()
+        doubled.values = base.values * 2
+        doubled.rio.to_raster(doubled_tiff)
+
+    out_file_fp = tmp_path / "cli_layers.zarr"
+    config = {
+        "fp": str(out_file_fp),
+        "layers": {
+            "sample": str(sample_tiff_fp),
+            "double": str(doubled_tiff),
+        },
+    }
+
+    config_path = tmp_path / "config_layers_to_file.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    result = cli_runner.invoke(
+        main, ["layers-to-file", "-c", str(config_path)]
+    )
+    msg = f"Failed with error {_cli_error_message(result)}"
+    assert result.exit_code == 0, msg
+
+    with (
+        xr.open_dataset(out_file_fp, consolidated=False, engine="zarr") as ds,
+        rioxarray.open_rasterio(sample_tiff_fp) as sample_da,
+        rioxarray.open_rasterio(doubled_tiff) as double_da,
+    ):
+        assert "sample" in ds
+        assert "double" in ds
+        assert ds["sample"].rio.crs == sample_da.rio.crs
+        assert ds["double"].rio.crs == double_da.rio.crs
+        assert ds["sample"].rio.transform() == sample_da.rio.transform()
+        assert ds["double"].rio.transform() == double_da.rio.transform()
+        assert np.allclose(ds["sample"].values, sample_da.values)
+        assert np.allclose(ds["double"].values, double_da.values)
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_layers_from_file_command(cli_runner, tmp_path, sample_tiff_fp):
+    """Ensure layers-from-file CLI extracts expected GeoTIFFs"""
+
+    doubled_tiff = tmp_path / "sample_doubled.tif"
+    with rioxarray.open_rasterio(sample_tiff_fp) as base:
+        doubled = base.copy()
+        doubled.values = base.values * 2
+        doubled.rio.to_raster(doubled_tiff)
+
+    layered_fp = tmp_path / "source_layers.zarr"
+    layered = LayeredFile(layered_fp)
+    layered.create_new(sample_tiff_fp, overwrite=True)
+    layered.write_geotiff_to_file(str(sample_tiff_fp), "sample")
+    layered.write_geotiff_to_file(str(doubled_tiff), "double")
+
+    out_dir = tmp_path / "layer_outputs"
+    config = {
+        "fp": str(layered_fp),
+        "out_layer_dir": str(out_dir),
+    }
+
+    config_path = tmp_path / "config_layers_from_file.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    result = cli_runner.invoke(
+        main, ["layers-from-file", "-c", str(config_path)]
+    )
+    msg = f"Failed with error {_cli_error_message(result)}"
+    assert result.exit_code == 0, msg
+
+    sample_tiff = out_dir / "sample.tif"
+    double_tiff = out_dir / "double.tif"
+    assert sample_tiff.exists()
+    assert double_tiff.exists()
+
+    with (
+        rioxarray.open_rasterio(sample_tiff_fp) as sample_da,
+        rioxarray.open_rasterio(doubled_tiff) as double_da_src,
+        rioxarray.open_rasterio(sample_tiff) as sample_out,
+        rioxarray.open_rasterio(double_tiff) as double_out,
+    ):
+        assert np.allclose(sample_out.values, sample_da.values)
+        assert np.allclose(double_out.values, double_da_src.values)
+        assert sample_out.rio.transform() == sample_da.rio.transform()
+        assert double_out.rio.transform() == double_da_src.rio.transform()
+        assert sample_out.rio.crs == sample_da.rio.crs
+        assert double_out.rio.crs == double_da_src.rio.crs
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_convert_pois_to_lines_command(
+    cli_runner, tmp_path, sample_tiff_fp
+):
+    """Ensure convert-pois-to-lines CLI creates GeoPackage"""
+
+    poi_rows = [
+        {
+            "POI Name": "alpha",
+            "State": "CO",
+            "Voltage (kV)": 230,
+            "Lat": 35.0,
+            "Long": -110.0,
+        },
+        {
+            "POI Name": "beta",
+            "State": "NM",
+            "Voltage (kV)": 345,
+            "Lat": 36.0,
+            "Long": -109.0,
+        },
+    ]
+
+    poi_csv = tmp_path / "poi.csv"
+    with poi_csv.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=[
+                "POI Name",
+                "State",
+                "Voltage (kV)",
+                "Lat",
+                "Long",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(poi_rows)
+
+    out_gpkg = tmp_path / "pois.gpkg"
+    config = {
+        "poi_csv_f": str(poi_csv),
+        "template_f": str(sample_tiff_fp),
+        "out_f": str(out_gpkg),
+    }
+
+    config_path = tmp_path / "config_convert_pois.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    result = cli_runner.invoke(
+        main, ["convert-pois-to-lines", "-c", str(config_path)]
+    )
+    msg = f"Failed with error {_cli_error_message(result)}"
+    assert result.exit_code == 0, msg
+    assert out_gpkg.exists()
+
+    pois = gpd.read_file(out_gpkg).sort_values("gid").reset_index(drop=True)
+    assert pois.crs and pois.crs.to_string().upper() == "EPSG:4326"
+    assert pois["POI Name"].tolist() == ["alpha", "beta", "fake"]
+    assert pois["category"].tolist() == [
+        "Substation",
+        "Substation",
+        "TransLine",
+    ]
+    assert int(pois.loc[0, "Voltage (kV)"]) == 230
+    assert int(pois.loc[1, "Voltage (kV)"]) == 345
+    assert pd.isna(pois.loc[2, "Voltage (kV)"])
+    assert int(pois.loc[2, "gid"]) == 9999
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_map_ss_to_rr_command(cli_runner, tmp_path):
+    """Ensure map-ss-to-rr CLI filters and maps regions"""
+
+    features = gpd.GeoDataFrame(
+        {
+            "category": ["Substation", "Substation", "Line", "Line"],
+            "gid": [1, 2, 10, 11],
+            "trans_gids": [
+                json.dumps([10]),
+                json.dumps([11]),
+                None,
+                None,
+            ],
+            "voltage": [0, 0, 230, 34],
+        },
+        geometry=[
+            Point(0.0, 0.0),
+            Point(5.0, 0.0),
+            LineString([(0.0, 0.0), (0.0, 1.0)]),
+            LineString([(5.0, 0.0), (5.0, 1.0)]),
+        ],
+        crs="EPSG:4326",
+    )
+    regions = gpd.GeoDataFrame(
+        {"region_id": ["A", "B"]},
+        geometry=[
+            Polygon([(-1, -1), (-1, 1), (1, 1), (1, -1)]),
+            Polygon([(4, -1), (4, 1), (6, 1), (6, -1)]),
+        ],
+        crs="EPSG:4326",
+    )
+
+    features_path = tmp_path / "features.gpkg"
+    regions_path = tmp_path / "regions.gpkg"
+    out_path = tmp_path / "mapped_subs.gpkg"
+    features.to_file(features_path, driver="GPKG")
+    regions.to_file(regions_path, driver="GPKG")
+
+    config = {
+        "features_fpath": str(features_path),
+        "regions_fpath": str(regions_path),
+        "region_identifier_column": "region_id",
+        "minimum_substation_voltage_kv": 100,
+        "out_file": str(out_path),
+    }
+
+    config_path = tmp_path / "config_map_ss.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    result = cli_runner.invoke(main, ["map-ss-to-rr", "-c", str(config_path)])
+    msg = f"Failed with error {_cli_error_message(result)}"
+    assert result.exit_code == 0, msg
+    assert out_path.exists()
+
+    mapped = gpd.read_file(out_path)
+    assert mapped["gid"].tolist() == [1]
+    assert mapped["region_id"].tolist() == ["A"]
+    assert mapped.loc[0, "min_volts"] == 230
+    assert mapped.loc[0, "max_volts"] == 230
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_ss_from_conn_command(cli_runner, tmp_path):
+    """Ensure ss-from-conn CLI extracts substations"""
+
+    csv_path = tmp_path / "connections.csv"
+    pd.DataFrame(
+        {
+            "poi_gid": [1, 1, np.nan],
+            "poi_lat": [10.0, 10.0, 40.0],
+            "poi_lon": [100.0, 100.0, 120.0],
+            "region_id": ["A", "A", "B"],
+        }
+    ).to_csv(csv_path, index=False)
+
+    out_path = tmp_path / "subs.gpkg"
+    config = {
+        "connections_fpath": str(csv_path),
+        "region_identifier_column": "region_id",
+        "out_file": str(out_path),
+    }
+
+    config_path = tmp_path / "config_ss_from_conn.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    result = cli_runner.invoke(main, ["ss-from-conn", "-c", str(config_path)])
+    msg = f"Failed with error {_cli_error_message(result)}"
+    assert result.exit_code == 0, msg
+    assert out_path.exists()
+
+    subs = gpd.read_file(out_path)
+    assert len(subs) == 1
+    assert subs.loc[0, "poi_gid"] == 1
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_add_rr_to_nn_command(cli_runner, tmp_path, sample_tiff_fp):
+    """Ensure add-rr-to-nn CLI annotates network nodes"""
+
+    network = gpd.GeoDataFrame(
+        {"value": [1, 2]},
+        geometry=[Point(0.0, 0.0), Point(10.0, 0.0)],
+        crs="EPSG:4326",
+    )
+    regions = gpd.GeoDataFrame(
+        {"region": ["west", "east"]},
+        geometry=[
+            Polygon([(-1, -1), (-1, 1), (1, 1), (1, -1)]),
+            Polygon([(9, -1), (9, 1), (11, 1), (11, -1)]),
+        ],
+        crs="EPSG:4326",
+    )
+
+    network_path = tmp_path / "network.gpkg"
+    regions_path = tmp_path / "regions.gpkg"
+    out_path = tmp_path / "network_with_regions.gpkg"
+    network.to_file(network_path, driver="GPKG")
+    regions.to_file(regions_path, driver="GPKG")
+
+    config = {
+        "network_nodes_fpath": str(network_path),
+        "regions_fpath": str(regions_path),
+        "region_identifier_column": "region",
+        "crs_template_file": str(sample_tiff_fp),
+        "out_file": str(out_path),
+    }
+
+    config_path = tmp_path / "config_add_rr.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    result = cli_runner.invoke(main, ["add-rr-to-nn", "-c", str(config_path)])
+    msg = f"Failed with error {_cli_error_message(result)}"
+    assert result.exit_code == 0, msg
+    assert out_path.exists()
+
+    nodes = gpd.read_file(out_path).sort_values("value").reset_index(drop=True)
+    assert nodes["region"].tolist() == ["west", "east"]
 
 
 if __name__ == "__main__":
