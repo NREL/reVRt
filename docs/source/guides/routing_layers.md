@@ -166,12 +166,13 @@ as described below).
 
 ### Building barrier layers
 Barrier layers are geospatial layers just like costs or frictions that are
-paired with a threshold value. Any pixel in the barrier layer at or above
-the threshold value will be treated as a barrier that cannot be crossed by
-a route. For example, this configuration:
+paired with a definition of what values should act as the barrier (the standard
+comparison operators are allowed: ``>``, ``>=``, ``<``, ``<=``, ``==``). Any
+pixel with a value that satisfies the comparison operator will be treated as a
+barrier that cannot be crossed by a route. For example, this configuration:
 
 ```JSON
-    {"layer_name": "slope", "threshold": 15}
+    {"layer_name": "slope", "barrier_values": ">=15"}
 ```
 
 would tell the routing algorithm that any pixels with a value $\ge 15$ in the
@@ -180,13 +181,13 @@ can specify multiple barriers to be considered during routing:
 
 ```JSON
 "barrier_layers": [
-    {"layer_name": "slope", "threshold": 15},
-    {"layer_name": "barrier_bool_mask", "threshold": 1},
+    {"layer_name": "slope", "barrier_values": ">=15"},
+    {"layer_name": "barrier_bool_mask", "barrier_values": "==1"},
     ...
 ]
 ```
 
-You can also repeat barrier layer entires with different threshold values; this
+You can also repeat barrier layer entires with different barrier values; this
 becomes useful when applying soft barriers.
 
 ### Soft Barriers
@@ -205,8 +206,8 @@ barrier), you have to provide a ``barrier_importance`` ranking, like so:
 
 ```JSON
 "barrier_layers": [
-    {"layer_name": "slope", "threshold": 15, "barrier_importance": 10},
-    {"layer_name": "barrier_bool_mask", "threshold": 1, "barrier_importance": 1},
+    {"layer_name": "slope", "barrier_values": ">=15", "barrier_importance": 10},
+    {"layer_name": "barrier_bool_mask", "barrier_values": "==1", "barrier_importance": 1},
     ...
 ]
 ```
@@ -222,9 +223,9 @@ You can also specify that a barrier should never be dropped by leaving out the
 
 ```JSON
 "barrier_layers": [
-    {"layer_name": "slope", "threshold": 15, "barrier_importance": 10},
-    {"layer_name": "barrier_bool_mask", "threshold": 1, "barrier_importance": 1},
-    {"layer_name": "important_barrier", "threshold": 0},
+    {"layer_name": "slope", "barrier_values": ">=15", "barrier_importance": 10},
+    {"layer_name": "barrier_bool_mask", "barrier_values": "==1", "barrier_importance": 1},
+    {"layer_name": "important_barrier", "barrier_values": "<0.5"},
     ...
 ]
 ```
