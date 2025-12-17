@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765928803143,
+  "lastUpdate": 1765933534070,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2519,6 +2519,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 399744061,
             "range": "± 5524159",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3e6030327a200e5cfe99bc6329aa702a22da7bd7",
+          "message": "Build(deps): Bump actions/cache from 4 to 5 (#178)\n\nBumps [actions/cache](https://github.com/actions/cache) from 4 to 5.\n- [Release notes](https://github.com/actions/cache/releases)\n- [Changelog](https://github.com/actions/cache/blob/main/RELEASES.md)\n- [Commits](https://github.com/actions/cache/compare/v4...v5)\n\n---\nupdated-dependencies:\n- dependency-name: actions/cache\n  dependency-version: '5'\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-12-16T17:54:41-07:00",
+          "tree_id": "30c6d1fdc5a391ebc6a0af5316ce58dfaecebabf",
+          "url": "https://github.com/NREL/reVRt/commit/3e6030327a200e5cfe99bc6329aa702a22da7bd7"
+        },
+        "date": 1765933533402,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 146531114,
+            "range": "± 2560035",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 143968197,
+            "range": "± 2094773",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 255536257,
+            "range": "± 15320749",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 346525263,
+            "range": "± 17350562",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 666896272,
+            "range": "± 16346652",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 152660217,
+            "range": "± 2259704",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 156110784,
+            "range": "± 1369279",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170269025,
+            "range": "± 1250032",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 220664396,
+            "range": "± 3887997",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 397483987,
+            "range": "± 10962346",
             "unit": "ns/iter"
           }
         ]
