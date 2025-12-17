@@ -489,12 +489,12 @@ def region_mapper(regions, region_identifier_column):
     """Generate a function to map points to a region
 
     The returned mapping function maps a point to a unique value from
-    the `region_identifier_column` column in the input GeoPackage.
+    the `region_identifier_column` column in the input GeoDataFrame.
 
     Parameters
     ----------
-    regions : gpd.GeoPackage
-        GeoPackage defining the regions. This table must
+    regions : geopandas.GeoDataFrame
+        GeoDataFrame defining the regions. This table must
         have a `region_identifier_column` column which uniquely
         identifies the region, as well as a geometry for each region.
     """
