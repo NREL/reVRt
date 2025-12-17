@@ -313,7 +313,7 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
         cost_multiplier_scalar=1,
         friction_layers=[{"mask": "layer_2", "apply_row_mult": True}],
         tracked_layers={"layer_3": "max"},
-        use_hard_barrier=True,
+        ignore_invalid_costs=True,
     )
 
     assert len(saved_calls) == 1

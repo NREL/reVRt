@@ -57,15 +57,15 @@ def sample_large_layered_data(tmp_path_factory):
     return layered_fp
 
 
-@pytest.mark.parametrize("use_hard_barrier", [True, False])
+@pytest.mark.parametrize("ignore_invalid_costs", [True, False])
 def test_soft_barrier_with_large_dataset(
-    sample_large_layered_data, use_hard_barrier
+    sample_large_layered_data, ignore_invalid_costs
 ):
     """Test that soft barriers work as expected in point-to-many routing"""
     scenario = RoutingScenario(
         cost_fpath=sample_large_layered_data,
         cost_layers=[{"layer_name": "layer_1"}],
-        use_hard_barrier=use_hard_barrier,
+        ignore_invalid_costs=ignore_invalid_costs,
     )
 
     output = find_all_routes(
@@ -75,7 +75,7 @@ def test_soft_barrier_with_large_dataset(
         ],
         save_paths=True,
     )
-    if use_hard_barrier:
+    if ignore_invalid_costs:
         assert isinstance(output, list)
         assert not output
     else:

@@ -1513,7 +1513,7 @@ def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
     hard_scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
         cost_layers=[{"layer_name": "layer_1"}],
-        use_hard_barrier=True,
+        ignore_invalid_costs=True,
     )
     hard_layers = RoutingLayers(hard_scenario).build()
     try:
@@ -1526,7 +1526,7 @@ def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
     soft_scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
         cost_layers=[{"layer_name": "layer_1"}],
-        use_hard_barrier=False,
+        ignore_invalid_costs=False,
     )
     soft_layers = RoutingLayers(soft_scenario).build()
     try:
@@ -1540,13 +1540,13 @@ def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
         soft_layers.close()
 
 
-@pytest.mark.parametrize("use_hard_barrier", [True, False])
-def test_soft_barrier(sample_layered_data, use_hard_barrier):
+@pytest.mark.parametrize("ignore_invalid_costs", [True, False])
+def test_soft_barrier(sample_layered_data, ignore_invalid_costs):
     """Test that soft barriers work as expected in point-to-many routing"""
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
         cost_layers=[{"layer_name": "layer_7"}],
-        use_hard_barrier=use_hard_barrier,
+        ignore_invalid_costs=ignore_invalid_costs,
     )
 
     output = find_all_routes(
@@ -1556,7 +1556,7 @@ def test_soft_barrier(sample_layered_data, use_hard_barrier):
         ],
         save_paths=True,
     )
-    if use_hard_barrier:
+    if ignore_invalid_costs:
         assert isinstance(output, list)
         assert not output
     else:
