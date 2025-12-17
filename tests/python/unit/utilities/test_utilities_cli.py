@@ -1,14 +1,14 @@
 """Tests for CLI utility commands"""
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 import pytest
-import geopandas as gpd
+import rasterio
 import numpy as np
 import pandas as pd
-import rasterio
 import xarray as xr
+import geopandas as gpd
 from rasterio.transform import from_origin
 from shapely.geometry import LineString, Point, Polygon
 
