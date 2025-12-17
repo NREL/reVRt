@@ -7,13 +7,13 @@ import pytest
 import rasterio
 import numpy as np
 import pandas as pd
-import xarray as xr
 import geopandas as gpd
 from rasterio.transform import from_origin
 from shapely.geometry import LineString, Point, Polygon
 
 from revrt.exceptions import revrtValueError
 from revrt.utilities import cli
+from revrt.utilities.handlers import LayeredFile
 from revrt.warn import revrtWarning
 
 
@@ -37,24 +37,20 @@ def _write_template_raster(path):
 
 def _write_template_zarr(path):
     """Helper function to write a template Zarr file for tests"""
-    data = xr.DataArray(
-        np.zeros((1, 2, 2), dtype=np.uint8),
-        coords={"band": [1], "y": [1.0, 0.0], "x": [0.0, 1.0]},
-        dims=("band", "y", "x"),
-        name="layer",
+    template_tif = Path(path).with_suffix(".tif")
+    _write_template_raster(template_tif)
+    layered = LayeredFile(path)
+    layered.create_new(
+        template_tif,
+        overwrite=True,
+        chunk_x=1,
+        chunk_y=1,
     )
-    data = data.rio.write_crs("EPSG:4326")
-    data = data.rio.write_transform(from_origin(0, 2, 1, 1))
-    data = data.rio.set_spatial_dims(x_dim="x", y_dim="y")
-    data = data.rio.write_coordinate_system()
-    dataset = data.to_dataset()
-    dataset = dataset.rio.set_spatial_dims(x_dim="x", y_dim="y")
-    dataset["layer"] = dataset["layer"].rio.write_crs("EPSG:4326")
-    dataset["layer"] = dataset["layer"].rio.write_transform(
-        from_origin(0, 2, 1, 1)
-    )
-    dataset["layer"] = dataset["layer"].rio.write_coordinate_system()
-    dataset.to_zarr(path)
+    height = layered.profile["height"]
+    width = layered.profile["width"]
+    values = np.zeros((1, height, width), dtype=np.uint8)
+    layered.write_layer(values, "layer", overwrite=True)
+    template_tif.unlink(missing_ok=True)
 
 
 def test_layers_from_file_selects_specific_layers(monkeypatch, tmp_path):
