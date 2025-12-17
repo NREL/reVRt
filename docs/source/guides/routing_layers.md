@@ -9,5 +9,5 @@ or any other quantity that you may wish to study.
 The optimal route is always computed through a single layer, but
 this layer may be composed of several customizable components.
 In the following sections, we break down each of these components
-and how you can use the to build out the scenario that you are
+and how you can use them to build out the scenario that you are
 interested in studying.
