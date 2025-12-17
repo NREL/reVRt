@@ -61,7 +61,10 @@ def test_basic_single_route_layered_file(tmp_path):
         "test_costs",
         overwrite=True,
     )
-    cost_definition = {"cost_layers": [{"layer_name": "test_costs"}]}
+    cost_definition = {
+        "cost_layers": [{"layer_name": "test_costs"}],
+        "ignore_null_costs": True,
+    }
     results = find_paths(
         zarr_fp=layered_fp,
         cost_layers=json.dumps(cost_definition),
