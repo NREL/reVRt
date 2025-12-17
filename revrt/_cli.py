@@ -12,6 +12,9 @@ from revrt.utilities.cli import (
     layers_to_file_command,
     layers_from_file_command,
     convert_pois_to_lines_command,
+    map_ss_to_rr_command,
+    ss_from_conn_command,
+    add_rr_to_nn_command,
 )
 
 
@@ -24,8 +27,11 @@ commands = [
     convert_pois_to_lines_command,
     build_masks_command,
     build_routing_layers_command,
-    route_characterizations_command,
     route_points_command,
+    map_ss_to_rr_command,
+    ss_from_conn_command,
+    add_rr_to_nn_command,
+    route_characterizations_command,
 ]
 main = make_cli(commands, info={"name": "reVRt", "version": __version__})
 
