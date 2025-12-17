@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765934621421,
+  "lastUpdate": 1765945992445,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2687,6 +2687,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 269335833,
             "range": "± 3416670",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d39c53fe78082923c0eb6b2a7b0359f8ec63bac9",
+          "message": "Build(deps): Bump actions/upload-artifact from 5 to 6 (#176)\n\nBumps [actions/upload-artifact](https://github.com/actions/upload-artifact) from 5 to 6.\n- [Release notes](https://github.com/actions/upload-artifact/releases)\n- [Commits](https://github.com/actions/upload-artifact/compare/v5...v6)\n\n---\nupdated-dependencies:\n- dependency-name: actions/upload-artifact\n  dependency-version: '6'\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2025-12-16T21:22:17-07:00",
+          "tree_id": "f04af00fe0328f86c5f10f5cc8e12aaa8a7c1051",
+          "url": "https://github.com/NREL/reVRt/commit/d39c53fe78082923c0eb6b2a7b0359f8ec63bac9"
+        },
+        "date": 1765945991599,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 147315447,
+            "range": "± 2858610",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 107688123,
+            "range": "± 1194864",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 251256708,
+            "range": "± 10161954",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 346058916,
+            "range": "± 17733889",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 662691839,
+            "range": "± 23233992",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 150253877,
+            "range": "± 3884768",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155780652,
+            "range": "± 793847",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170039623,
+            "range": "± 929154",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 219534763,
+            "range": "± 2025662",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 397455012,
+            "range": "± 8989540",
             "unit": "ns/iter"
           }
         ]
