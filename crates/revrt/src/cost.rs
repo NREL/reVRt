@@ -8,6 +8,9 @@ use tracing::{debug, trace};
 use crate::dataset::LazySubset;
 use crate::error::Result;
 
+/// A multi-dimensional array representing cost data
+type CostArray = ndarray::Array<f32, ndarray::Dim<ndarray::IxDynImpl>>;
+
 #[derive(Clone, Debug, serde::Deserialize)]
 /// A cost function definition
 ///
@@ -31,7 +34,7 @@ pub(crate) struct CostFunction {
 /// through the cell. Instead, the value of the layer is added once, right
 /// when the path enters the cell.
 struct CostLayer {
-    layer_name: String,
+    layer_name: Option<String>,
     #[builder(setter(strip_option), default)]
     multiplier_scalar: Option<f32>,
     #[builder(setter(strip_option, into), default)]
@@ -77,46 +80,68 @@ impl CostFunction {
     /// # Returns
     /// A 2D array containing the cost for the subset covered by the input
     /// features.
-    pub(crate) fn compute(
-        &self,
-        features: &mut LazySubset<f32>,
-        is_invariant: bool,
-    ) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+    pub(crate) fn compute(&self, features: &mut LazySubset<f32>, is_invariant: bool) -> CostArray {
         debug!(
             "Calculating (is_invariant={}) cost for ({})",
             is_invariant,
             features.subset()
         );
 
-        let layers: Vec<&CostLayer> = self
-            .cost_layers
+        let mut cost_layers = Vec::with_capacity(self.cost_layers.len());
+        let mut friction_layers = Vec::with_capacity(self.cost_layers.len());
+
+        self.cost_layers
             .iter()
+            .for_each(|layer| match &layer.layer_name {
+                Some(_) => cost_layers.push(layer.clone()),
+                None => friction_layers.push(layer.clone()),
+            });
+
+        let cost_layers: Vec<CostLayer> = cost_layers
+            .into_iter()
             .filter(|layer| layer.is_invariant.unwrap_or(false) == is_invariant)
             .collect();
 
-        if layers.is_empty() {
+        if cost_layers.is_empty() {
             return empty_cost_array(features);
         }
 
-        let cost = layers
+        let cost_data = cost_layers
             .into_iter()
-            .map(|layer| build_single_layer(layer, features))
+            .map(|layer| build_single_cost_layer(layer, features))
             .collect::<Vec<_>>();
 
-        let views: Vec<_> = cost.iter().map(|a| a.view()).collect();
-        let stack = stack(Axis(0), &views).unwrap();
-        //let cost = stack![Axis(3), &cost];
-        trace!("Stack shape: {:?}", stack.shape());
-        let cost = stack.sum_axis(Axis(0));
-        trace!("Stack shape: {:?}", stack.shape());
+        let final_cost_layer = reduce_layers(cost_data);
 
-        cost
+        let friction_data = friction_layers
+            .into_iter()
+            .map(|layer| build_single_friction_layer(layer, features))
+            .collect::<Vec<_>>();
+
+        let mut final_friction_layer = match friction_data.is_empty() {
+            true => ArrayD::<f32>::zeros(IxDyn(final_cost_layer.shape())),
+            false => reduce_layers(friction_data),
+        };
+
+        // Ensure friction does not go below -1. If any values are below -1,
+        // emit a warning and clamp them to -1 so the routing surface
+        // calculation (1 + friction) does not produce negative cost values
+        final_friction_layer.mapv_inplace(|v| {
+            if v <= -1.0 {
+                tracing::warn!("Friction layer contains values <= -1; clamping to -1");
+                -1.0 + 1e-7
+            } else {
+                v
+            }
+        });
+
+        // routing surface is: final_cost_layer * (1 + final_friction_layer)
+        final_cost_layer
+            * (ArrayD::<f32>::ones(IxDyn(final_friction_layer.shape())) + final_friction_layer)
     }
 }
 
-fn empty_cost_array(
-    features: &LazySubset<f32>,
-) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
+fn empty_cost_array(features: &LazySubset<f32>) -> CostArray {
     let shape: Vec<usize> = features
         .subset()
         .shape()
@@ -127,11 +152,10 @@ fn empty_cost_array(
     ArrayD::<f32>::zeros(IxDyn(&shape))
 }
 
-fn build_single_layer(
-    layer: &CostLayer,
-    features: &mut LazySubset<f32>,
-) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>> {
-    let layer_name = &layer.layer_name;
+fn build_single_cost_layer(layer: CostLayer, features: &mut LazySubset<f32>) -> CostArray {
+    let layer_name = &layer
+        .layer_name
+        .expect("Cost layers should have the `layer_name` key set");
     trace!("Layer name: {}", layer_name);
 
     let mut cost = features
@@ -162,6 +186,34 @@ fn build_single_layer(
         // trace!( "Cost for chunk ({}, {}) in layer {}: {}", ci, cj, layer_name, cost);
     }
     cost
+}
+
+fn build_single_friction_layer(layer: CostLayer, features: &mut LazySubset<f32>) -> CostArray {
+    trace!("Building friction layer: {:?}", layer);
+
+    let multiplier_layer_name = layer
+        .multiplier_layer
+        .expect("Friction layers MUST specify a `multiplier_layer`");
+
+    let mut friction = features
+        .get(&multiplier_layer_name)
+        .expect("Multiplier layer not found in features");
+
+    if let Some(multiplier_scalar) = layer.multiplier_scalar {
+        trace!("\t- Layer has multiplier scalar {}", multiplier_scalar);
+        friction *= multiplier_scalar;
+    }
+
+    friction
+}
+
+fn reduce_layers(data: Vec<CostArray>) -> CostArray {
+    let views: Vec<_> = data.iter().map(|a| a.view()).collect();
+    let stack = stack(Axis(0), &views).unwrap();
+    trace!("Stack shape: {:?}", stack.shape());
+    let final_layer = stack.sum_axis(Axis(0));
+    trace!("Stack shape: {:?}", stack.shape());
+    final_layer
 }
 
 #[cfg(test)]
@@ -200,14 +252,14 @@ mod test_builder {
     #[test]
     fn costlayer() {
         let layer = CostLayerBuilder::default()
-            .layer_name("A".to_string())
+            .layer_name(Some("A".to_string()))
             .multiplier_scalar(2.0)
             .multiplier_layer("B")
             .is_invariant(false)
             .build()
             .unwrap();
 
-        assert_eq!(layer.layer_name, "A");
+        assert_eq!(layer.layer_name, Some("A".to_string()));
         assert_eq!(layer.multiplier_scalar, Some(2.0));
         assert_eq!(layer.multiplier_layer, Some("B".to_string()));
         assert_eq!(layer.is_invariant, Some(false));
@@ -216,11 +268,11 @@ mod test_builder {
     #[test]
     fn defaults() {
         let layer = CostLayerBuilder::default()
-            .layer_name("A".to_string())
+            .layer_name(Some("A".to_string()))
             .build()
             .unwrap();
 
-        assert_eq!(layer.layer_name, "A");
+        assert_eq!(layer.layer_name, Some("A".to_string()));
         assert_eq!(layer.multiplier_scalar, None);
         assert_eq!(layer.multiplier_layer, None);
         assert_eq!(layer.is_invariant, None);
@@ -230,6 +282,18 @@ mod test_builder {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::dataset::{make_lazy_subset_for_tests, samples};
+    use std::sync::Arc;
+    use zarrs::array_subset::ArraySubset;
+    use zarrs::filesystem::FilesystemStore;
+    use zarrs::storage::ReadableListableStorage;
+
+    fn make_features_for_costs_tests() -> LazySubset<f32> {
+        let path = samples::multi_variable_zarr();
+        let store: ReadableListableStorage = Arc::new(FilesystemStore::new(&path).unwrap());
+        let subset = ArraySubset::new_with_start_shape(vec![0, 0, 0], vec![1, 2, 2]).unwrap();
+        make_lazy_subset_for_tests(store, subset)
+    }
 
     #[test]
     fn test_cost() {
@@ -237,21 +301,86 @@ mod test {
         let cost = CostFunction::from_json(&json).unwrap();
 
         assert_eq!(cost.cost_layers.len(), 5);
-        assert_eq!(cost.cost_layers[0].layer_name, "A");
+        assert_eq!(cost.cost_layers[0].layer_name, Some("A".to_string()));
         assert_eq!(cost.cost_layers[0].is_invariant, None);
-        assert_eq!(cost.cost_layers[1].layer_name, "B");
+        assert_eq!(cost.cost_layers[1].layer_name, Some("B".to_string()));
         assert_eq!(cost.cost_layers[1].multiplier_scalar, Some(100.0));
         assert_eq!(cost.cost_layers[1].is_invariant, None);
-        assert_eq!(cost.cost_layers[2].layer_name, "A");
+        assert_eq!(cost.cost_layers[2].layer_name, Some("A".to_string()));
         assert_eq!(cost.cost_layers[2].multiplier_layer, Some("B".to_string()));
         assert_eq!(cost.cost_layers[2].is_invariant, None);
-        assert_eq!(cost.cost_layers[3].layer_name, "C");
+        assert_eq!(cost.cost_layers[3].layer_name, Some("C".to_string()));
         assert_eq!(cost.cost_layers[3].multiplier_layer, Some("A".to_string()));
         assert_eq!(cost.cost_layers[3].multiplier_scalar, Some(2.0));
         assert_eq!(cost.cost_layers[3].is_invariant, None);
-        assert_eq!(cost.cost_layers[4].layer_name, "C");
+        assert_eq!(cost.cost_layers[4].layer_name, Some("C".to_string()));
         assert_eq!(cost.cost_layers[4].multiplier_layer, None);
         assert_eq!(cost.cost_layers[4].multiplier_scalar, Some(100.0));
         assert_eq!(cost.cost_layers[4].is_invariant, Some(true));
+    }
+
+    #[test]
+    fn test_friction_only_returns_zeros() {
+        let mut features = make_features_for_costs_tests();
+
+        // friction-only (no `layer_name`) should return an empty cost array (zeros)
+        let json = r#"
+        {
+            "cost_layers": [
+                {"multiplier_layer": "B", "multiplier_scalar": -3.0}
+            ]
+        }
+        "#;
+
+        let cost_fn = CostFunction::from_json(json).unwrap();
+        let result = cost_fn.compute(&mut features, false);
+
+        assert_eq!(result.shape(), &[1, 2, 2]);
+        for v in result.iter() {
+            assert_eq!(*v, 0.0_f32);
+        }
+    }
+
+    #[test]
+    fn test_friction_clamp_with_cost_layer() {
+        use ndarray::Zip;
+
+        let mut features = make_features_for_costs_tests();
+
+        // cost layer A with a friction layer defined by B * -3.0
+        let json = r#"
+        {
+            "cost_layers": [
+                {"layer_name": "A"},
+                {"multiplier_layer": "B", "multiplier_scalar": -3.0}
+            ]
+        }
+        "#;
+
+        let cost_fn = CostFunction::from_json(json).unwrap();
+        let result = cost_fn.compute(&mut features, false);
+
+        let a = features.get("A").unwrap();
+        let b = features.get("B").unwrap();
+        Zip::from(&result)
+            .and(&a)
+            .and(&b)
+            .for_each(|r, a_item, b_item| {
+                // Build expected result: for each cell, friction = B * -3.0
+                // if friction < -1 => clamp to -1+1e-12
+                // result = A * (1 + friction_clamped)
+                let mut friction = b_item * -3.0;
+                if friction < -1.0 {
+                    friction = -1.0 + 1e-7;
+                }
+                let truth = a_item * (1.0 + friction);
+
+                if *a_item > 0.0_f32 {
+                    dbg!(r, a_item, b_item);
+                    assert!(*r > 0.0_f32);
+                }
+                let diff = (*r - truth).abs();
+                assert!(diff < 1e-6, "mismatch {} vs {} (diff={})", r, truth, diff);
+            });
     }
 }
