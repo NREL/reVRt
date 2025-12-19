@@ -26,7 +26,7 @@ these cost values if the path goes diagonally through the pixel.
 ### Building cost layers
 A single cost layer could be defined as follows:
 
-```JSON
+```json5
 {
     "layer_name": "my_cost_layer",
     "multiplier_layer": "my_bool_layer",
@@ -36,15 +36,15 @@ A single cost layer could be defined as follows:
 
 This would create a cost layer from ``"my_cost_layer"``, which would
 have a mask layer applied to it (``"my_bool_layer"``) along with a
-scalar that would adjust the costs (in this case for inflation).
-There are several more options you can include for a single layer;
-they are all documented
-[here]("https://nrel.github.io/reVRt/_cli/reVRt.html#revrt-route-points:~:text=cost_layerslist").
+scalar that would adjust the costs (for example, a value of ``1.04`` can
+account for inflation). There are several more options you can include
+for a single layer; they are all documented
+[here](https://nrel.github.io/reVRt/_cli/reVRt.html#revrt-route-points:~:text=cost_layerslist).
 
 For maximum flexibility, you can specify multiple such layers that all
 aggregate to form the final routing cost layer:
 
-```JSON
+```json5
 "cost_layers": [
     {
         "layer_name": "my_cost_layer",
@@ -55,7 +55,7 @@ aggregate to form the final routing cost layer:
         "layer_name": "local_costs_mask",
         "multiplier_scalar": 10000  // cost (per pixel) to route through a local town
     },
-    ...
+    // ...
 ]
 ```
 
@@ -99,8 +99,8 @@ including any the friction values in the output cost.
 ### Contribution to Routing
 Friction is added to the cost routing layer using the following equation:
 
-```math
-    R = C * (1 + F)
+```{math}
+R = C * (1 + F)
 ```
 
 where $R$ is the final routing layer, $C$ is the cost layer built in the
@@ -118,7 +118,7 @@ so the cost values themselves can never flip signs.
 Friction layers are built similarly to cost layers. A single friction
 layer could be defined as follows:
 
-```JSON
+```json5
 {
     "multiplier_layer": "my_friction_region",
     "multiplier_scalar": 10  // moderately avoid
@@ -129,12 +129,12 @@ One major difference is that there is no ``"layer_name"`` input, since
 the friction layer itself is being multiplied onto the final cost routing
 layer (see the section above). As before, there are several more options
 you can include for a single friction layer; they are all documented
-[here]("https://nrel.github.io/reVRt/_cli/reVRt.html#revrt-route-points:~:text=friction_layerslist").
+[here](https://nrel.github.io/reVRt/_cli/reVRt.html#revrt-route-points:~:text=friction_layerslist).
 
 For maximum flexibility, you can specify multiple friction layers that all
 aggregate to form the final friction layer:
 
-```JSON
+```json5
 "friction_layers": [
     {
         "multiplier_layer": "my_friction_region",
@@ -148,7 +148,7 @@ aggregate to form the final friction layer:
         "multiplier_layer": "highway_mask",
         "multiplier_scalar": -0.5  // encourage routing here
     },
-    ...
+    // ...
 ]
 ```
 As mentioned before, the friction multiplier can be negative values in
@@ -171,19 +171,19 @@ comparison operators are allowed: ``>``, ``>=``, ``<``, ``<=``, ``==``). Any
 pixel with a value that satisfies the comparison operator will be treated as a
 barrier that cannot be crossed by a route. For example, this configuration:
 
-```JSON
-    {"layer_name": "slope", "barrier_values": ">=15"}
+```json5
+{"layer_name": "slope", "barrier_values": ">=15"}
 ```
 
 would tell the routing algorithm that any pixels with a value $\ge 15$ in the
 ``slope`` layer should be completely avoided. As with all the other layers, you
 can specify multiple barriers to be considered during routing:
 
-```JSON
+```json5
 "barrier_layers": [
     {"layer_name": "slope", "barrier_values": ">=15"},
     {"layer_name": "barrier_bool_mask", "barrier_values": "==1"},
-    ...
+    // ...
 ]
 ```
 
@@ -204,11 +204,11 @@ or all barrier layers with a rank have been dropped.
 To specify that a layer can be dropped in order to compute a route (i.e. a soft
 barrier), you have to provide a ``barrier_importance`` ranking, like so:
 
-```JSON
+```json5
 "barrier_layers": [
     {"layer_name": "slope", "barrier_values": ">=15", "barrier_importance": 10},
     {"layer_name": "barrier_bool_mask", "barrier_values": "==1", "barrier_importance": 1},
-    ...
+    // ...
 ]
 ```
 
@@ -221,12 +221,12 @@ barrier, it will be dropped as well.
 You can also specify that a barrier should never be dropped by leaving out the
 ``barrier_importance`` key altogether. This can be combined with soft barriers:
 
-```JSON
+```json5
 "barrier_layers": [
     {"layer_name": "slope", "barrier_values": ">=15", "barrier_importance": 10},
     {"layer_name": "barrier_bool_mask", "barrier_values": "==1", "barrier_importance": 1},
     {"layer_name": "important_barrier", "barrier_values": "<0.5"},
-    ...
+    // ...
 ]
 ```
 
