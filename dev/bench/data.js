@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766184827139,
+  "lastUpdate": 1766186875104,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -2939,6 +2939,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 398030159,
             "range": "± 5499601",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b7d055969d66c2ec6f78713b6b985280aa3d7c97",
+          "message": "Add logic for `ignore_invalid_costs` input (#181)\n\n* Update\n\n* Update\n\n* Update lockfile\n\n* Add new exception type\n\n* Add another error type\n\n* Log class names\n\n* Update tests to check for name\n\n* Update logic to look for shape dataset\n\n* Add first few tests for routing\n\n* Routing WIP!!\n\n* More tests\n\n* Add test\n\n* Add test\n\n* Fix typo\n\n* Fix bug\n\n* Add tracked layers test\n\n* Add geometry test\n\n* A few more tests\n\n* Add `__init__.py` to module\n\n* Updates\n\n* Don't allow negative costs\n\n* Add tests for invalid start/end costs\n\n* Check for error message logs\n\n* Add routing utility tests\n\n* Add utilities module\n\n* Update docstrings\n\n* Add first pass of cli file\n\n* Minor updates\n\n* Connect first routing CLI\n\n* Add changes to points logic\n\n* Minor docstring updates\n\n* Update\n\n* Partially fix tests\n\n* Fix tests\n\n* Add docstrings\n\n* Minor updates\n\n* Fix docs\n\n* No extra log\n\n* Fix recursion error\n\n* Add tests\n\n* MVP routing CLI tests\n\n* Minor refactor\n\n* Minor formatting\n\n* update tests\n\n* Update tests\n\n* Update lockfile\n\n* MInor formatting\n\n* Update instructions\n\n* Break out dictionary extraction\n\n* Minor update\n\n* Docstrings\n\n* Add a few tests\n\n* Update\n\n* Minor fix\n\n* More messages\n\n* Use `da.max`\n\n* Fix rust tests\n\n* Minor refactor\n\n* Much lower memory limit\n\n* `add_layer_to_data` now returns `Result` object\n\n* More error types\n\n* Layer name is now optional\n\n* mInor rename\n\n* Add friction logic\n\n* Don't allow friction to go below -1\n\n* Update type\n\n* Make `LazySubset` initializable in tests\n\n* Up precision on tiny non-zero factor\n\n* Add tests for friction input\n\n* Add test for creating a dataset layer from cost, friction, and invariant layers\n\n* Update documentation\n\n* Update docs\n\n* Minor doc updates\n\n* Fix friction logic\n\n* Fix bug\n\n* Add some friction tests\n\n* Minor update\n\n* Add test for `include_in_final_cost=False`\n\n* Extra test\n\n* Refactor frictions logic to match rust side\n\n* Update documentation\n\n* Add test for invariant layer\n\n* Add test\n\n* MInor update to tests\n\n* Fix up tests\n\n* Don't check coverage for defensive code\n\n* Minor fix\n\n* Add a few tests\n\n* Remove instructions\n\n* Remove scratch files\n\n* Add tests for soft barrier\n\n* Add integration tets for soft barrier in large file\n\n* Pass soft barrier arg down to rust\n\n* Accept `use_hard_barrier` as an input\n\n* Pass `use_hard_barrier` down to dataset and implement logic\n\n* Pass parameter down\n\n* Fix cli\n\n* Fix test\n\n* Add tests for hard and soft barrier\n\n* Fix not enough slashes\n\n* Update docs\n\n* PR review\n\n* Update based on comment\n\n* Fix typo\n\n* PR review\n\n* Move variable into cost function\n\n* Fix passing down to Rust\n\n* Fix formatting\n\n* Fix tests\n\n* Rename directory\n\n* Start routing layer concept doc\n\n* Update title\n\n* Formatting\n\n* Typo\n\n* Rename file\n\n* Add text\n\n* Rename variable\n\n* Add text\n\n* Rename variable\n\n* New barrier value definition\n\n* Mention NaN\n\n* Add guide to docs\n\n* Fix math rendering\n\n* Invalid costs are now NaN",
+          "timestamp": "2025-12-19T16:16:12-07:00",
+          "tree_id": "cdebbe16fca95f302219f3c387c01e07177120e0",
+          "url": "https://github.com/NREL/reVRt/commit/b7d055969d66c2ec6f78713b6b985280aa3d7c97"
+        },
+        "date": 1766186873784,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 145165355,
+            "range": "± 2694512",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 62390327,
+            "range": "± 931545",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 251158877,
+            "range": "± 13772694",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 341142654,
+            "range": "± 18196567",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 654067402,
+            "range": "± 21428754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 148876294,
+            "range": "± 2732753",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 153553859,
+            "range": "± 800623",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 168394891,
+            "range": "± 1572607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 217014351,
+            "range": "± 5866851",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 390698410,
+            "range": "± 3951375",
             "unit": "ns/iter"
           }
         ]
