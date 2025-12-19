@@ -485,6 +485,28 @@ def expand_dim_if_needed(values):
     return values
 
 
+def region_mapper(regions, region_identifier_column):
+    """Generate a function to map points to a region
+
+    The returned mapping function maps a point to a unique value from
+    the `region_identifier_column` column in the input GeoDataFrame.
+
+    Parameters
+    ----------
+    regions : geopandas.GeoDataFrame
+        GeoDataFrame defining the regions. This table must
+        have a `region_identifier_column` column which uniquely
+        identifies the region, as well as a geometry for each region.
+    """
+
+    def _map_region(point):
+        """Find the region ID for the input point."""
+        idx = regions.distance(point).sort_values().index[0]
+        return regions.loc[idx, region_identifier_column]
+
+    return _map_region
+
+
 def _compute_half_width_using_ranges(
     routes, row_width_ranges, row_width_key="voltage"
 ):

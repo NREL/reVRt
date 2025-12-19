@@ -1,15 +1,23 @@
 """revrt utilities command line interface (CLI)"""
 
+import json
 import logging
 from pathlib import Path
+from warnings import warn
 
 import rasterio
+import rioxarray
+import numpy as np
 import pandas as pd
+import xarray as xr
 import geopandas as gpd
 from shapely.geometry import Point, LineString
 from gaps.cli import CLICommandFromClass, CLICommandFromFunction
 
+from revrt.utilities.base import region_mapper
 from revrt.utilities.handlers import LayeredFile
+from revrt.exceptions import revrtValueError
+from revrt.warn import revrtWarning
 
 
 logger = logging.getLogger(__name__)
@@ -149,6 +157,250 @@ def convert_pois_to_lines(poi_csv_f, template_f, out_f):
     logger.debug("Complete")
 
 
+def map_ss_to_rr(
+    features_fpath,
+    regions_fpath,
+    region_identifier_column,
+    substation_category_name="Substation",
+    minimum_substation_voltage_kv=69,
+    out_file=None,
+):
+    """
+    Map substation locations to reinforcement regions.
+
+    Reinforcement regions are user-defined. Typical regions are
+    Balancing Areas, States, or Counties, though custom regions are also
+    allowed. Each region must be supplied with a unique identifier in
+    the input file.
+
+    This method also removes substations that do not meet the min 69 kV
+    voltage requirement and adds {'min_volts', 'max_volts'} fields to
+    the remaining substations.
+
+    .. IMPORTANT::
+        This method DOES NOT clip the substations to the reinforcement
+        regions boundary. All substations will be mapped to their
+        closest region. It is your responsibility to remove any
+        substations outside of the analysis region before calling this
+        method.
+
+    Doing the pre-processing step avoids any issues with substations
+    being left out or double counted if they were simply clipped to the
+    reinforcement region shapes.
+
+    Parameters
+    ----------
+    features_fpath : path-like
+        Path to GeoPackage with substation and transmission features.
+    regions_fpath : path-like
+        Path to reinforcement regions GeoPackage.
+    region_identifier_column : str
+        Name of column in reinforcement regions GeoPackage
+        containing a unique identifier for each region.
+    substation_category_name : str, default="Substation"
+        Name of category in features GeoPackage that contains
+        substation features. By default, "Substation".
+    minimum_substation_voltage_kv : float, default=69
+        Minimum voltage (kV) that a substation must have to be
+        included in the output file. By default, 69 kV.
+    out_file : path-like, optional
+        Name for output GeoPackage file. By default, ``None``.
+    """
+
+    features = gpd.read_file(features_fpath)
+    substations = (
+        features[features.category == substation_category_name]
+        .reset_index(drop=True)
+        .dropna(axis="columns", how="all")
+    )
+
+    regions = gpd.read_file(regions_fpath).to_crs(features.crs)
+    logger.info(
+        "Mapping %d substation locations to %d reinforcement regions",
+        substations.shape[0],
+        regions.shape[0],
+    )
+
+    map_func = region_mapper(regions, region_identifier_column)
+    centroids = substations.centroid
+    substations[region_identifier_column] = centroids.apply(map_func)
+
+    logger.info("Calculating min/max voltage for each substation...")
+    bad_subs = np.zeros(len(substations), dtype=bool)
+    for idx, row in substations.iterrows():
+        lines = row["trans_gids"]
+        if isinstance(lines, str):
+            lines = json.loads(lines)
+
+        lines_mask = features["gid"].isin(lines)
+        voltage = features.loc[lines_mask, "voltage"].to_numpy()
+
+        if np.max(voltage) >= minimum_substation_voltage_kv:
+            substations.loc[idx, "min_volts"] = np.min(voltage)
+            substations.loc[idx, "max_volts"] = np.max(voltage)
+        else:
+            bad_subs[idx] = True
+
+    if any(bad_subs):
+        msg = (
+            "The following sub-stations do not have the minimum "
+            "required voltage of 69 kV and will be dropped:\n"
+            f"{substations.loc[bad_subs, 'gid']}"
+        )
+        warn(msg, revrtWarning)
+        substations = substations.loc[~bad_subs].reset_index(drop=True)
+
+    logger.info("Writing substation output to %r", out_file)
+    substations.to_file(out_file, driver="GPKG", index=False)
+
+
+def ss_from_conn(connections_fpath, region_identifier_column, out_file):
+    """Extract substations from connections table output by LCP.
+
+    Substations extracted by this method can be used for reinforcement
+    calculations.
+
+    This method also does minor filtering/formatting of the input
+    connections table.
+
+    Reinforcement regions are user-defined. Typical regions are
+    Balancing Areas, States, or Counties, though custom regions are also
+    allowed. Each region must be supplied with a unique identifier in
+    the input file.
+
+    .. Important:: This method DOES NOT clip the substations to the
+      reinforcement regions boundary. All substations will be mapped to
+      their closest region. It is your responsibility to remove any
+      substations outside of the analysis region before calling this
+      method.
+
+    Doing the pre-processing step avoids any issues with substations
+    being left out or double counted if they were simply clipped to the
+    reinforcement region shapes.
+
+    Parameters
+    ----------
+    connections_fpath : path-like
+        Path to GeoPackage with substation and transmission features.
+    region_identifier_column : str
+        Name of column in reinforcement regions GeoPackage
+        containing a unique identifier for each region.
+    out_file : path-like
+        Name for output GeoPackage file.
+    """
+
+    logger.info("Reading in connection info...")
+    if connections_fpath.endswith(".csv"):
+        connections = pd.read_csv(connections_fpath)
+    elif connections_fpath.endswith(".gpkg"):
+        connections = gpd.read_file(connections_fpath)
+    else:
+        msg = (
+            "Unknown file ending for features file (must be "
+            f"'.csv' or '.gpkg'): {connections_fpath}"
+        )
+        raise revrtValueError(msg)
+
+    logger.info("Filtering out NaN's in connection info...")
+    connections = connections[~connections["poi_gid"].isna()]
+    connections = connections[~connections["poi_lat"].isna()]
+    connections = connections[~connections["poi_lon"].isna()]
+
+    logger.info("Extracting substation locations...")
+    cols = ["poi_gid", "poi_lat", "poi_lon", region_identifier_column]
+    poi_groups = connections.groupby(cols)
+    pois = [info for info, __ in poi_groups]
+    pois = pd.DataFrame(pois, columns=cols)
+
+    geo = [
+        Point(row["poi_lon"], row["poi_lat"]) for __, row in pois.iterrows()
+    ]
+    substations = gpd.GeoDataFrame(pois, crs="epsg:4326", geometry=geo)
+
+    logger.info("Writing substation output to %r", out_file)
+    substations["poi_gid"] = substations["poi_gid"].astype("Int64")
+    substations.to_file(out_file, driver="GPKG", index=False)
+
+
+def add_rr_to_nn(
+    network_nodes_fpath,
+    regions_fpath,
+    region_identifier_column,
+    crs_template_file=None,
+    out_file=None,
+):
+    """Add reinforcement region column to network node file.
+
+    Reinforcement regions are user-defined. Typical regions are
+    Balancing Areas, States, or Counties, though custom regions are also
+    allowed. Each region must be supplied with a unique identifier in
+    the input file.
+
+    Parameters
+    ----------
+    network_nodes_fpath : path-like
+        Path to network nodes GeoPackage. The `region_identifier_column`
+        will be added to this file if it is missing.
+    regions_fpath : path-like
+        Path to reinforcement regions GeoPackage. The
+        `region_identifier_column` from this file will be added to the
+        `network_nodes_fpath` if needed.
+    region_identifier_column : str
+        Name of column in reinforcement regions GeoPackage
+        containing a unique identifier for each region.
+    crs_template_file : path-like, optional
+        Path to a file containing the CRS that should be used to
+        perform the mapping. This input can be an exclusions Zarr file,
+        a GeoTIFF, or any file tha can be read with GeoPandas. If
+        ``None``, the `network_nodes_fpath` file CRS is used to
+        perform the mapping. By default, ``None``.
+    out_file : path-like, optional
+        Name for output GeoPackage file. If ``None``, the
+        `network_nodes_fpath` file will be overwritten. By default,
+        ``None``.
+    """
+    crs_template_file = Path(crs_template_file or network_nodes_fpath)
+
+    logger.info("Reading in network node info...")
+    network_nodes_fpath = Path(network_nodes_fpath)
+    network_nodes = gpd.read_file(network_nodes_fpath)
+
+    logger.info("Reading in CRS template...")
+    if crs_template_file.suffix == ".zarr":
+        with xr.open_dataset(
+            crs_template_file, consolidated=False, engine="zarr"
+        ) as ds:
+            crs = ds.rio.crs
+    elif crs_template_file.suffix in {".tif", ".tiff"}:
+        with rioxarray.open_rasterio(crs_template_file) as geo:
+            crs = geo.rio.crs
+    else:
+        crs = gpd.read_file(crs_template_file).crs
+
+    network_nodes = network_nodes.to_crs(crs)
+    regions = gpd.read_file(regions_fpath).to_crs(crs)
+    if region_identifier_column in network_nodes:
+        msg = (
+            f"Network nodes file {str(network_nodes_fpath)!r} was specified "
+            f"but it already contains the {region_identifier_column!r} "
+            "column. No data modified!"
+        )
+        warn(msg, revrtWarning)
+        return
+
+    logger.info("Adding regions to network nodes...")
+    centroids = network_nodes.centroid
+    map_func = region_mapper(regions, region_identifier_column)
+    network_nodes[region_identifier_column] = centroids.apply(map_func)
+
+    if out_file is None:
+        out_fn = f"{network_nodes_fpath.stem}.gpkg"
+        out_file = network_nodes_fpath.parent / out_fn
+
+    logger.info("Writing updated network node data to %r", str(out_file))
+    network_nodes.to_file(out_file, driver="GPKG")
+
+
 layers_to_file_command = CLICommandFromClass(
     LayeredFile, method="layers_to_file", add_collect=False
 )
@@ -162,4 +414,13 @@ convert_pois_to_lines_command = CLICommandFromFunction(
     name="convert-pois-to-lines",
     add_collect=False,
     split_keys=None,
+)
+map_ss_to_rr_command = CLICommandFromFunction(
+    function=map_ss_to_rr, add_collect=False
+)
+ss_from_conn_command = CLICommandFromFunction(
+    function=ss_from_conn, add_collect=False
+)
+add_rr_to_nn_command = CLICommandFromFunction(
+    function=add_rr_to_nn, add_collect=False
 )
