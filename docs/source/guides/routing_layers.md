@@ -68,17 +68,17 @@ One of the restrictions of the routing algorithm is that all costs must
 be strictly positive. Negative, zero, or NaN costs are not allowed (we
 call them "invalid" costs).
 
-In an ideal world, all the input cost data would have values $\gt 0$ to
+In an ideal world, all the input cost data would have values {math}`\gt 0` to
 satisfy this requirement. Unfortunately, real-world data is rarely
 comprehensive enough to have a valid cost estimate across an entire domain.
 This problem is particularly amplified when working with high-resolution data
 across a large extent like CONUS.
 
 To reduce headaches for users, ``reVRt`` has two options to handle cost values
-$\leq 0$. The first (and default) option is to ignore these cells entirely. This
-means routes cannot pass through them (they act as a quasi-barrier, but within
-the cost layer itself). This is likely the behavior that the vast majority of
-users will want, since these "invalid" costs often occur at the edge of the
+{math}`\leq 0`. The first (and default) option is to ignore these cells entirely.
+This means routes cannot pass through them (they act as a quasi-barrier, but
+within the cost layer itself). This is likely the behavior that the vast majority
+of users will want, since these "invalid" costs often occur at the edge of the
 domain anyways.
 
 Sometimes, however, the presence of invalid costs can prevent a route from being
@@ -103,16 +103,16 @@ Friction is added to the cost routing layer using the following equation:
 R = C * (1 + F)
 ```
 
-where $R$ is the final routing layer, $C$ is the cost layer built in the
-previous section, and $F$ is the built-out friction layer (see below for
-details on building a friction layer).
+where {math}`R` is the final routing layer, {math}`C` is the cost layer built
+in the previous section, and {math}`F` is the built-out friction layer (see
+below for details on building a friction layer).
 
 Based on this formulation, we can see that positive friction values can
 be used to strongly discentivise routes through certain pixels. On the
 other hand, friction values near ``-1`` can be used to represent incentives
 (e.g. routing along an existing right-of-way). ``reVRt`` ensures that
-individual friction values are $\gt -1$ (i.e. $(1 + F) > 0$ is upheld),
-so the cost values themselves can never flip signs.
+individual friction values are {math}`\gt -1` (i.e. {math}`(1 + F) > 0` is
+upheld), so the cost values themselves can never flip signs.
 
 ### Building friction layers
 Friction layers are built similarly to cost layers. A single friction
@@ -155,8 +155,8 @@ As mentioned before, the friction multiplier can be negative values in
 order to incentivize routing along certain pixels. You can specify multiple
 such layers. ``reVRt`` processes each layer individually and then aggregates
 everything to determine the final friction layer. After the aggregation, all
-friction values are clamped to be $\gt -1$, such that friction can never
-create invalid cost values in the cost layer.
+friction values are clamped to be {math}`\gt -1`, such that friction can
+never create invalid cost values in the cost layer.
 
 ## Barrier Layers
 Barrier layers represent pixels that routes must not cross. Unlike frictions,
@@ -175,9 +175,9 @@ barrier that cannot be crossed by a route. For example, this configuration:
 {"layer_name": "slope", "barrier_values": ">=15"}
 ```
 
-would tell the routing algorithm that any pixels with a value $\ge 15$ in the
-``slope`` layer should be completely avoided. As with all the other layers, you
-can specify multiple barriers to be considered during routing:
+would tell the routing algorithm that any pixels with a value {math}`\ge 15`
+in the ``slope`` layer should be completely avoided. As with all the other
+layers, you can specify multiple barriers to be considered during routing:
 
 ```json5
 "barrier_layers": [
