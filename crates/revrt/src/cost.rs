@@ -1,5 +1,6 @@
 //! Cost function
 
+use core::f32;
 use derive_builder::Builder;
 use ndarray::{ArrayD, Axis, IxDyn, stack};
 use std::convert::TryFrom;
@@ -10,6 +11,9 @@ use crate::error::Result;
 
 /// A multi-dimensional array representing cost data
 type CostArray = ndarray::Array<f32, ndarray::Dim<ndarray::IxDynImpl>>;
+
+/// Large friction value to use for invalid costs that can be routed through
+const HIGH_FRICTION_INVALID_COST: f32 = 1e10;
 
 #[derive(Clone, Debug, serde::Deserialize)]
 /// A cost function definition
@@ -113,7 +117,18 @@ impl CostFunction {
             .map(|layer| build_single_cost_layer(layer, features))
             .collect::<Vec<_>>();
 
-        let final_cost_layer = reduce_layers(cost_data);
+        let mut final_cost_layer = reduce_layers(cost_data);
+        final_cost_layer.mapv_inplace(|v| {
+            if v <= 0_f32 {
+                if self.ignore_invalid_costs {
+                    f32::NAN
+                } else {
+                    HIGH_FRICTION_INVALID_COST
+                }
+            } else {
+                v
+            }
+        });
 
         let friction_data = friction_layers
             .into_iter()

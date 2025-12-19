@@ -17,8 +17,6 @@ use crate::cost::CostFunction;
 use crate::error::{Error, Result};
 pub(crate) use lazy_subset::LazySubset;
 
-const SOFT_BARRIER_COST: f32 = 1e10;
-
 /// Manages the features datasets and calculated total cost
 pub(super) struct Dataset {
     /// A Zarr storages with the features
@@ -280,7 +278,13 @@ impl Dataset {
         let center = neighbors
             .iter()
             .find(|((ir, jr), _)| *ir == i && *jr == j)
-            .map(|((ir, jr), v)| ((ir, jr), self.maybe_barriered(v)))
+            .map(|((ir, jr), v)| {
+                if v.is_nan() {
+                    ((ir, jr), &0_f32) // NaN's don't contribute to cost
+                } else {
+                    ((ir, jr), v)
+                }
+            })
             .unwrap();
         trace!("Center point: {:?}", center);
 
@@ -290,16 +294,10 @@ impl Dataset {
         let cost_to_neighbors = neighbors
             .iter()
             .zip(invariant_neighbors.iter())
-            .filter(|(((ir, jr), v), _)| {
-                !(*ir == i && *jr == j) && (*v > 0. || !self.cost_function.ignore_invalid_costs)
-            }) // no center point and only positive costs
+            .filter(|(((ir, jr), v), _)| !(v.is_nan() || *ir == i && *jr == j)) // no center point and only valid costs
             .map(|(((ir, jr), v), ((inv_ir, inv_jr), inv_cost))| {
                 debug_assert_eq!((ir, jr), (inv_ir, inv_jr));
-                (
-                    (ir, jr),
-                    0.5 * (self.maybe_barriered(v) + center.1),
-                    inv_cost,
-                )
+                ((ir, jr), 0.5 * (v + center.1), inv_cost)
             })
             .map(|((ir, jr), v, inv_cost)| {
                 let scaled = if *ir != i && *jr != j {
@@ -328,14 +326,6 @@ impl Dataset {
             )
             .unwrap();
         */
-    }
-
-    fn maybe_barriered(&self, pixel_value: &f32) -> f32 {
-        if !self.cost_function.ignore_invalid_costs && *pixel_value <= 0. {
-            SOFT_BARRIER_COST
-        } else {
-            *pixel_value
-        }
     }
 
     fn get_neighbor_costs(
@@ -837,7 +827,7 @@ mod tests {
                     continue; // skip center
                 }
 
-                let mut averaged = SOFT_BARRIER_COST;
+                let mut averaged = 1e10f32;
                 if ir != 1 && jr != 1 {
                     averaged *= std::f32::consts::SQRT_2;
                 }
