@@ -31,7 +31,10 @@ def validate_single_var(data, start, end, tmp_path):
     ds["test_costs"].encoding = {"fill_value": 1_000.0, "_FillValue": 1_000.0}
     ds.chunk({"x": 4, "y": 3}).to_zarr(test_cost_fp, mode="w", zarr_format=3)
 
-    cost_definition = {"cost_layers": [{"layer_name": "test_costs"}]}
+    cost_definition = {
+        "cost_layers": [{"layer_name": "test_costs"}],
+        "ignore_invalid_costs": True,
+    }
     results = find_paths(
         zarr_fp=test_cost_fp,
         cost_layers=json.dumps(cost_definition),

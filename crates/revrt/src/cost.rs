@@ -1,5 +1,6 @@
 //! Cost function
 
+use core::f32;
 use derive_builder::Builder;
 use ndarray::{ArrayD, Axis, IxDyn, stack};
 use std::convert::TryFrom;
@@ -11,6 +12,9 @@ use crate::error::Result;
 /// A multi-dimensional array representing cost data
 type CostArray = ndarray::Array<f32, ndarray::Dim<ndarray::IxDynImpl>>;
 
+/// Large friction value to use for invalid costs that can be routed through
+const HIGH_FRICTION_INVALID_COST: f32 = 1e10;
+
 #[derive(Clone, Debug, serde::Deserialize)]
 /// A cost function definition
 ///
@@ -20,6 +24,8 @@ type CostArray = ndarray::Array<f32, ndarray::Dim<ndarray::IxDynImpl>>;
 /// layers that are summed together (per grid point) to give the total cost.
 pub(crate) struct CostFunction {
     cost_layers: Vec<CostLayer>,
+    /// Option to completely ignore <=0 cost cells
+    pub(crate) ignore_invalid_costs: bool,
 }
 
 #[derive(Builder, Clone, Debug, serde::Deserialize)]
@@ -111,7 +117,18 @@ impl CostFunction {
             .map(|layer| build_single_cost_layer(layer, features))
             .collect::<Vec<_>>();
 
-        let final_cost_layer = reduce_layers(cost_data);
+        let mut final_cost_layer = reduce_layers(cost_data);
+        final_cost_layer.mapv_inplace(|v| {
+            if v <= 0_f32 {
+                if self.ignore_invalid_costs {
+                    f32::NAN
+                } else {
+                    HIGH_FRICTION_INVALID_COST
+                }
+            } else {
+                v
+            }
+        });
 
         let friction_data = friction_layers
             .into_iter()
@@ -126,14 +143,10 @@ impl CostFunction {
         // Ensure friction does not go below -1. If any values are below -1,
         // emit a warning and clamp them to -1 so the routing surface
         // calculation (1 + friction) does not produce negative cost values
-        final_friction_layer.mapv_inplace(|v| {
-            if v <= -1.0 {
-                tracing::warn!("Friction layer contains values <= -1; clamping to -1");
-                -1.0 + 1e-7
-            } else {
-                v
-            }
-        });
+        if final_friction_layer.iter().any(|v| *v <= -1.0) {
+            tracing::warn!("Friction layer contains values <= -1; clamping to -1");
+            final_friction_layer.mapv_inplace(|v| if v <= -1.0 { -1.0 + 1e-7 } else { v });
+        }
 
         // routing surface is: final_cost_layer * (1 + final_friction_layer)
         final_cost_layer
@@ -233,7 +246,8 @@ pub(crate) mod sample {
                     "multiplier_layer": "A"},
                 {"layer_name": "C", "multiplier_scalar": 100,
                     "is_invariant": true}
-            ]
+            ],
+            "ignore_invalid_costs": true
         }
         "#
         .to_string()
@@ -328,7 +342,8 @@ mod test {
         {
             "cost_layers": [
                 {"multiplier_layer": "B", "multiplier_scalar": -3.0}
-            ]
+            ],
+            "ignore_invalid_costs": true
         }
         "#;
 
@@ -353,7 +368,8 @@ mod test {
             "cost_layers": [
                 {"layer_name": "A"},
                 {"multiplier_layer": "B", "multiplier_scalar": -3.0}
-            ]
+            ],
+            "ignore_invalid_costs": true
         }
         "#;
 

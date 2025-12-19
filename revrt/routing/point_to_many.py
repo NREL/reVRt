@@ -37,7 +37,7 @@ class RoutingScenario:
         tracked_layers=None,
         cost_multiplier_layer=None,
         cost_multiplier_scalar=1,
-        use_hard_barrier=True,
+        ignore_invalid_costs=True,
     ):
         """
 
@@ -58,7 +58,7 @@ class RoutingScenario:
             Layer name providing spatial multipliers for total cost.
         cost_multiplier_scalar : int or float, optional
             Scalar multiplier applied to the final cost surface.
-        use_hard_barrier : bool, optional
+        ignore_invalid_costs : bool, optional
             Flag indicating whether non-positive costs block traversal.
         """
         self.cost_fpath = cost_fpath
@@ -67,7 +67,7 @@ class RoutingScenario:
         self.tracked_layers = tracked_layers or {}
         self.cost_multiplier_layer = cost_multiplier_layer
         self.cost_multiplier_scalar = cost_multiplier_scalar
-        self.use_hard_barrier = use_hard_barrier
+        self.ignore_invalid_costs = ignore_invalid_costs
 
     def __repr__(self):
         return (
@@ -81,7 +81,12 @@ class RoutingScenario:
     @cached_property
     def cl_as_json(self):
         """str: JSON string describing configured cost layers"""
-        return json.dumps({"cost_layers": list(self._all_layers_for_rust())})
+        return json.dumps(
+            {
+                "cost_layers": list(self._all_layers_for_rust()),
+                "ignore_invalid_costs": self.ignore_invalid_costs,
+            }
+        )
 
     def _all_layers_for_rust(self):
         """Cost and friction layers formatted for Rust ingestion"""
@@ -116,7 +121,7 @@ class RoutingLayers:
     SOFT_BARRIER_MULTIPLIER = 100
     """Multiplier to apply to max cost to use for barriers
 
-    This value is only used if ``use_hard_barrier=False``.
+    This value is only used if ``ignore_invalid_costs=False``.
     """
 
     def __init__(self, routing_scenario, chunks="auto"):
@@ -249,7 +254,7 @@ class RoutingLayers:
         )
         self.final_routing_layer.values = da.where(
             self.final_routing_layer <= 0,
-            -1 if self.routing_scenario.use_hard_barrier else max_val,
+            -1 if self.routing_scenario.ignore_invalid_costs else max_val,
             self.final_routing_layer,
         )
 

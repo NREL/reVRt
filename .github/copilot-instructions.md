@@ -85,8 +85,8 @@ that is only used for development (tests, linting, docs, etc.).
 
 ## 5. Coding Guidelines (Python)
 - Follow `docs/source/dev/README.rst` for style: maintain numpy-style
-  docstrings, avoid type hints unless pre-existing, and keep module-level
-  imports in the documented order (`numpy as np`, `xarray as xr`, etc.).
+  docstrings, and keep module-level imports in the documented order
+  (`numpy as np`, `xarray as xr`, etc.).
 - Follow Ruff configuration (79 char lines, 72 char lines for docstrings,
   double quotes, numpy docstyle). Run locally: `pixi run -e dev ruff check .`
   and `pixi run -e dev ruff format .`

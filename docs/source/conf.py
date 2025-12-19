@@ -55,6 +55,7 @@ extensions = [
     "sphinx_click.ext",
     "sphinx_tabs.tabs",
     "sphinx_copybutton",
+    "myst_parser",
 ]
 
 intersphinx_mapping = {
@@ -85,7 +86,7 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_suffix = ".rst"
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
 # source_parsers = {'.md': MarkdownParser}
 

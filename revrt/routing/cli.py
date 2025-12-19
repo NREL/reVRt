@@ -41,7 +41,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     cost_multiplier_scalar=1,
     transmission_config=None,
     save_paths=False,
-    use_hard_barrier=False,
+    ignore_invalid_costs=False,
     _split_params=None,
 ):
     r"""Run least-cost path routing for pairs of points
@@ -126,7 +126,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
 
         .. IMPORTANT::
            If a pixel has a final cost of :math:`\leq 0`, it is treated
-           as a barrier (i.e. no paths can ever cross this pixels).
+           as a barrier (i.e. no paths can ever cross this pixel).
 
     out_dir : path-like
         Directory where routing outputs should be written.
@@ -240,11 +240,11 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     save_paths : bool, default=False
         Save outputs as a GeoPackage with path geometries when ``True``.
         Defaults to ``False``.
-    use_hard_barrier : bool, optional
-        Optional flag to treat any cost values of <= 0 as a hard barrier
+    ignore_invalid_costs : bool, optional
+        Optional flag to treat any cost values <= 0 as impassable
         (i.e. no paths can ever cross this). If ``False``, cost values
         of <= 0 are set to a large value to simulate a strong but
-        permeable barrier. By default, ``False``.
+        permeable "quasi-barrier". By default, ``False``.
 
     Returns
     -------
@@ -287,7 +287,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         cost_multiplier_scalar=cost_multiplier_scalar,
         friction_layers=friction_layers,
         tracked_layers=tracked_layers,
-        use_hard_barrier=use_hard_barrier,
+        ignore_invalid_costs=ignore_invalid_costs,
     )
 
     elapsed_time = (time.time() - start_time) / 60
@@ -306,7 +306,7 @@ def _run_lcp(
     cost_multiplier_scalar=1,
     friction_layers=None,
     tracked_layers=None,
-    use_hard_barrier=True,
+    ignore_invalid_costs=True,
 ):
     """Execute least-cost path routing for the prepared route subset"""
 
@@ -351,7 +351,7 @@ def _run_lcp(
             tracked_layers=tracked_layers,
             cost_multiplier_layer=cost_multiplier_layer,
             cost_multiplier_scalar=cost_multiplier_scalar,
-            use_hard_barrier=use_hard_barrier,
+            ignore_invalid_costs=ignore_invalid_costs,
         )
 
         out = find_all_routes(

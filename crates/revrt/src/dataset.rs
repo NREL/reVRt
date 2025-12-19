@@ -278,6 +278,13 @@ impl Dataset {
         let center = neighbors
             .iter()
             .find(|((ir, jr), _)| *ir == i && *jr == j)
+            .map(|((ir, jr), v)| {
+                if v.is_nan() {
+                    ((ir, jr), &0_f32) // NaN's don't contribute to cost
+                } else {
+                    ((ir, jr), v)
+                }
+            })
             .unwrap();
         trace!("Center point: {:?}", center);
 
@@ -287,7 +294,7 @@ impl Dataset {
         let cost_to_neighbors = neighbors
             .iter()
             .zip(invariant_neighbors.iter())
-            .filter(|(((ir, jr), v), _)| !(*ir == i && *jr == j) && *v > 0.) // no center point and only positive costs
+            .filter(|(((ir, jr), v), _)| !(v.is_nan() || *ir == i && *jr == j)) // no center point and only valid costs
             .map(|(((ir, jr), v), ((inv_ir, inv_jr), inv_cost))| {
                 debug_assert_eq!((ir, jr), (inv_ir, inv_jr));
                 ((ir, jr), 0.5 * (v + center.1), inv_cost)
@@ -392,8 +399,8 @@ fn add_layer_to_data(
 }
 
 #[cfg(test)]
-// Make a LazySubset from a source and array subset to be used in tests
-//
+/// Make a LazySubset from a source and array subset to be used in tests
+///
 /// # Returns
 /// An initialized LazySubset<f32> instance.
 pub(crate) fn make_lazy_subset_for_tests(
@@ -412,8 +419,10 @@ mod tests {
     #[test]
     fn test_simple_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
-        let cost_function =
-            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
+        let cost_function = CostFunction::from_json(
+            r#"{"cost_layers": [{"layer_name": "A"}], "ignore_invalid_costs": true}"#,
+        )
+        .unwrap();
         let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
@@ -462,11 +471,13 @@ mod tests {
     fn test_simple_invariant_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "A", "is_invariant": true}]}"#,
+            r#"{
+                "cost_layers": [{"layer_name": "A", "is_invariant": true}],
+                "ignore_invalid_costs": true
+            }"#,
         )
         .unwrap();
-        let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
         let array = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
@@ -492,8 +503,7 @@ mod tests {
     fn test_sample_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function = crate::cost::sample::cost_function();
-        let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
         let array_a = zarrs::array::Array::open(dataset.source.clone(), "/A").unwrap();
@@ -575,10 +585,11 @@ mod tests {
     #[test]
     fn test_get_3x3_single_item_array() {
         let path = samples::cost_as_index_zarr((1, 1), (1, 1));
-        let cost_function =
-            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+        let cost_function = CostFunction::from_json(
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
+        )
+        .unwrap();
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
 
@@ -598,10 +609,11 @@ mod tests {
     #[test_case((1, 1), vec![(0, 1, 2.), (1, 0, 2.5)] ; "bottom right corner")]
     fn test_get_3x3_two_by_two_array((si, sj): (u64, u64), expected_output: Vec<(u64, u64, f32)>) {
         let path = samples::cost_as_index_zarr((2, 2), (2, 2));
-        let cost_function =
-            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+        let cost_function = CostFunction::from_json(
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
+        )
+        .unwrap();
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
 
@@ -635,10 +647,11 @@ mod tests {
         expected_output: Vec<(u64, u64, f32)>,
     ) {
         let path = samples::cost_as_index_zarr((3, 3), (3, 3));
-        let cost_function =
-            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+        let cost_function = CostFunction::from_json(
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
+        )
+        .unwrap();
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
 
@@ -675,10 +688,11 @@ mod tests {
         expected_output: Vec<(u64, u64, f32)>,
     ) {
         let path = samples::cost_as_index_zarr((4, 4), (2, 2));
-        let cost_function =
-            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
-        let dataset =
-            Dataset::open(path, cost_function, 250_000_000).expect("Error opening dataset");
+        let cost_function = CostFunction::from_json(
+            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
+        )
+        .unwrap();
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
 
@@ -703,11 +717,12 @@ mod tests {
         // Define cost function: A normal, C invariant, friction from B * 0.5
         let json = r#"
         {
-        "cost_layers": [
-            {"layer_name": "A"},
-            {"layer_name": "C", "is_invariant": true},
-            {"multiplier_layer": "B", "multiplier_scalar": 0.5}
-            ]
+            "cost_layers": [
+                {"layer_name": "A"},
+                {"layer_name": "C", "is_invariant": true},
+                {"multiplier_layer": "B", "multiplier_scalar": 0.5}
+            ],
+            "ignore_invalid_costs": true
         }
         "#;
 
@@ -763,6 +778,63 @@ mod tests {
 
         // Compare results: lengths and per-item approx equality
         assert_eq!(results.len(), expected.len());
+        for (idx, val) in expected {
+            let found = results
+                .iter()
+                .find(|(ai, _)| ai.i == idx.i && ai.j == idx.j);
+            assert!(found.is_some(), "Missing neighbor {:?} in results", idx);
+            let actual = found.unwrap().1;
+            let diff = (actual - val).abs();
+            assert!(
+                diff < 1e-5,
+                "mismatch for {:?}: actual={} expected={} diff={}",
+                idx,
+                actual,
+                val,
+                diff
+            );
+        }
+    }
+
+    #[test_case(r#"{"cost_layers": [{"layer_name": "B"}], "ignore_invalid_costs": true}"# ; "zero layer")]
+    #[test_case(r#"{"cost_layers": [{"layer_name": "C"}], "ignore_invalid_costs": true}"# ; "negative layer")]
+    fn test_get_3x3_with_hard_barriered_layers(json: &str) {
+        let path = samples::specific_layers_zarr((3, 3), (3, 3), 0_f32, -1_f32);
+        let cost_function = CostFunction::from_json(json).unwrap();
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: 1, j: 1 });
+        assert!(
+            results.is_empty(),
+            "Found data with `ignore_invalid_costs=true`"
+        );
+    }
+
+    #[test_case(r#"{"cost_layers": [{"layer_name": "B"}], "ignore_invalid_costs": false}"# ; "zero layer")]
+    #[test_case(r#"{"cost_layers": [{"layer_name": "C"}], "ignore_invalid_costs": false}"# ; "negative layer")]
+    fn test_get_3x3_with_soft_barrier_layers(json: &str) {
+        let path = samples::specific_layers_zarr((3, 3), (3, 3), 0_f32, -1_f32);
+        let cost_function = CostFunction::from_json(json).unwrap();
+        let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
+
+        let results = dataset.get_3x3(&ArrayIndex { i: 1, j: 1 });
+        assert_eq!(results.len(), 8);
+
+        let mut expected: Vec<(ArrayIndex, f32)> = vec![];
+        for ir in 0..3u64 {
+            for jr in 0..3u64 {
+                if ir == 1 && jr == 1 {
+                    continue; // skip center
+                }
+
+                let mut averaged = 1e10f32;
+                if ir != 1 && jr != 1 {
+                    averaged *= std::f32::consts::SQRT_2;
+                }
+                expected.push((ArrayIndex { i: ir, j: jr }, averaged));
+            }
+        }
+
         for (idx, val) in expected {
             let found = results
                 .iter()
