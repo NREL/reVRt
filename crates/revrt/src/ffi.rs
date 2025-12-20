@@ -43,30 +43,10 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     Path to zarr file containing cost layers.
 /// cost_layers : str
 ///     JSON string representation of the cost function. The following
-///     keys are allowed in the cost function:
-///
-///         - "cost_layers": A list of dictionaries that define
-///            the cost layer computation. Each dictionary must have at
-///            least one key: "layer_name". This key points to the layer
-///            in the Zarr file that should be read in. The other optional
-///            keys are "multiplier_layer", which is the name of a layer in
-///            the Zarr file that should be multiplied onto the original
-///            layer and "multiplier_scalar", which should be a float that
-///            should be applied to scale the layer. All of the layers in
-///            the list are processed this way and then summed to obtain the
-///            final cost layer for routing.
-///         - "friction_layers": A list of dictionaries that define the
-///            friction layer(s). Each dictionary must have at
-///            least one key: "multiplier_layer". This key points to the layer
-///            in the Zarr file that should be read in and acts as the base
-///            friction multiplier mask. The other optional key is
-///            "multiplier_scalar", which should be a float that should be
-///            applied to scale the friction layer. All of the layers in
-///            the list are processed this way and then summed to obtain the
-///            final friction layer for routing.
-///         - "ignore_invalid_costs": A boolean flag that indicates whether
-///            to completely ignore <=0 and NaN cost cells.
-///
+///     keys are allowed in the cost function: "cost_layers",
+///     "friction_layers", and "ignore_invalid_costs". See the
+///     documentation of the cost function for details oin each of these
+///     inputs.
 /// start : list of tuple
 ///     List of two-tuples containing non-negative integers representing
 ///     the indices in the array for the pixel from which routing should
