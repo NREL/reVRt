@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766195165663,
+  "lastUpdate": 1766205618287,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3107,6 +3107,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 392592548,
             "range": "± 8548965",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1b41bd8cad5ea58a2b990d79e0a67b65108a572c",
+          "message": "Better friction handling (#185)\n\n* Update docstring\n\n* Update variable name\n\n* Rename input\n\n* Update friction layer handling\n\n* Remove optional input\n\n* Properly pass friction layers\n\n* Fix tests",
+          "timestamp": "2025-12-19T21:29:23-07:00",
+          "tree_id": "5aaf13cc83469fa90fb43e3da87a1984b304a313",
+          "url": "https://github.com/NREL/reVRt/commit/1b41bd8cad5ea58a2b990d79e0a67b65108a572c"
+        },
+        "date": 1766205617617,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 153447627,
+            "range": "± 3237109",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 158495783,
+            "range": "± 2025360",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 256150734,
+            "range": "± 14706590",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 350374462,
+            "range": "± 14707804",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 681308875,
+            "range": "± 15372778",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 149746574,
+            "range": "± 3087160",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 154693341,
+            "range": "± 1452780",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 169447066,
+            "range": "± 1786872",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 221330010,
+            "range": "± 4296905",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 403712021,
+            "range": "± 7450603",
             "unit": "ns/iter"
           }
         ]
