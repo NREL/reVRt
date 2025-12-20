@@ -507,8 +507,8 @@ def _collect_existing_routes(out_fp):
 def _update_multipliers(layers, polarity, voltage, transmission_config):
     """Update layer multipliers based on user input"""
     output_layers = deepcopy(layers)
-    polarity = str(polarity)
-    voltage = str(int(voltage)) if voltage != "unknown" else "unknown"
+    polarity = "unknown" if polarity in {None, "unknown"} else str(polarity)
+    voltage = "unknown" if voltage in {None, "unknown"} else str(int(voltage))
 
     for layer in output_layers:
         if layer.pop("apply_row_mult", False):
