@@ -11,9 +11,14 @@ import pandas as pd
 import geopandas as gpd
 import xarray as xr
 from gaps.cli import CLICommandFromFunction
+from gaps.config import load_config
 
 from revrt.costs.config import parse_config
-from revrt.routing.point_to_many import find_all_routes, RoutingScenario
+from revrt.routing.point_to_many import (
+    find_all_routes,
+    RoutingScenario,
+    RoutingLayers,
+)
 from revrt.routing.utilities import map_to_costs
 from revrt.exceptions import revrtKeyError
 
@@ -296,6 +301,76 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     return str(out_fp)
 
 
+def build_routing_layer(lcp_config_fp, out_dir, polarity=None, voltage=None):
+    """Build out the routing layers used by reVRt
+
+    Parameters
+    ----------
+    lcp_config_fp : path-like
+        Path to LCP config file for which the routing layer should be
+        created.
+    out_dir : path-like
+        Path to directory where to store the outputs.
+    polarity : str, optional
+        Polarity to use when building the routing layer. This input is
+        required if any cost or friction layers that have
+        `apply_polarity_mult` set to `True` - they will have the
+        appropriate multiplier applied based on this polarity.
+        By default, ``None``.
+    voltage : str, optional
+        Voltage to use when building the routing layer. This input is
+        required if any cost or friction layers that have
+        `apply_row_mult` or `apply_polarity_mult` set to `True` - they
+        will have the appropriate multiplier applied based on this
+        voltage. By default, ``None``.
+
+    Returns
+    -------
+    list
+        List of paths to the GeoTIFF files that were created.
+    """
+    # TODO: Add dask client here??
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    config = load_config(lcp_config_fp)
+
+    route_cl = _update_multipliers(
+        config["cost_layers"],
+        polarity,
+        voltage,
+        config.get("transmission_config"),
+    )
+    route_fl = _update_multipliers(
+        config.get("friction_layers") or [],
+        polarity,
+        voltage,
+        config.get("transmission_config"),
+    )
+
+    routing_scenario = RoutingScenario(
+        cost_fpath=config["cost_fpath"],
+        cost_layers=route_cl,
+        friction_layers=route_fl,
+        cost_multiplier_layer=config.get("cost_multiplier_layer"),
+        cost_multiplier_scalar=config.get("cost_multiplier_scalar", 1),
+        ignore_invalid_costs=config.get("ignore_invalid_costs", False),
+    )
+
+    rl = RoutingLayers(routing_scenario)
+    rl.build()
+
+    cost_out_fp = out_dir / "agg_costs.tif"
+    logger.debug("\t- Writing costs to %s", cost_out_fp)
+    rl.cost.rio.to_raster(cost_out_fp, driver="GTiff", nodata=-1)
+
+    frl_out_fp = out_dir / "final_routing_layer.tif"
+    logger.debug("\t- Writing final routing layer to %s", frl_out_fp)
+    rl.final_routing_layer.rio.to_raster(frl_out_fp, driver="GTiff", nodata=-1)
+
+    return [str(cost_out_fp), str(frl_out_fp)]
+
+
 def _run_lcp(
     cost_fpath,
     route_points,
@@ -432,8 +507,8 @@ def _collect_existing_routes(out_fp):
 def _update_multipliers(layers, polarity, voltage, transmission_config):
     """Update layer multipliers based on user input"""
     output_layers = deepcopy(layers)
-    polarity = str(polarity)
-    voltage = str(int(voltage)) if voltage != "unknown" else "unknown"
+    polarity = "unknown" if polarity in {None, "unknown"} else str(polarity)
+    voltage = "unknown" if voltage in {None, "unknown"} else str(int(voltage))
 
     for layer in output_layers:
         if layer.pop("apply_row_mult", False):
@@ -547,4 +622,8 @@ route_points_command = CLICommandFromFunction(
     add_collect=False,
     split_keys={"_split_params"},
     config_preprocessor=_split_routes,
+)
+
+build_route_costs_command = CLICommandFromFunction(
+    build_routing_layer, name="build-route-costs", add_collect=False
 )
