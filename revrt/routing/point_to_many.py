@@ -83,19 +83,22 @@ class RoutingScenario:
         """str: JSON string describing configured cost layers"""
         return json.dumps(
             {
-                "cost_layers": list(self._all_layers_for_rust()),
+                "cost_layers": list(self._cost_layers_for_rust()),
+                "friction_layers": list(self._friction_layers_for_rust()),
                 "ignore_invalid_costs": self.ignore_invalid_costs,
             }
         )
 
-    def _all_layers_for_rust(self):
-        """Cost and friction layers formatted for Rust ingestion"""
+    def _cost_layers_for_rust(self):
+        """Cost layers formatted for Rust ingestion"""
         for layer in self.cost_layers:
             out_layer = layer.copy()
             out_layer.pop("include_in_report", None)
             out_layer.pop("include_in_final_cost", None)
             yield out_layer
 
+    def _friction_layers_for_rust(self):
+        """Friction layers formatted for Rust ingestion"""
         for layer in self.friction_layers:
             out_layer = layer.copy()
             if "layer_name" in out_layer:
