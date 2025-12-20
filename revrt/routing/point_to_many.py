@@ -636,7 +636,7 @@ def _compute_valid_path(
     try:
         route_result = find_paths(
             zarr_fp=routing_scenario.cost_fpath,
-            cost_layers=routing_scenario.cost_function_json,
+            cost_function=routing_scenario.cost_function_json,
             start=[start_point],
             end=end_points,
         )

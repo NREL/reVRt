@@ -89,11 +89,11 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     route goes through and the second element is the final
 ///     route cost.
 #[pyfunction]
-#[pyo3(signature = (zarr_fp, cost_layers, start, end, cache_size=250_000_000))]
+#[pyo3(signature = (zarr_fp, cost_function, start, end, cache_size=250_000_000))]
 #[allow(clippy::type_complexity)]
 fn find_paths(
     zarr_fp: PathBuf,
-    cost_layers: String,
+    cost_function: String,
     start: Vec<(u64, u64)>,
     end: Vec<(u64, u64)>,
     cache_size: u64,
@@ -103,7 +103,7 @@ fn find_paths(
         .map(|(i, j)| ArrayIndex { i, j })
         .collect();
     let end: Vec<ArrayIndex> = end.into_iter().map(|(i, j)| ArrayIndex { i, j }).collect();
-    let paths = resolve(zarr_fp, &cost_layers, cache_size, &start, end)?;
+    let paths = resolve(zarr_fp, &cost_function, cache_size, &start, end)?;
     Ok(paths
         .into_iter()
         .map(|(path, cost)| (path.into_iter().map(Into::into).collect(), cost))
