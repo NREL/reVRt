@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766186875104,
+  "lastUpdate": 1766195165663,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3023,6 +3023,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 390698410,
             "range": "± 3951375",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "68285267597a23b18e99b98b1f7e6b716e9dc642",
+          "message": "Build cost routing layer (#183)\n\n* Add `build_route_costs_command`\n\n* Bug fixes\n\n* Add test for `build_route_costs_command`\n\n* Minor fix\n\n* Add test to run in CLI",
+          "timestamp": "2025-12-19T18:34:45-07:00",
+          "tree_id": "8f35cc1f677f2428c304eed93a382835b901d6f6",
+          "url": "https://github.com/NREL/reVRt/commit/68285267597a23b18e99b98b1f7e6b716e9dc642"
+        },
+        "date": 1766195164574,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 146269124,
+            "range": "± 2440377",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 169132122,
+            "range": "± 2015229",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 250849666,
+            "range": "± 9384638",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 343181209,
+            "range": "± 20708506",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 647427437,
+            "range": "± 17978141",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 149896739,
+            "range": "± 2254135",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 153858709,
+            "range": "± 790294",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 168472976,
+            "range": "± 1218582",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 216544036,
+            "range": "± 4608767",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 392592548,
+            "range": "± 8548965",
             "unit": "ns/iter"
           }
         ]
