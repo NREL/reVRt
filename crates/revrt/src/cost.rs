@@ -264,8 +264,7 @@ pub(crate) mod sample {
                     "multiplier_layer": "A"},
                 {"layer_name": "C", "multiplier_scalar": 100,
                     "is_invariant": true}
-            ],
-            "ignore_invalid_costs": true
+            ]
         }
         "#
         .to_string()
@@ -361,8 +360,7 @@ mod test {
             "cost_layers": [],
             "friction_layers": [
                 {"multiplier_layer": "B", "multiplier_scalar": -3.0}
-            ],
-            "ignore_invalid_costs": true
+            ]
         }
         "#;
 
@@ -389,8 +387,7 @@ mod test {
             ],
             "friction_layers": [
                 {"multiplier_layer": "B", "multiplier_scalar": -3.0}
-            ],
-            "ignore_invalid_costs": true
+            ]
         }
         "#;
 
