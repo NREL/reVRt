@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::path::PathBuf;
 
 use pyo3::exceptions::{PyException, PyIOError};
@@ -25,6 +26,7 @@ impl From<Error> for PyErr {
 fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_paths, m)?)?;
     m.add("revrtRustError", py.get_type::<revrtRustError>())?;
+    m.add_class::<Number>()?;
     Ok(())
 }
 
@@ -45,7 +47,7 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     JSON string representation of the cost function. The following
 ///     keys are allowed in the cost function: "cost_layers",
 ///     "friction_layers", and "ignore_invalid_costs". See the
-///     documentation of the cost function for details oin each of these
+///     documentation of the cost function for details on each of these
 ///     inputs.
 /// start : list of tuple
 ///     List of two-tuples containing non-negative integers representing
@@ -88,4 +90,54 @@ fn find_paths(
         .into_iter()
         .map(|(path, cost)| (path.into_iter().map(Into::into).collect(), cost))
         .collect())
+}
+
+/// A test docstring for a class.
+#[pyclass]
+struct Number {
+    value: i32,
+}
+
+#[pyclass]
+struct NumberIter {
+    data: std::vec::IntoIter<i32>,
+}
+
+// use pyo3::types::PyString;
+
+#[pymethods]
+impl NumberIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<i32> {
+        println!("Calling __next__ from Rust!");
+        slf.data.next()
+    }
+}
+
+#[pymethods]
+impl Number {
+    #[new]
+    #[pyo3(signature = (value=100))]
+    fn new(value: i32) -> Self {
+        Number { value }
+    }
+
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!("Number({})", self.value))
+    }
+
+    // fn __iter__<'py>(slf: PyRef<'py, Self>) -> PyResult<pyo3::Bound<'py, pyo3::types::PyIterator>> {
+    //     PyString::new(slf.py(), "hello, world").try_iter()
+    // }
+
+    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<NumberIter>> {
+        Py::new(
+            slf.py(),
+            NumberIter {
+                data: vec![1, 2, 3, 4, 5].into_iter(),
+            },
+        )
+    }
 }
