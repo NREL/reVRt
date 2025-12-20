@@ -362,11 +362,11 @@ def build_routing_layer(lcp_config_fp, out_dir, polarity=None, voltage=None):
 
     cost_out_fp = out_dir / "agg_costs.tif"
     logger.debug("\t- Writing costs to %s", cost_out_fp)
-    rl.costs.rio.to_raster(cost_out_fp, river="GTiff", nodata=-1)
+    rl.cost.rio.to_raster(cost_out_fp, driver="GTiff", nodata=-1)
 
     frl_out_fp = out_dir / "final_routing_layer.tif"
     logger.debug("\t- Writing final routing layer to %s", frl_out_fp)
-    rl.final_routing_layer.rio.to_raster(frl_out_fp, river="GTiff", nodata=-1)
+    rl.final_routing_layer.rio.to_raster(frl_out_fp, driver="GTiff", nodata=-1)
 
     return [str(cost_out_fp), str(frl_out_fp)]
 
