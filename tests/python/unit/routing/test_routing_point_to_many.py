@@ -1456,7 +1456,7 @@ def test_friction_layer_with_layer_name_warns(sample_layered_data):
     )
 
     with pytest.warns(revrtDeprecationWarning) as warning_record:
-        layers_for_rust = list(scenario._all_layers_for_rust())
+        layers_for_rust = list(scenario._friction_layers_for_rust())
 
     assert len(warning_record) == 1
     friction_payload = layers_for_rust[-1]
@@ -1478,7 +1478,7 @@ def test_friction_layer_with_multiplier_layer_only(sample_layered_data):
         ],
     )
 
-    layers_for_rust = list(scenario._all_layers_for_rust())
+    layers_for_rust = list(scenario._friction_layers_for_rust())
     friction_payload = layers_for_rust[-1]
     assert friction_payload["multiplier_layer"] == "layer_4"
     assert "mask" not in friction_payload
