@@ -419,10 +419,8 @@ mod tests {
     #[test]
     fn test_simple_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "A"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "A"}]}"#).unwrap();
         let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let test_points = [ArrayIndex { i: 3, j: 1 }, ArrayIndex { i: 2, j: 2 }];
@@ -471,10 +469,7 @@ mod tests {
     fn test_simple_invariant_cost_function_get_3x3() {
         let path = samples::multi_variable_zarr();
         let cost_function = CostFunction::from_json(
-            r#"{
-                "cost_layers": [{"layer_name": "A", "is_invariant": true}],
-                "ignore_invalid_costs": true
-            }"#,
+            r#"{"cost_layers": [{"layer_name": "A", "is_invariant": true}]}"#,
         )
         .unwrap();
         let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
@@ -585,10 +580,8 @@ mod tests {
     #[test]
     fn test_get_3x3_single_item_array() {
         let path = samples::cost_as_index_zarr((1, 1), (1, 1));
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: 0, j: 0 });
@@ -609,10 +602,8 @@ mod tests {
     #[test_case((1, 1), vec![(0, 1, 2.), (1, 0, 2.5)] ; "bottom right corner")]
     fn test_get_3x3_two_by_two_array((si, sj): (u64, u64), expected_output: Vec<(u64, u64, f32)>) {
         let path = samples::cost_as_index_zarr((2, 2), (2, 2));
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
@@ -647,10 +638,8 @@ mod tests {
         expected_output: Vec<(u64, u64, f32)>,
     ) {
         let path = samples::cost_as_index_zarr((3, 3), (3, 3));
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
@@ -688,10 +677,8 @@ mod tests {
         expected_output: Vec<(u64, u64, f32)>,
     ) {
         let path = samples::cost_as_index_zarr((4, 4), (2, 2));
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let dataset = Dataset::open(path, cost_function, 1_000).expect("Error opening dataset");
 
         let results = dataset.get_3x3(&ArrayIndex { i: si, j: sj });
@@ -719,10 +706,11 @@ mod tests {
         {
             "cost_layers": [
                 {"layer_name": "A"},
-                {"layer_name": "C", "is_invariant": true},
-                {"multiplier_layer": "B", "multiplier_scalar": 0.5}
+                {"layer_name": "C", "is_invariant": true}
             ],
-            "ignore_invalid_costs": true
+            "friction_layers": [
+                {"multiplier_layer": "B", "multiplier_scalar": 0.5}
+            ]
         }
         "#;
 

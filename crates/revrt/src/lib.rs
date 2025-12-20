@@ -70,8 +70,7 @@ pub fn bench_minimalist(
             {"layer_name": "B", "multiplier_scalar": 100},
             {"layer_name": "A", "multiplier_layer": "B"},
             {"layer_name": "C", "multiplier_layer": "A", "multiplier_scalar": 2}
-            ],
-        "ignore_invalid_costs": true
+        ]
     }"#
     .to_string();
     let cost_function = CostFunction::from_json(&cost_json).unwrap();
@@ -137,10 +136,8 @@ mod tests {
         expected_cost: f32,
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(1.0);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = vec![ArrayIndex { i: ei, j: ej }];
@@ -160,10 +157,8 @@ mod tests {
         expected_cost: f32,
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(1.0);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = endpoints
@@ -191,10 +186,8 @@ mod tests {
         cost_array_fill: f32,
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(cost_array_fill);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = endpoints
@@ -220,10 +213,8 @@ mod tests {
     // Due to truncation solution to handle f32 costs.
     fn routing_many_to_many() {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![
             ArrayIndex { i: 1, j: 1 },
@@ -254,10 +245,8 @@ mod tests {
     #[test]
     fn routing_many_to_one() {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![ArrayIndex { i: 1, j: 1 }, ArrayIndex { i: 5, j: 5 }];
         let end = vec![ArrayIndex { i: 3, j: 3 }];
@@ -326,10 +315,8 @@ mod tests {
             )
             .unwrap();
 
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
 
         let start = vec![ArrayIndex { i: 0, j: 0 }];

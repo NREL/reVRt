@@ -42,16 +42,11 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// zarr_fp : path-like
 ///     Path to zarr file containing cost layers.
 /// cost_layers : str
-///     JSON string representation of a list of dictionaries
-///     that define the cost layer computation. Each dictionary
-///     must have at least one key: "layer_name". This key points
-///     to the layer in the Zarr file that should be read in. The
-///     other optional keys are "multiplier_layer", which is the
-///     name of a layer in the Zarr file that should be multiplied
-///     onto the original layer and "multiplier_scalar", which
-///     should be a float that should be applied to scale the layer.
-///     All of the layers in the list are processed this way and then
-///     summed to obtain the final cost layer for routing.
+///     JSON string representation of the cost function. The following
+///     keys are allowed in the cost function: "cost_layers",
+///     "friction_layers", and "ignore_invalid_costs". See the
+///     documentation of the cost function for details oin each of these
+///     inputs.
 /// start : list of tuple
 ///     List of two-tuples containing non-negative integers representing
 ///     the indices in the array for the pixel from which routing should
@@ -74,11 +69,11 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     route goes through and the second element is the final
 ///     route cost.
 #[pyfunction]
-#[pyo3(signature = (zarr_fp, cost_layers, start, end, cache_size=250_000_000))]
+#[pyo3(signature = (zarr_fp, cost_function, start, end, cache_size=250_000_000))]
 #[allow(clippy::type_complexity)]
 fn find_paths(
     zarr_fp: PathBuf,
-    cost_layers: String,
+    cost_function: String,
     start: Vec<(u64, u64)>,
     end: Vec<(u64, u64)>,
     cache_size: u64,
@@ -88,7 +83,7 @@ fn find_paths(
         .map(|(i, j)| ArrayIndex { i, j })
         .collect();
     let end: Vec<ArrayIndex> = end.into_iter().map(|(i, j)| ArrayIndex { i, j }).collect();
-    let paths = resolve(zarr_fp, &cost_layers, cache_size, &start, end)?;
+    let paths = resolve(zarr_fp, &cost_function, cache_size, &start, end)?;
     Ok(paths
         .into_iter()
         .map(|(path, cost)| (path.into_iter().map(Into::into).collect(), cost))

@@ -43,7 +43,7 @@ def test_basic_single_route(tmp_path):
     }
     results = find_paths(
         zarr_fp=test_cost_fp,
-        cost_layers=json.dumps(cost_definition),
+        cost_function=json.dumps(cost_definition),
         start=[(1, 1)],
         end=[(2, 6)],
     )

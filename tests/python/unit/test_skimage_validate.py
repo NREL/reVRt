@@ -37,7 +37,7 @@ def validate_single_var(data, start, end, tmp_path):
     }
     results = find_paths(
         zarr_fp=test_cost_fp,
-        cost_layers=json.dumps(cost_definition),
+        cost_function=json.dumps(cost_definition),
         start=[start],
         end=[end],
     )
