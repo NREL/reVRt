@@ -1,6 +1,8 @@
 """reVRt routing CLI unit tests"""
 
+import os
 import json
+import platform
 from pathlib import Path
 
 import numpy as np
@@ -12,6 +14,7 @@ import rasterio
 from shapely.geometry import Point, LineString
 from rasterio.transform import from_origin
 
+from revrt._cli import main
 from revrt.utilities import LayeredFile
 from revrt.routing.utilities import map_to_costs
 from revrt.exceptions import revrtKeyError
@@ -623,6 +626,62 @@ def test_build_route_costs_command_writes_expected_layers(
 
     assert agg_costs.shape == expected_vals.shape
     assert final_layer.shape == expected_vals.shape
+    assert np.allclose(agg_costs, expected_vals)
+    assert np.allclose(final_layer, expected_vals)
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_build_route_costs_command(
+    cli_runner, sample_layered_data, tmp_path
+):
+    """CLI build-route-costs command should produce routed rasters"""
+
+    lcp_config = {
+        "cost_fpath": str(sample_layered_data),
+        "cost_layers": [
+            {"layer_name": "layer_1", "multiplier_scalar": 1.5},
+            {"layer_name": "layer_2", "multiplier_scalar": 0.5},
+        ],
+        "cost_multiplier_scalar": 2.0,
+        "ignore_invalid_costs": True,
+    }
+
+    lcp_config_fp = tmp_path / "cli_lcp_config.json"
+    lcp_config_fp.write_text(json.dumps(lcp_config))
+
+    cli_config = {"lcp_config_fp": str(lcp_config_fp)}
+
+    cli_config_fp = tmp_path / "cli_command_config.json"
+    cli_config_fp.write_text(json.dumps(cli_config))
+
+    result = cli_runner.invoke(
+        main, ["build-route-costs", "-c", str(cli_config_fp)]
+    )
+    assert result.exit_code == 0, result.output
+
+    cost_fp = tmp_path / "agg_costs.tif"
+    final_fp = tmp_path / "final_routing_layer.tif"
+    assert cost_fp.exists()
+    assert final_fp.exists()
+
+    with xr.open_dataset(
+        sample_layered_data, consolidated=False, engine="zarr"
+    ) as ds:
+        layer_one = ds["layer_1"].isel(band=0).astype(np.float32).load()
+        layer_two = ds["layer_2"].isel(band=0).astype(np.float32).load()
+
+    expected_vals = (layer_one * 1.5 + layer_two * 0.5) * 2.0
+
+    with rasterio.open(cost_fp) as src:
+        agg_costs = src.read(1)
+
+    with rasterio.open(final_fp) as src:
+        final_layer = src.read(1)
+
     assert np.allclose(agg_costs, expected_vals)
     assert np.allclose(final_layer, expected_vals)
 
