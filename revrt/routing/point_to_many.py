@@ -79,7 +79,7 @@ class RoutingScenario:
         )
 
     @cached_property
-    def cl_as_json(self):
+    def cost_function_json(self):
         """str: JSON string describing configured cost layers"""
         return json.dumps(
             {
@@ -636,7 +636,7 @@ def _compute_valid_path(
     try:
         route_result = find_paths(
             zarr_fp=routing_scenario.cost_fpath,
-            cost_layers=routing_scenario.cl_as_json,
+            cost_layers=routing_scenario.cost_function_json,
             start=[start_point],
             end=end_points,
         )
