@@ -1,11 +1,20 @@
 #![allow(dead_code)]
 use std::path::PathBuf;
+use std::sync::{Arc, mpsc};
+use std::thread;
+use std::time::Duration;
 
 use pyo3::exceptions::{PyException, PyIOError};
 use pyo3::prelude::*;
 
+use rand::Rng;
+use rayon::prelude::*;
+
 use crate::error::{Error, Result};
 use crate::{ArrayIndex, resolve};
+
+/// A multi-dimensional array representing cost data
+type PythonRouteDefinition = (Vec<(u64, u64)>, Vec<(u64, u64)>);
 
 pyo3::create_exception!(_rust, revrtRustError, PyException);
 
@@ -92,52 +101,170 @@ fn find_paths(
         .collect())
 }
 
-/// A test docstring for a class.
+struct RouteDefinition {
+    start_inds: Vec<ArrayIndex>,
+    end_inds: Vec<ArrayIndex>,
+}
+
+impl From<RouteDefinition> for PythonRouteDefinition {
+    fn from(
+        RouteDefinition {
+            start_inds,
+            end_inds,
+        }: RouteDefinition,
+    ) -> PythonRouteDefinition {
+        (
+            start_inds
+                .into_iter()
+                .map(|ArrayIndex { i, j }| (i, j))
+                .collect(),
+            end_inds
+                .into_iter()
+                .map(|ArrayIndex { i, j }| (i, j))
+                .collect(),
+        )
+    }
+}
+
+impl From<PythonRouteDefinition> for RouteDefinition {
+    fn from((start_points, end_points): PythonRouteDefinition) -> RouteDefinition {
+        let start_inds = start_points
+            .into_iter()
+            .map(|(i, j)| ArrayIndex { i, j })
+            .collect();
+        let end_inds = end_points
+            .into_iter()
+            .map(|(i, j)| ArrayIndex { i, j })
+            .collect();
+
+        RouteDefinition {
+            start_inds,
+            end_inds,
+        }
+    }
+}
+
 #[pyclass]
 struct Number {
-    value: i32,
+    // data: Arc<[i32]>,
+    zarr_fp: PathBuf,
+    cost_function: String,
+    route_definitions: Vec<PythonRouteDefinition>,
+    cache_size: u64,
 }
 
-#[pyclass]
+#[pymethods]
+impl Number {
+    // #[new]
+    // #[pyo3(signature = (values=None))]
+    // fn new(values: Option<Vec<i32>>) -> PyResult<Self> {
+    //     let data = values.unwrap_or_else(|| vec![1, 2, 3, 4, 5]);
+    //     Ok(Self {
+    //         data: Arc::from(data),
+    //     })
+    // }
+
+    #[new]
+    fn new(
+        zarr_fp: PathBuf,
+        cost_function: String,
+        route_definitions: Vec<PythonRouteDefinition>,
+        cache_size: u64,
+    ) -> PyResult<Self> {
+        Ok(Self {
+            zarr_fp,
+            cost_function,
+            route_definitions,
+            cache_size,
+        })
+        // Ok(Self {
+        //     data: Arc::from(values),
+        // })
+    }
+
+    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<NumberIter>> {
+        // Py::new(slf.py(), NumberIter::new(Arc::clone(&slf.data)))
+        Py::new(slf.py(), NumberIter::new(slf))
+    }
+
+    // fn __str__(&self) -> PyResult<String> {
+    //     Ok(format!("Number(len={})", self.data.len()))
+    // }
+}
+
+#[pyclass(unsendable)]
 struct NumberIter {
-    data: std::vec::IntoIter<i32>,
+    // receiver: mpsc::Receiver<i32>,
+    receiver: mpsc::Receiver<Result<Vec<(Vec<(u64, u64)>, f32)>>>,
+    finished: bool,
 }
 
-// use pyo3::types::PyString;
+impl NumberIter {
+    // fn new(data: Arc<[i32]>) -> Self {
+    fn new(scenario: Number) -> Self {
+        let (tx, rx) = mpsc::channel();
+        rayon::spawn(move || {
+            //     fn find_paths(
+            //     zarr_fp: PathBuf,
+            //     cost_function: String,
+            //     start: Vec<(u64, u64)>,
+            //     end: Vec<(u64, u64)>,
+            //     cache_size: u64,
+            // ) -> Result<Vec<(Vec<(u64, u64)>, f32)>>
+            // let len = data.len();
+            // let _ = (0..len)
+            //     .into_par_iter()
+            //     .try_for_each_with(tx, |sender, idx| {
+            //         let value = data[idx];
+            //         let mut rng = rand::rng();
+            //         let delay_secs = rng.random_range(1..=5);
+            //         println!("Sleeping {delay_secs}s before yielding {value}");
+            //         thread::sleep(Duration::from_secs(delay_secs));
+            //         sender.send(value).map_err(|_| ())
+            //     });
+            let _ = scenario
+                .route_definitions
+                .into_par_iter()
+                .try_for_each_with(tx, |sender, (start_points, end_points)| {
+                    // println!("Sleeping {delay_secs}s before yielding {value}");
+                    let routes = find_paths(
+                        scenario.zarr_fp.clone(),
+                        scenario.cost_function.clone(),
+                        start_points,
+                        end_points,
+                        scenario.cache_size,
+                    );
+                    sender.send(routes)
+                });
+        });
+
+        Self {
+            receiver: rx,
+            finished: false,
+        }
+    }
+}
 
 #[pymethods]
 impl NumberIter {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<i32> {
-        println!("Calling __next__ from Rust!");
-        slf.data.next()
-    }
-}
 
-#[pymethods]
-impl Number {
-    #[new]
-    #[pyo3(signature = (value=100))]
-    fn new(value: i32) -> Self {
-        Number { value }
-    }
+    // fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<Option<i32>>  {
+    fn __next__(
+        mut slf: PyRefMut<'_, Self>,
+    ) -> PyResult<Option<Result<Vec<(Vec<(u64, u64)>, f32)>>>> {
+        if slf.finished {
+            return Ok(None);
+        }
 
-    fn __str__(&self) -> PyResult<String> {
-        Ok(format!("Number({})", self.value))
-    }
-
-    // fn __iter__<'py>(slf: PyRef<'py, Self>) -> PyResult<pyo3::Bound<'py, pyo3::types::PyIterator>> {
-    //     PyString::new(slf.py(), "hello, world").try_iter()
-    // }
-
-    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<NumberIter>> {
-        Py::new(
-            slf.py(),
-            NumberIter {
-                data: vec![1, 2, 3, 4, 5].into_iter(),
-            },
-        )
+        match slf.receiver.recv() {
+            Ok(value) => Ok(Some(value)),
+            Err(_) => {
+                slf.finished = true;
+                Ok(None)
+            }
+        }
     }
 }
