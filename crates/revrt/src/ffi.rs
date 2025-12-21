@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::thread;
@@ -8,6 +9,7 @@ use pyo3::exceptions::{PyException, PyIOError};
 use pyo3::prelude::*;
 
 use rand::Rng;
+use rand::rng;
 use rayon::prelude::*;
 
 use crate::error::{Error, Result};
@@ -231,12 +233,23 @@ impl NumberIter {
                 |sender, (start_points, end_points)| {
                     // println!("Sleeping {delay_secs}s before yielding {value}");
                     println!("Computing routes between {start_points:?} and {end_points:?}");
+                    if end_points.last() == Some(&(2, 6)) {
+                        // let mut rng = rand::rng();
+                        // let delay_secs = rng.random_range(3..=7);
+                        let delay_secs = 6;
+                        println!("Sleeping {delay_secs}s before yielding");
+                        io::stdout().flush().expect("Failed to flush stdout");
+                        thread::sleep(Duration::from_secs(delay_secs));
+                    }
                     let routes = find_paths(
                         zarr_fp.clone(),
                         cost_function.clone(),
-                        start_points,
-                        end_points,
+                        start_points.clone(),
+                        end_points.clone(),
                         cache_size,
+                    );
+                    println!(
+                        "Finished computing routes between {start_points:?} and {end_points:?}"
                     );
                     sender.send(routes)
                 },
@@ -253,6 +266,7 @@ impl NumberIter {
 #[pymethods]
 impl NumberIter {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        println!("Initialized iterator");
         slf
     }
 
@@ -263,7 +277,7 @@ impl NumberIter {
         if slf.finished {
             return Ok(None);
         }
-
+        println!("Calling next on receiver");
         match slf.receiver.recv() {
             Ok(value) => Ok(Some(value)),
             Err(_) => {
@@ -271,5 +285,19 @@ impl NumberIter {
                 Ok(None)
             }
         }
+
+        // let py = slf.py();
+        // let recv_result = {
+        //     let receiver = &slf.receiver;
+        //     py.allow_threads(|| receiver.recv())
+        // };
+
+        // match recv_result {
+        //     Ok(value) => Ok(Some(value)),
+        //     Err(_) => {
+        //         slf.finished = true;
+        //         Ok(None)
+        //     }
+        // }
     }
 }
