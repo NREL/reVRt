@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use std::path::PathBuf;
-use std::sync::{Arc, mpsc};
+use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
@@ -101,48 +101,48 @@ fn find_paths(
         .collect())
 }
 
-struct RouteDefinition {
-    start_inds: Vec<ArrayIndex>,
-    end_inds: Vec<ArrayIndex>,
-}
+// struct RouteDefinition {
+//     start_inds: Vec<ArrayIndex>,
+//     end_inds: Vec<ArrayIndex>,
+// }
 
-impl From<RouteDefinition> for PythonRouteDefinition {
-    fn from(
-        RouteDefinition {
-            start_inds,
-            end_inds,
-        }: RouteDefinition,
-    ) -> PythonRouteDefinition {
-        (
-            start_inds
-                .into_iter()
-                .map(|ArrayIndex { i, j }| (i, j))
-                .collect(),
-            end_inds
-                .into_iter()
-                .map(|ArrayIndex { i, j }| (i, j))
-                .collect(),
-        )
-    }
-}
+// impl From<RouteDefinition> for PythonRouteDefinition {
+//     fn from(
+//         RouteDefinition {
+//             start_inds,
+//             end_inds,
+//         }: RouteDefinition,
+//     ) -> PythonRouteDefinition {
+//         (
+//             start_inds
+//                 .into_iter()
+//                 .map(|ArrayIndex { i, j }| (i, j))
+//                 .collect(),
+//             end_inds
+//                 .into_iter()
+//                 .map(|ArrayIndex { i, j }| (i, j))
+//                 .collect(),
+//         )
+//     }
+// }
 
-impl From<PythonRouteDefinition> for RouteDefinition {
-    fn from((start_points, end_points): PythonRouteDefinition) -> RouteDefinition {
-        let start_inds = start_points
-            .into_iter()
-            .map(|(i, j)| ArrayIndex { i, j })
-            .collect();
-        let end_inds = end_points
-            .into_iter()
-            .map(|(i, j)| ArrayIndex { i, j })
-            .collect();
+// impl From<PythonRouteDefinition> for RouteDefinition {
+//     fn from((start_points, end_points): PythonRouteDefinition) -> RouteDefinition {
+//         let start_inds = start_points
+//             .into_iter()
+//             .map(|(i, j)| ArrayIndex { i, j })
+//             .collect();
+//         let end_inds = end_points
+//             .into_iter()
+//             .map(|(i, j)| ArrayIndex { i, j })
+//             .collect();
 
-        RouteDefinition {
-            start_inds,
-            end_inds,
-        }
-    }
-}
+//         RouteDefinition {
+//             start_inds,
+//             end_inds,
+//         }
+//     }
+// }
 
 #[pyclass]
 struct Number {
@@ -184,7 +184,7 @@ impl Number {
 
     fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<NumberIter>> {
         // Py::new(slf.py(), NumberIter::new(Arc::clone(&slf.data)))
-        Py::new(slf.py(), NumberIter::new(slf))
+        Py::new(slf.py(), NumberIter::new(&slf))
     }
 
     // fn __str__(&self) -> PyResult<String> {
@@ -201,8 +201,12 @@ struct NumberIter {
 
 impl NumberIter {
     // fn new(data: Arc<[i32]>) -> Self {
-    fn new(scenario: Number) -> Self {
+    fn new(scenario: &Number) -> Self {
         let (tx, rx) = mpsc::channel();
+        let zarr_fp = scenario.zarr_fp.clone();
+        let cost_function = scenario.cost_function.clone();
+        let route_definitions = scenario.route_definitions.clone();
+        let cache_size = scenario.cache_size;
         rayon::spawn(move || {
             //     fn find_paths(
             //     zarr_fp: PathBuf,
@@ -222,20 +226,21 @@ impl NumberIter {
             //         thread::sleep(Duration::from_secs(delay_secs));
             //         sender.send(value).map_err(|_| ())
             //     });
-            let _ = scenario
-                .route_definitions
-                .into_par_iter()
-                .try_for_each_with(tx, |sender, (start_points, end_points)| {
+            let _ = route_definitions.into_par_iter().try_for_each_with(
+                tx,
+                |sender, (start_points, end_points)| {
                     // println!("Sleeping {delay_secs}s before yielding {value}");
+                    println!("Computing routes between {start_points:?} and {end_points:?}");
                     let routes = find_paths(
-                        scenario.zarr_fp.clone(),
-                        scenario.cost_function.clone(),
+                        zarr_fp.clone(),
+                        cost_function.clone(),
                         start_points,
                         end_points,
-                        scenario.cache_size,
+                        cache_size,
                     );
                     sender.send(routes)
-                });
+                },
+            );
         });
 
         Self {
