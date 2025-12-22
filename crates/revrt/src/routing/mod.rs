@@ -1,8 +1,10 @@
 mod features;
 mod scenario;
 
+use std::sync::{Arc, mpsc};
+
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::{ArrayIndex, Solution, error::Result};
 use features::Features;
@@ -53,6 +55,63 @@ impl Routing {
             })
             .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
             .collect()
+    }
+}
+
+pub(super) struct RouteDefinition {
+    pub(super) start_inds: Vec<ArrayIndex>,
+    pub(super) end_inds: Vec<ArrayIndex>,
+}
+
+pub(super) struct ParRouting {
+    scenario: Arc<Scenario>,
+}
+
+impl ParRouting {
+    pub(super) fn new<P: AsRef<std::path::Path>>(
+        store_path: P,
+        cost_function: crate::cost::CostFunction,
+        cache_size: u64,
+    ) -> Result<Self> {
+        let scenario = Scenario::new(store_path, cost_function, cache_size)?;
+
+        Ok(Self {
+            scenario: Arc::new(scenario),
+        })
+    }
+    pub(super) fn lazy_scout(
+        &self,
+        // route_definitions: Vec<(Vec<ArrayIndex>, Vec<ArrayIndex>)>,
+        route_definitions: Vec<RouteDefinition>,
+        tx: mpsc::Sender<Vec<(Vec<ArrayIndex>, f32)>>,
+    ) {
+        let scenario = Arc::clone(&self.scenario);
+        rayon::spawn(move || {
+            let _ = route_definitions.into_par_iter().try_for_each_with(
+                tx,
+                |sender,
+                 RouteDefinition {
+                     start_inds,
+                     end_inds,
+                 }| {
+                    debug!("Computing routes between {start_inds:?} and {end_inds:?}");
+                    let routes: Vec<(Vec<ArrayIndex>, f32)> = start_inds
+                        .into_par_iter()
+                        .filter_map(|s| {
+                            pathfinding::prelude::dijkstra(
+                                &s,
+                                |p| scenario.successors(p),
+                                |p| end_inds.contains(p),
+                            )
+                        })
+                        .map(|(route, total_cost)| (route, unscaled_cost(total_cost)))
+                        .collect();
+                    let num_routes = routes.len();
+                    trace!("Finished computing {num_routes} to {end_inds:?}");
+                    sender.send(routes)
+                },
+            );
+        });
     }
 }
 
