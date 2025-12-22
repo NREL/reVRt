@@ -6,7 +6,7 @@ use std::sync::{Arc, mpsc};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::{debug, trace};
 
-use crate::{ArrayIndex, Solution, error::Result};
+use crate::{ArrayIndex, RevrtRoutingSolutions, Solution, error::Result};
 use features::Features;
 use scenario::Scenario;
 
@@ -81,9 +81,8 @@ impl ParRouting {
     }
     pub(super) fn lazy_scout(
         &self,
-        // route_definitions: Vec<(Vec<ArrayIndex>, Vec<ArrayIndex>)>,
         route_definitions: Vec<RouteDefinition>,
-        tx: mpsc::Sender<Vec<(Vec<ArrayIndex>, f32)>>,
+        tx: mpsc::Sender<RevrtRoutingSolutions>,
     ) {
         let scenario = Arc::clone(&self.scenario);
         rayon::spawn(move || {
@@ -95,7 +94,7 @@ impl ParRouting {
                      end_inds,
                  }| {
                     debug!("Computing routes between {start_inds:?} and {end_inds:?}");
-                    let routes: Vec<(Vec<ArrayIndex>, f32)> = start_inds
+                    let routes: RevrtRoutingSolutions = start_inds
                         .into_par_iter()
                         .filter_map(|s| {
                             pathfinding::prelude::dijkstra(
@@ -104,7 +103,7 @@ impl ParRouting {
                                 |p| end_inds.contains(p),
                             )
                         })
-                        .map(|(route, total_cost)| (route, unscaled_cost(total_cost)))
+                        .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
                         .collect();
                     let num_routes = routes.len();
                     trace!("Finished computing {num_routes} to {end_inds:?}");
