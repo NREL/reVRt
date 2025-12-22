@@ -56,7 +56,7 @@ pub(crate) fn resolve_generator<P, I>(
     store_path: P,
     cost_function: &str,
     route_definitions: I,
-    tx: mpsc::Sender<RevrtRoutingSolutions>,
+    tx: mpsc::Sender<(u32, RevrtRoutingSolutions)>,
     cache_size: u64,
 ) -> Result<()>
 where

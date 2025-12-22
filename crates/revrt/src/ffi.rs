@@ -12,13 +12,14 @@ type PyRoutePoint = (u64, u64);
 type PyPossibleRouteNodes = Vec<PyRoutePoint>;
 type PyRouteResult = (Vec<PyRoutePoint>, f32);
 type PyRoutingSolutions = Vec<PyRouteResult>;
-type PyRouteYield = PyResult<Option<PyRoutingSolutions>>;
-type PyRouteDefinition = (PyPossibleRouteNodes, PyPossibleRouteNodes);
+type PyRouteYield = PyResult<Option<(u32, PyRoutingSolutions)>>;
+type PyRouteDefinition = (u32, PyPossibleRouteNodes, PyPossibleRouteNodes);
 
 impl From<&PyRouteDefinition> for RouteDefinition {
-    fn from(value: &PyRouteDefinition) -> RouteDefinition {
-        let (start_points, end_points) = value;
+    fn from(route: &PyRouteDefinition) -> RouteDefinition {
+        let (id, start_points, end_points) = route;
         RouteDefinition {
+            route_id: *id,
             start_inds: start_points
                 .iter()
                 .map(|(i, j)| ArrayIndex { i: *i, j: *j })
@@ -135,26 +136,33 @@ fn find_paths(
 ///     inputs.
 /// route_definitions : list of tuple
 ///     List of tuples containing path definitions. Each path definition
-///     tuple should contain two lists: the first list contains the
-///     starting points and the second list contains the ending points.
-///     Each point is represented as a two-tuple of non-negative integers
-///     representing the indices in the array for the pixel indicating
-///     where routing should begin/end. A unique path will be returned for
-///     each of the starting points in each of the path definition tuples.
+///     tuple should be of the form (int, list, list). The int input is
+///     a route ID (non-negative) that you can use to link results to
+///     input route definitions. The first list contains the starting
+///     points and the second list contains the ending points. Each point
+///     is represented as a two-tuple of non-negative integers representing
+///     the indices in the array for the pixel indicating where routing should
+///     begin/end. A unique path will be returned for each of the starting
+///     points in each of the path definition tuples (assuming a valid path
+///     exists).
 /// cache_size : int, default=250_000_000
 ///     Cache size to use for computation, in bytes.
 ///     By default, `250,000,000` (250MB).
 ///
 /// Yields
 /// ------
-/// list of tuple
-///     List of path routing results. Each result is a tuples where
-///     the first element is a list of points that the route goes through
-///     and the second element is the final route cost. Multiple tuples
-///     will be returned if the path definition had multiple starting points.
+/// tuple
+///     A tuple representing the route finding result for a single
+///     path definition. The first element is the route definition ID
+///     (as given in the input) and the second element is a list of path
+///     routing results. Each result is a tuple where the first element
+///     is a list of points that the route goes through and the second
+///     element is the final route cost. The result list will contain
+///     multiple tuples if the path definition had multiple starting points.
 ///     An empty list will be returned if no paths were found from any of
 ///     the starting points to any of the ending points. This generator
-///     will yield one list per path definition (no order is guaranteed).
+///     will yield one tuple per path definition. Order is not guaranteed,
+///     so use the route ID input to match results to inputs.
 #[pyclass]
 struct RouteFinder {
     zarr_fp: PathBuf,
@@ -196,7 +204,7 @@ impl RouteFinder {
 
 #[pyclass(unsendable)]
 struct RouteOutputIter {
-    receiver: Option<mpsc::Receiver<RevrtRoutingSolutions>>,
+    receiver: Option<mpsc::Receiver<(u32, RevrtRoutingSolutions)>>,
     finished: bool,
 }
 
@@ -248,7 +256,7 @@ impl RouteOutputIter {
         slf.receiver = Some(receiver);
 
         match recv_result {
-            Ok(value) => Ok(Some(value.into_iter().map(Into::into).collect())),
+            Ok((id, solutions)) => Ok(Some((id, solutions.into_iter().map(Into::into).collect()))),
             Err(_) => {
                 slf.finished = true;
                 Ok(None)

@@ -59,6 +59,7 @@ impl Routing {
 }
 
 pub(super) struct RouteDefinition {
+    pub(super) route_id: u32,
     pub(super) start_inds: Vec<ArrayIndex>,
     pub(super) end_inds: Vec<ArrayIndex>,
 }
@@ -82,7 +83,7 @@ impl ParRouting {
     pub(super) fn lazy_scout<I>(
         &self,
         route_definitions: I,
-        tx: mpsc::Sender<RevrtRoutingSolutions>,
+        tx: mpsc::Sender<(u32, RevrtRoutingSolutions)>,
     ) where
         I: IntoParallelIterator<Item = RouteDefinition> + Send + 'static,
         I::Iter: Send,
@@ -93,6 +94,7 @@ impl ParRouting {
                 tx,
                 |sender,
                  RouteDefinition {
+                     route_id,
                      start_inds,
                      end_inds,
                  }| {
@@ -110,7 +112,7 @@ impl ParRouting {
                         .collect();
                     let num_routes = routes.len();
                     trace!("Finished computing {num_routes} to {end_inds:?}");
-                    sender.send(routes)
+                    sender.send((route_id, routes))
                 },
             );
         });
