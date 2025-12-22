@@ -1,22 +1,43 @@
-#![allow(dead_code)]
-use std::io::{self, Write};
 use std::path::PathBuf;
 use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
 
 use pyo3::exceptions::{PyException, PyIOError};
 use pyo3::prelude::*;
 
-use rand::Rng;
-use rand::rng;
-use rayon::prelude::*;
-
 use crate::error::{Error, Result};
-use crate::{ArrayIndex, resolve};
+use crate::routing::RouteDefinition;
+use crate::{ArrayIndex, RevrtRoutingSolutions, Solution, resolve, resolve_generator};
 
-/// A multi-dimensional array representing cost data
-type PythonRouteDefinition = (Vec<(u64, u64)>, Vec<(u64, u64)>);
+type PyRoutePoint = (u64, u64);
+type PyPossibleRouteNodes = Vec<PyRoutePoint>;
+type PyRouteResult = (Vec<PyRoutePoint>, f32);
+type PyRoutingSolutions = Vec<PyRouteResult>;
+type PyRouteYield = PyResult<Option<PyRoutingSolutions>>;
+type PyRouteDefinition = (PyPossibleRouteNodes, PyPossibleRouteNodes);
+
+impl From<&PyRouteDefinition> for RouteDefinition {
+    fn from(value: &PyRouteDefinition) -> RouteDefinition {
+        let (start_points, end_points) = value;
+        RouteDefinition {
+            start_inds: start_points
+                .iter()
+                .map(|(i, j)| ArrayIndex { i: *i, j: *j })
+                .collect(),
+            end_inds: end_points
+                .iter()
+                .map(|(i, j)| ArrayIndex { i: *i, j: *j })
+                .collect(),
+        }
+    }
+}
+
+impl From<Solution<ArrayIndex, f32>> for PyRouteResult {
+    fn from(solution: Solution<ArrayIndex, f32>) -> Self {
+        let Solution { route, total_cost } = solution;
+        let path = route.into_iter().map(Into::into).collect();
+        (path, total_cost)
+    }
+}
 
 pyo3::create_exception!(_rust, revrtRustError, PyException);
 
@@ -37,7 +58,7 @@ impl From<Error> for PyErr {
 fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_paths, m)?)?;
     m.add("revrtRustError", py.get_type::<revrtRustError>())?;
-    m.add_class::<Number>()?;
+    m.add_class::<RouteFinder>()?;
     Ok(())
 }
 
@@ -54,7 +75,7 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// ----------
 /// zarr_fp : path-like
 ///     Path to zarr file containing cost layers.
-/// cost_layers : str
+/// cost_function : str
 ///     JSON string representation of the cost function. The following
 ///     keys are allowed in the cost function: "cost_layers",
 ///     "friction_layers", and "ignore_invalid_costs". See the
@@ -103,201 +124,138 @@ fn find_paths(
         .collect())
 }
 
-// struct RouteDefinition {
-//     start_inds: Vec<ArrayIndex>,
-//     end_inds: Vec<ArrayIndex>,
-// }
-
-// impl From<RouteDefinition> for PythonRouteDefinition {
-//     fn from(
-//         RouteDefinition {
-//             start_inds,
-//             end_inds,
-//         }: RouteDefinition,
-//     ) -> PythonRouteDefinition {
-//         (
-//             start_inds
-//                 .into_iter()
-//                 .map(|ArrayIndex { i, j }| (i, j))
-//                 .collect(),
-//             end_inds
-//                 .into_iter()
-//                 .map(|ArrayIndex { i, j }| (i, j))
-//                 .collect(),
-//         )
-//     }
-// }
-
-// impl From<PythonRouteDefinition> for RouteDefinition {
-//     fn from((start_points, end_points): PythonRouteDefinition) -> RouteDefinition {
-//         let start_inds = start_points
-//             .into_iter()
-//             .map(|(i, j)| ArrayIndex { i, j })
-//             .collect();
-//         let end_inds = end_points
-//             .into_iter()
-//             .map(|(i, j)| ArrayIndex { i, j })
-//             .collect();
-
-//         RouteDefinition {
-//             start_inds,
-//             end_inds,
-//         }
-//     }
-// }
-
+/// Find least-cost paths for one or more starting points in parallel.
+///
+/// Parameters
+/// ----------
+/// zarr_fp : path-like
+///     Path to zarr file containing cost layers.
+/// cost_function : str
+///     JSON string representation of the cost function. The following
+///     keys are allowed in the cost function: "cost_layers",
+///     "friction_layers", and "ignore_invalid_costs". See the
+///     documentation of the cost function for details on each of these
+///     inputs.
+/// route_definitions : list of tuple
+///     List of tuples containing path definitions. Each path definition
+///     tuple should contain two lists: the first list contains the
+///     starting points and the second list contains the ending points.
+///     Each point is represented as a two-tuple of non-negative integers
+///     representing the indices in the array for the pixel indicating
+///     where routing should begin/end. A unique path will be returned for
+///     each of the starting points in each of the path definition tuples.
+/// cache_size : int, default=250_000_000
+///     Cache size to use for computation, in bytes.
+///     By default, `250,000,000` (250MB).
+///
+/// Yields
+/// ------
+/// list of tuple
+///     List of path routing results. Each result is a tuples where
+///     the first element is a list of points that the route goes through
+///     and the second element is the final route cost. Multiple tuples
+///     will be returned if the path definition had multiple starting points.
+///     An empty list will be returned if no paths were found from any of
+///     the starting points to any of the ending points. This generator
+///     will yield one list per path definition (no order is guaranteed).
 #[pyclass]
-struct Number {
-    // data: Arc<[i32]>,
+struct RouteFinder {
     zarr_fp: PathBuf,
     cost_function: String,
-    route_definitions: Vec<PythonRouteDefinition>,
+    route_definitions: Vec<PyRouteDefinition>,
     cache_size: u64,
 }
 
 #[pymethods]
-impl Number {
-    // #[new]
-    // #[pyo3(signature = (values=None))]
-    // fn new(values: Option<Vec<i32>>) -> PyResult<Self> {
-    //     let data = values.unwrap_or_else(|| vec![1, 2, 3, 4, 5]);
-    //     Ok(Self {
-    //         data: Arc::from(data),
-    //     })
-    // }
-
+impl RouteFinder {
     #[new]
+    #[pyo3(signature = (zarr_fp, cost_function, route_definitions, cache_size=250_000_000))]
     fn new(
         zarr_fp: PathBuf,
         cost_function: String,
-        route_definitions: Vec<PythonRouteDefinition>,
+        route_definitions: Vec<PyRouteDefinition>,
         cache_size: u64,
-    ) -> PyResult<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             zarr_fp,
             cost_function,
             route_definitions,
             cache_size,
-        })
-        // Ok(Self {
-        //     data: Arc::from(values),
-        // })
+        }
     }
 
-    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<NumberIter>> {
-        // Py::new(slf.py(), NumberIter::new(Arc::clone(&slf.data)))
-        Py::new(slf.py(), NumberIter::new(&slf))
+    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<RouteOutputIter>> {
+        let iter = RouteOutputIter::new(&slf)?;
+        Py::new(slf.py(), iter)
     }
 
-    // fn __str__(&self) -> PyResult<String> {
-    //     Ok(format!("Number(len={})", self.data.len()))
-    // }
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!(
+            "`RouteFinder` instance for {} routes",
+            self.route_definitions.len()
+        ))
+    }
 }
 
 #[pyclass(unsendable)]
-struct NumberIter {
-    // receiver: mpsc::Receiver<i32>,
-    receiver: mpsc::Receiver<Result<Vec<(Vec<(u64, u64)>, f32)>>>,
+struct RouteOutputIter {
+    receiver: Option<mpsc::Receiver<RevrtRoutingSolutions>>,
     finished: bool,
 }
 
-impl NumberIter {
-    // fn new(data: Arc<[i32]>) -> Self {
-    fn new(scenario: &Number) -> Self {
+impl RouteOutputIter {
+    fn new(user_input: &RouteFinder) -> Result<Self> {
         let (tx, rx) = mpsc::channel();
-        let zarr_fp = scenario.zarr_fp.clone();
-        let cost_function = scenario.cost_function.clone();
-        let route_definitions = scenario.route_definitions.clone();
-        let cache_size = scenario.cache_size;
-        rayon::spawn(move || {
-            //     fn find_paths(
-            //     zarr_fp: PathBuf,
-            //     cost_function: String,
-            //     start: Vec<(u64, u64)>,
-            //     end: Vec<(u64, u64)>,
-            //     cache_size: u64,
-            // ) -> Result<Vec<(Vec<(u64, u64)>, f32)>>
-            // let len = data.len();
-            // let _ = (0..len)
-            //     .into_par_iter()
-            //     .try_for_each_with(tx, |sender, idx| {
-            //         let value = data[idx];
-            //         let mut rng = rand::rng();
-            //         let delay_secs = rng.random_range(1..=5);
-            //         println!("Sleeping {delay_secs}s before yielding {value}");
-            //         thread::sleep(Duration::from_secs(delay_secs));
-            //         sender.send(value).map_err(|_| ())
-            //     });
-            let _ = route_definitions.into_par_iter().try_for_each_with(
-                tx,
-                |sender, (start_points, end_points)| {
-                    // println!("Sleeping {delay_secs}s before yielding {value}");
-                    println!("Computing routes between {start_points:?} and {end_points:?}");
-                    if end_points.last() == Some(&(2, 6)) {
-                        // let mut rng = rand::rng();
-                        // let delay_secs = rng.random_range(3..=7);
-                        let delay_secs = 6;
-                        println!("Sleeping {delay_secs}s before yielding");
-                        io::stdout().flush().expect("Failed to flush stdout");
-                        thread::sleep(Duration::from_secs(delay_secs));
-                    }
-                    let routes = find_paths(
-                        zarr_fp.clone(),
-                        cost_function.clone(),
-                        start_points.clone(),
-                        end_points.clone(),
-                        cache_size,
-                    );
-                    println!(
-                        "Finished computing routes between {start_points:?} and {end_points:?}"
-                    );
-                    sender.send(routes)
-                },
-            );
-        });
-
-        Self {
-            receiver: rx,
+        resolve_generator(
+            &user_input.zarr_fp,
+            &user_input.cost_function,
+            user_input
+                .route_definitions
+                .iter()
+                .map(Into::into)
+                .collect::<Vec<_>>(),
+            tx,
+            user_input.cache_size,
+        )?;
+        Ok(Self {
+            receiver: Some(rx),
             finished: false,
-        }
+        })
     }
 }
 
 #[pymethods]
-impl NumberIter {
+impl RouteOutputIter {
     fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        println!("Initialized iterator");
         slf
     }
 
-    // fn __next__(mut slf: PyRefMut<'_, Self>) -> PyResult<Option<i32>>  {
-    fn __next__(
-        mut slf: PyRefMut<'_, Self>,
-    ) -> PyResult<Option<Result<Vec<(Vec<(u64, u64)>, f32)>>>> {
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> PyRouteYield {
         if slf.finished {
             return Ok(None);
         }
-        println!("Calling next on receiver");
-        match slf.receiver.recv() {
-            Ok(value) => Ok(Some(value)),
+
+        let receiver = match slf.receiver.take() {
+            Some(receiver) => receiver,
+            None => {
+                slf.finished = true;
+                return Ok(None);
+            }
+        };
+
+        let py = slf.py();
+        let (recv_result, receiver) = py.detach(move || {
+            let result = receiver.recv();
+            (result, receiver)
+        });
+        slf.receiver = Some(receiver);
+
+        match recv_result {
+            Ok(value) => Ok(Some(value.into_iter().map(Into::into).collect())),
             Err(_) => {
                 slf.finished = true;
                 Ok(None)
             }
         }
-
-        // let py = slf.py();
-        // let recv_result = {
-        //     let receiver = &slf.receiver;
-        //     py.allow_threads(|| receiver.recv())
-        // };
-
-        // match recv_result {
-        //     Ok(value) => Ok(Some(value)),
-        //     Err(_) => {
-        //         slf.finished = true;
-        //         Ok(None)
-        //     }
-        // }
     }
 }
