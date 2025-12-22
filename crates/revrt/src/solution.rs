@@ -5,8 +5,8 @@
 /// Solution for one single routing case
 ///
 pub(super) struct Solution<I, C> {
-    route: Vec<I>,
-    total_cost: C,
+    pub(super) route: Vec<I>,
+    pub(super) total_cost: C,
 }
 
 impl<I, C> Solution<I, C> {
@@ -25,3 +25,5 @@ impl<I, C> Solution<I, C> {
         &self.total_cost
     }
 }
+
+pub type RevrtRoutingSolutions = Vec<Solution<crate::ArrayIndex, f32>>;
