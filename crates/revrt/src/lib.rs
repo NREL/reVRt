@@ -9,10 +9,12 @@ mod ffi;
 mod routing;
 mod solution;
 
+use std::sync::mpsc;
+
 use cost::CostFunction;
 use error::Result;
-use routing::Routing;
-use solution::Solution;
+use routing::{ParRouting, RouteDefinition, Routing};
+use solution::{RevrtRoutingSolutions, Solution};
 
 #[allow(missing_docs)]
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -50,6 +52,20 @@ pub fn resolve<P: AsRef<std::path::Path>>(
         .map(|solution| (solution.route().clone(), *solution.total_cost()))
         .collect();
     Ok(result)
+}
+
+#[allow(missing_docs)]
+pub(crate) fn lazy_resolve<P: AsRef<std::path::Path>>(
+    store_path: P,
+    cost_function: &str,
+    route_definitions: Vec<RouteDefinition>,
+    tx: mpsc::Sender<RevrtRoutingSolutions>,
+    cache_size: u64,
+) -> Result<()> {
+    let cost_function = crate::cost::CostFunction::from_json(cost_function)?;
+    let simulation = ParRouting::new(store_path, cost_function, cache_size)?;
+    simulation.lazy_scout(route_definitions, tx);
+    Ok(())
 }
 
 #[inline]
