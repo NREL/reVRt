@@ -55,13 +55,18 @@ pub fn resolve<P: AsRef<std::path::Path>>(
 }
 
 #[allow(missing_docs)]
-pub(crate) fn lazy_resolve<P: AsRef<std::path::Path>>(
+pub(crate) fn resolve_generator<P, I>(
     store_path: P,
     cost_function: &str,
-    route_definitions: Vec<RouteDefinition>,
+    route_definitions: I,
     tx: mpsc::Sender<RevrtRoutingSolutions>,
     cache_size: u64,
-) -> Result<()> {
+) -> Result<()>
+where
+    P: AsRef<std::path::Path>,
+    I: rayon::prelude::IntoParallelIterator<Item = RouteDefinition> + Send + 'static,
+    I::Iter: Send,
+{
     let cost_function = crate::cost::CostFunction::from_json(cost_function)?;
     let simulation = ParRouting::new(store_path, cost_function, cache_size)?;
     simulation.lazy_scout(route_definitions, tx);

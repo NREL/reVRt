@@ -79,11 +79,14 @@ impl ParRouting {
             scenario: Arc::new(scenario),
         })
     }
-    pub(super) fn lazy_scout(
+    pub(super) fn lazy_scout<I>(
         &self,
-        route_definitions: Vec<RouteDefinition>,
+        route_definitions: I,
         tx: mpsc::Sender<RevrtRoutingSolutions>,
-    ) {
+    ) where
+        I: IntoParallelIterator<Item = RouteDefinition> + Send + 'static,
+        I::Iter: Send,
+    {
         let scenario = Arc::clone(&self.scenario);
         rayon::spawn(move || {
             let _ = route_definitions.into_par_iter().try_for_each_with(
