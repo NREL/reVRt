@@ -43,14 +43,11 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     cache_size: u64,
     start: &[ArrayIndex],
     end: Vec<ArrayIndex>,
-) -> Result<Vec<(Vec<ArrayIndex>, f32)>> {
+) -> Result<RevrtRoutingSolutions> {
     let cost_function = CostFunction::from_json(cost_function)?;
     tracing::trace!("Cost function: {:?}", cost_function);
     let mut simulation: Routing = Routing::new(store_path, cost_function, cache_size).unwrap();
-    let result = simulation
-        .compute(start, end)
-        .map(|solution| (solution.route().clone(), *solution.total_cost()))
-        .collect();
+    let result = simulation.compute(start, end).collect();
     Ok(result)
 }
 

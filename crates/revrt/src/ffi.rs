@@ -111,17 +111,14 @@ fn find_paths(
     start: Vec<(u64, u64)>,
     end: Vec<(u64, u64)>,
     cache_size: u64,
-) -> Result<Vec<(Vec<(u64, u64)>, f32)>> {
+) -> Result<PyRoutingSolutions> {
     let start: Vec<ArrayIndex> = start
         .into_iter()
         .map(|(i, j)| ArrayIndex { i, j })
         .collect();
     let end: Vec<ArrayIndex> = end.into_iter().map(|(i, j)| ArrayIndex { i, j }).collect();
     let paths = resolve(zarr_fp, &cost_function, cache_size, &start, end)?;
-    Ok(paths
-        .into_iter()
-        .map(|(path, cost)| (path.into_iter().map(Into::into).collect(), cost))
-        .collect())
+    Ok(paths.into_iter().map(Into::into).collect())
 }
 
 /// Find least-cost paths for one or more starting points in parallel.

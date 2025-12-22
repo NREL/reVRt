@@ -4,9 +4,9 @@
 #[derive(Debug)]
 /// Solution for one single routing case
 ///
-pub(super) struct Solution<I, C> {
-    pub(super) route: Vec<I>,
-    pub(super) total_cost: C,
+pub struct Solution<I, C> {
+    pub(crate) route: Vec<I>,
+    pub(crate) total_cost: C,
 }
 
 impl<I, C> Solution<I, C> {
@@ -16,12 +16,12 @@ impl<I, C> Solution<I, C> {
     }
 
     #[allow(dead_code, missing_docs)]
-    pub(super) fn route(&self) -> &Vec<I> {
+    pub fn route(&self) -> &Vec<I> {
         &self.route
     }
 
     #[allow(dead_code, missing_docs)]
-    pub(super) fn total_cost(&self) -> &C {
+    pub fn total_cost(&self) -> &C {
         &self.total_cost
     }
 }

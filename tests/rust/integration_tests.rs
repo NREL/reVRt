@@ -21,6 +21,6 @@ fn basic_routing_in_data() {
     .unwrap();
     dbg!(&result);
     assert_eq!(result.len(), 1);
-    assert!(result[0].0.len() > 1);
-    assert!(result[0].1 > 0.);
+    assert!(result[0].route().len() > 1);
+    assert!(result[0].total_cost() > &0.);
 }
