@@ -678,7 +678,7 @@ def _compute_routes(
         route_attrs, default_attrs = _validate_route_attrs(route_attrs)
 
     route_definitions = _compile_valid_route_definitions(
-        routing_layers, route_definitions
+        routing_scenario, route_definitions, routing_layers
     )
 
     writer = RouteWriter(out_fp, crs=routing_layers.cost_crs)
@@ -746,12 +746,16 @@ def _skip_failed_routes(
             break
 
 
-def _compile_valid_route_definitions(routing_layers, route_definitions):
+def _compile_valid_route_definitions(
+    routing_scenario, route_definitions, routing_layers
+):
     """Filter route definitions to those with valid route nodes"""
     routes_to_compute = {}
     for ind, (start_points, end_points) in enumerate(route_definitions):
         filtered_start_points = _validate_start_points(
-            routing_layers, start_points
+            routing_layers,
+            start_points,
+            check_costs=routing_scenario.ignore_invalid_costs,
         )
         if not filtered_start_points:
             msg = (
@@ -763,7 +767,9 @@ def _compile_valid_route_definitions(routing_layers, route_definitions):
 
         try:
             filtered_end_points = _validate_end_points(
-                routing_layers, end_points
+                routing_layers,
+                end_points,
+                check_costs=routing_scenario.ignore_invalid_costs,
             )
         except revrtLeastCostPathNotFoundError:
             continue
@@ -781,12 +787,12 @@ def _compile_valid_route_definitions(routing_layers, route_definitions):
     return routes_to_compute
 
 
-def _validate_start_points(routing_layers, points):
+def _validate_start_points(routing_layers, points, check_costs):
     """Raise when no end cell provides a positive traversal cost"""
     points = _get_valid_points(
         points, routing_layers.cost.shape, point_type="start"
     )
-    if not points:
+    if not points or not check_costs:
         return points
 
     rows, cols = np.array(points).T
@@ -811,12 +817,12 @@ def _validate_start_points(routing_layers, points):
     return [p for p in points if p not in invalid_points]
 
 
-def _validate_end_points(routing_layers, points):
+def _validate_end_points(routing_layers, points, check_costs):
     """Raise when no end cell provides a positive traversal cost"""
     points = _get_valid_points(
         points, routing_layers.cost.shape, point_type="end"
     )
-    if not points:
+    if not points or not check_costs:
         return points
 
     rows, cols = np.array(points).T
