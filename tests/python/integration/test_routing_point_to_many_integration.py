@@ -9,7 +9,7 @@ import geopandas as gpd
 from rasterio.transform import from_origin
 
 from revrt.utilities import LayeredFile
-from revrt.routing.point_to_many import find_all_routes, RoutingScenario
+from revrt.routing.point_to_many import BatchRouteProcessor, RoutingScenario
 
 
 @pytest.fixture(scope="module")
@@ -70,14 +70,12 @@ def test_soft_barrier_with_large_dataset(
     )
 
     out_gpkg = tmp_path / "routes.gpkg"
-    find_all_routes(
-        scenario,
-        route_definitions=[
-            ([(5, 0)], [(5, 900)]),
-        ],
-        out_fp=out_gpkg,
-        save_paths=True,
+
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario, route_definitions=[([(5, 0)], [(5, 900)])]
     )
+    route_computer.process(out_fp=out_gpkg, save_paths=True)
+
     if ignore_invalid_costs:
         assert not out_gpkg.exists()
     else:
