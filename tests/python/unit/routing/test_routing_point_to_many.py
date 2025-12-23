@@ -611,11 +611,110 @@ def test_start_point_on_barrier_returns_no_route(
         save_paths=False,
     )
     assert_message_was_logged(
-        "None of the start idx have a valid cost (must be > 0)! [(3, 1)]",
-        "ERROR",
+        "One or more of the start points have an invalid cost (must be > 0): "
+        "{(3, 1)}",
+        "WARNING",
+    )
+    assert_message_was_logged(
+        "All start points are invalid for route definition 0: [(3, 1)]",
+        "WARNING",
+    )
+    assert not out_csv.exists()
+
+
+def test_invalid_start_point_logged(
+    sample_layered_data, assert_message_was_logged, tmp_path
+):
+    """Test that only the invalid starting point is logged"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    assert not out_csv.exists()
+    out_csv = tmp_path / "routes.csv"
+
+    # (0, 3) in layer_1 is 0 -> treated as barrier
+    find_all_routes(
+        scenario,
+        route_definitions=[
+            ([(1, 1), (0, 3)], [(2, 6)]),
+        ],
+        out_fp=out_csv,
+        save_paths=False,
+    )
+    assert_message_was_logged(
+        "One or more of the start points have an invalid cost (must be > 0): "
+        "{(0, 3)}",
+        "WARNING",
+    )
+
+    output = pd.read_csv(out_csv)
+    assert len(output) == 1
+
+    route = output.iloc[0]
+    assert route["cost"] == pytest.approx(11.192389)
+    assert route["length_km"] == pytest.approx(0.0090710678)
+    assert route["start_row"] == 1
+    assert route["start_col"] == 1
+    assert route["end_row"] == 2
+    assert route["end_col"] == 6
+
+
+def test_invalid_start_point_explicitly_allowed(
+    sample_layered_data, assert_message_was_logged, tmp_path
+):
+    """Test that only the invalid starting point is logged"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+        ignore_invalid_costs=False,
+    )
+
+    out_csv = tmp_path / "routes.csv"
+
+    # (0, 3) in layer_1 is 0 -> treated as barrier
+    find_all_routes(
+        scenario,
+        route_definitions=[
+            ([(1, 1), (0, 3), (10000, 10000)], [(2, 6), (20000, 20000)]),
+        ],
+        out_fp=out_csv,
+        save_paths=False,
+    )
+
+    assert_message_was_logged(
+        "One or more of the start points are out of bounds for an array of "
+        "shape (7, 8): [(10000, 10000)]",
+        "WARNING",
+    )
+    assert_message_was_logged(
+        "One or more of the end points are out of bounds for an array of "
+        "shape (7, 8): [(20000, 20000)]",
+        "WARNING",
+    )
+
+    output = pd.read_csv(out_csv)
+    assert len(output) == 2
+
+    first_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 1)
+    ].iloc[0]
+    assert first_route["cost"] == pytest.approx(11.192389)
+    assert first_route["length_km"] == pytest.approx(0.0090710678)
+    assert first_route["start_row"] == 1
+    assert first_route["start_col"] == 1
+    assert first_route["end_row"] == 2
+    assert first_route["end_col"] == 6
+
+    second_route = output[
+        (output["start_row"] == 0) & (output["start_col"] == 3)
+    ].iloc[0]
+    assert second_route["start_row"] == 0
+    assert second_route["start_col"] == 3
+    assert second_route["end_row"] == 2
+    assert second_route["end_col"] == 6
 
 
 def test_some_endpoints_include_barriers_but_one_valid(
@@ -671,14 +770,14 @@ def test_all_endpoints_are_barriers_returns_no_route(
         save_paths=False,
     )
     assert_message_was_logged(
-        "None of the end idx have a valid cost (must be > 0)! "
+        "None of the end points have a valid cost (must be > 0): "
         "[(0, 3), (0, 7)]",
         "ERROR",
     )
     assert not out_csv.exists()
 
 
-def test_bad_index_returns_no_route(
+def test_bad_start_index_returns_no_route(
     sample_layered_data, assert_message_was_logged, tmp_path
 ):
     """If any points are out-of-bounds, no route is returned"""
@@ -698,11 +797,83 @@ def test_bad_index_returns_no_route(
         save_paths=False,
     )
     assert_message_was_logged(
-        "One or more of the start idx are out of bounds for an array of "
+        "One or more of the start points are out of bounds for an array of "
         "shape (7, 8): [(10000, 10000)]",
-        "ERROR",
+        "WARNING",
     )
     assert not out_csv.exists()
+
+
+def test_bad_end_index_returns_no_route(
+    sample_layered_data, assert_message_was_logged, tmp_path
+):
+    """If any points are out-of-bounds, no route is returned"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
+        scenario,
+        route_definitions=[
+            ([(1, 1)], [(10000, 10000)]),
+        ],
+        out_fp=out_csv,
+        save_paths=False,
+    )
+    assert_message_was_logged(
+        "One or more of the end points are out of bounds for an array of "
+        "shape (7, 8): [(10000, 10000)]",
+        "WARNING",
+    )
+    assert_message_was_logged(
+        "All end points are invalid for route definition 0: [(10000, 10000)]",
+        "WARNING",
+    )
+    assert not out_csv.exists()
+
+
+def test_bad_index_skipped(
+    sample_layered_data, assert_message_was_logged, tmp_path
+):
+    """If any points are out-of-bounds, no route is returned"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
+        scenario,
+        route_definitions=[
+            ([(10000, 10000), (1, 1)], [(0, 3), (2, 6), (20000, 20000)]),
+        ],
+        out_fp=out_csv,
+        save_paths=False,
+    )
+    assert_message_was_logged(
+        "One or more of the start points are out of bounds for an array of "
+        "shape (7, 8): [(10000, 10000)]",
+        "WARNING",
+    )
+    assert_message_was_logged(
+        "One or more of the end points are out of bounds for an array of "
+        "shape (7, 8): [(20000, 20000)]",
+        "WARNING",
+    )
+    output = pd.read_csv(out_csv)
+    assert len(output) == 1
+
+    route = output.iloc[0]
+    assert route["cost"] == pytest.approx(11.192389)
+    assert route["length_km"] == pytest.approx(0.0090710678)
+    assert route["start_row"] == 1
+    assert route["start_col"] == 1
+    assert route["end_row"] == 2
+    assert route["end_col"] == 6
 
 
 def test_routing_scenario_repr_contains_fields(sample_layered_data):
