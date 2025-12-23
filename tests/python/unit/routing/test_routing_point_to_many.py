@@ -1660,5 +1660,69 @@ def test_soft_barrier(sample_layered_data, ignore_invalid_costs, tmp_path):
         assert np.allclose(y, 2.5)
 
 
+def test_route_many_attrs(sample_layered_data, tmp_path):
+    """Test routing with multiple layers and a scalar multiplier"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_1"},
+        ],
+    )
+
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
+        scenario,
+        route_definitions=[
+            ([(1, 1)], [(2, 6)]),
+            ([(1, 2)], [(2, 6)]),
+            ([(1, 3)], [(2, 6)]),
+            ([(1, 4)], [(2, 6)]),
+        ],
+        out_fp=out_csv,
+        save_paths=False,
+        route_attrs={
+            frozenset({(1, 2), (2, 6)}): {"route_type": "A"},
+            frozenset({(1, 4), (2, 6)}): {"my_attr": "B"},
+            frozenset({(1, 3), (2, 6)}): {
+                "route_type": "C",
+                "my_attr": "D",
+                "final": True,
+            },
+        },
+    )
+
+    output = pd.read_csv(out_csv)
+    assert len(output) == 4
+
+    first_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 1)
+    ].iloc[0]
+    assert np.isnan(first_route["route_type"])
+    assert np.isnan(first_route["my_attr"])
+    assert np.isnan(first_route["final"])
+
+    second_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 2)
+    ].iloc[0]
+    assert second_route["route_type"] == "A"
+    assert np.isnan(second_route["my_attr"])
+    assert np.isnan(second_route["final"])
+
+    third_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 3)
+    ].iloc[0]
+    assert third_route["route_type"] == "C"
+    assert third_route["my_attr"] == "D"
+    assert third_route["final"]
+
+    fourth_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 4)
+    ].iloc[0]
+    assert np.isnan(fourth_route["route_type"])
+    assert fourth_route["my_attr"] == "B"
+    assert np.isnan(fourth_route["final"])
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
