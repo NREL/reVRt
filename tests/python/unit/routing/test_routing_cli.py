@@ -671,6 +671,113 @@ def test_cli_route_points_skips_precomputed_routes(
         ).all()
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_route_points_skips_precomputed_routes_gpkg(
+    cli_runner, sample_layered_data, tmp_path
+):
+    """route-points CLI should append only new routes (GPKG)"""
+
+    routes = _build_route_table(
+        sample_layered_data,
+        rows_cols=[((1, 1), (2, 3)), ((0, 0), (3, 4))],
+    )
+
+    route_table_fp = tmp_path / "route_points.csv"
+    routes.iloc[:1].to_csv(route_table_fp, index=False)
+
+    config = {
+        "cost_fpath": str(sample_layered_data),
+        "route_table": str(route_table_fp),
+        "cost_layers": [{"layer_name": "layer_1"}],
+        "save_paths": True,
+    }
+    config_fp = tmp_path / "route_points_config.json"
+    config_fp.write_text(json.dumps(config))
+
+    first_result = cli_runner.invoke(
+        main, ["route-points", "-c", str(config_fp)]
+    )
+    assert first_result.exit_code == 0, first_result.output
+
+    out_fp = list(tmp_path.glob("*test*.gpkg"))
+    assert len(out_fp) == 1
+    out_fp = out_fp[0]
+    assert out_fp.exists()
+
+    first_run = gpd.read_file(out_fp)
+    assert len(first_run) == 1
+
+    base_route_id = routes.iloc[0]["route_id"]
+    assert first_run["route_id"].tolist() == [base_route_id]
+    first_row = first_run.iloc[0]
+
+    sentinel_length = -4321.0
+    raw_first = gpd.read_file(out_fp)
+    assert "length_km" in raw_first.columns
+    raw_first.loc[
+        raw_first["route_id"].astype(str) == str(base_route_id),
+        "length_km",
+    ] = sentinel_length
+    raw_first.to_file(out_fp, index=False, driver="GPKG")
+
+    routes.to_csv(route_table_fp, index=False)
+
+    shutil.rmtree(tmp_path / ".gaps")
+    second_result = cli_runner.invoke(
+        main, ["route-points", "-c", str(config_fp)]
+    )
+    assert second_result.exit_code == 0, second_result.output
+
+    assert len(list(tmp_path.glob("*test*.gpkg"))) == 1
+    all_routes = gpd.read_file(out_fp)
+    assert len(all_routes) == 2
+
+    counts = all_routes["route_id"].value_counts()
+    for route_id in routes["route_id"]:
+        assert counts[route_id] == 1
+
+    first_after = all_routes.loc[all_routes["route_id"] == base_route_id].iloc[
+        0
+    ]
+
+    for col in ["cost", "optimized_objective"]:
+        assert first_after[col] == pytest.approx(first_row[col])
+
+    if "length_km" in all_routes.columns:
+        assert first_after["length_km"] == pytest.approx(sentinel_length)
+
+    with xr.open_dataset(
+        sample_layered_data, consolidated=False, engine="zarr"
+    ) as ds:
+        mapped = map_to_costs(
+            routes.copy(), ds.rio.crs, ds.rio.transform(), ds.rio.shape
+        )
+
+    merged = all_routes.merge(
+        mapped[
+            [
+                "route_id",
+                "start_row",
+                "start_col",
+                "end_row",
+                "end_col",
+            ]
+        ],
+        on="route_id",
+        how="left",
+        suffixes=("", "_expected"),
+    )
+
+    for col in ["start_row", "start_col", "end_row", "end_col"]:
+        assert (
+            merged[col].astype(int) == merged[f"{col}_expected"].astype(int)
+        ).all()
+
+
 def test_get_polarity_multiplier_unknown_polarity():
     """_get_polarity_multiplier should guard against unknown polarities"""
 
