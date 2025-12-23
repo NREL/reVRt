@@ -573,7 +573,7 @@ class RouteWriter:
         """
         self.out_fp = Path(out_fp)
         self.crs = crs
-        self._headers = None
+        self._columns = None
 
     def save(self, result):
         """Write a single route result to file
@@ -592,18 +592,18 @@ class RouteWriter:
         """Save route result to GeoPackage file"""
         data = gpd.GeoDataFrame([result], geometry="geometry", crs=self.crs)
         if self.out_fp.exists():
-            if self._headers is None:
-                self._headers = gpd.read_file(self.out_fp, rows=1)
-            data = pd.concat([self._headers, data]).iloc[1:]
+            if self._columns is None:
+                self._columns = gpd.read_file(self.out_fp, rows=1).columns
+            data = data.reindex(columns=self._columns)
         data.to_file(self.out_fp, driver="GPKG", mode="a")
 
     def _save_csv(self, result):
         """Save route result to CSV file"""
         data = pd.DataFrame([result])
         if self.out_fp.exists():
-            if self._headers is None:
-                self._headers = pd.read_csv(self.out_fp, nrows=0)
-            data = pd.concat([self._headers, data])
+            if self._columns is None:
+                self._columns = pd.read_csv(self.out_fp, nrows=0).columns
+            data = data.reindex(columns=self._columns)
         data.to_csv(
             self.out_fp, mode="a", index=False, header=not self.out_fp.exists()
         )
