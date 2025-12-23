@@ -15,9 +15,9 @@ from gaps.config import load_config
 
 from revrt.costs.config import parse_config
 from revrt.routing.point_to_many import (
-    find_all_routes,
+    BatchRouteProcessor,
     RoutingScenario,
-    RoutingLayers,
+    RoutingLayerManager,
 )
 from revrt.routing.utilities import map_to_costs
 from revrt.exceptions import revrtKeyError
@@ -357,7 +357,7 @@ def build_routing_layer(lcp_config_fp, out_dir, polarity=None, voltage=None):
         ignore_invalid_costs=config.get("ignore_invalid_costs", False),
     )
 
-    rl = RoutingLayers(routing_scenario)
+    rl = RoutingLayerManager(routing_scenario)
     rl.build()
 
     cost_out_fp = out_dir / "agg_costs.tif"
@@ -427,13 +427,12 @@ def _run_lcp(
             ignore_invalid_costs=ignore_invalid_costs,
         )
 
-        find_all_routes(
-            scenario,
+        route_computer = BatchRouteProcessor(
+            routing_scenario=scenario,
             route_definitions=route_definitions,
-            save_paths=save_paths,
-            out_fp=out_fp,
             route_attrs=route_attrs,
         )
+        route_computer.process(out_fp=out_fp, save_paths=save_paths)
 
     time_elapsed = f"{(time.monotonic() - ts) / 3600:.4f} hour(s)"
     logger.info(

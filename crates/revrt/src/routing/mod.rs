@@ -99,6 +99,23 @@ impl ParRouting {
                      end_inds,
                  }| {
                     debug!("Computing routes between {start_inds:?} and {end_inds:?}");
+                    // if end_inds.last() == Some(&ArrayIndex { i: 2, j: 6 }) {
+                    //     use std::thread;
+                    //     use std::time::Duration;
+                    //     // let mut rng = rand::rng();
+                    //     // let delay_secs = rng.random_range(3..=7);
+                    //     let delay_secs = if start_inds.first() == Some(&ArrayIndex { i: 1, j: 1 }) {
+                    //         6
+                    //         // return sender.send(Err(InvalidRouteStart(
+                    //         //     "start index ArrayIndex { i: 1, j: 1 } is invalid".into(),
+                    //         // )));
+                    //     } else {
+                    //         10
+                    //     };
+                    //     // println!("Sleeping {delay_secs}s before yielding");
+                    //     // io::stdout().flush().expect("Failed to flush stdout");
+                    //     thread::sleep(Duration::from_secs(delay_secs));
+                    // }
                     let routes: RevrtRoutingSolutions = start_inds
                         .into_par_iter()
                         .filter_map(|s| {

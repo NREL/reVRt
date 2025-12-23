@@ -11,9 +11,9 @@ from rasterio.transform import from_origin
 
 from revrt.utilities import LayeredFile
 from revrt.routing.point_to_many import (
-    find_all_routes,
-    RouteResult,
-    RoutingLayers,
+    BatchRouteProcessor,
+    RouteMetrics,
+    RoutingLayerManager,
     RoutingScenario,
 )
 from revrt.exceptions import revrtKeyError
@@ -186,14 +186,13 @@ def test_basic_single_route_layered_file_short_path(
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(1, 2)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
     assert len(output) == 1
@@ -212,15 +211,14 @@ def test_basic_single_route_layered_file(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
             ([(1, 2)], [(2, 6)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
     assert len(output) == 2
@@ -253,18 +251,17 @@ def test_multi_layer_route_layered_file(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
             ([(1, 2)], [(2, 6)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
         route_attrs={
             frozenset({(1, 2), (2, 6)}): {"route_type": "A"},
         },
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
     assert len(output) == 2
@@ -327,15 +324,14 @@ def test_save_paths_returns_expected_geometry(sample_layered_data, tmp_path):
     )
 
     out_gpkg = tmp_path / "routes.gpkg"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
             ([(1, 2)], [(2, 6)]),
         ],
-        out_fp=out_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=out_gpkg, save_paths=True)
 
     output = gpd.read_file(out_gpkg)
     assert len(output) == 2
@@ -389,12 +385,11 @@ def test_empty_route_definitions_returns_empty_dataframe(
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
     assert not out_csv.exists()
 
 
@@ -409,12 +404,11 @@ def test_empty_route_definitions_returns_empty_geo_dataframe(
     )
 
     out_gpkg = tmp_path / "routes.gpkg"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[],
-        out_fp=out_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=out_gpkg, save_paths=True)
     assert not out_gpkg.exists()
 
 
@@ -433,15 +427,14 @@ def test_multi_layer_route_with_multiplier(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
             ([(1, 2)], [(2, 6)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
     assert len(output) == 2
@@ -520,14 +513,13 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(1, 2)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
     assert len(output) == 1
@@ -560,14 +552,13 @@ def test_routing_with_tracked_layers(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(1, 2)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
     assert len(output) == 1
@@ -602,14 +593,14 @@ def test_start_point_on_barrier_returns_no_route(
     out_csv = tmp_path / "routes.csv"
 
     # (3, 1) in layer_6 is -1 -> treated as barrier
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(3, 1)], [(2, 6)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
+
     assert_message_was_logged(
         "One or more of the start points have an invalid cost (must be > 0): "
         "{(3, 1)}",
@@ -635,14 +626,14 @@ def test_invalid_start_point_logged(
     out_csv = tmp_path / "routes.csv"
 
     # (0, 3) in layer_1 is 0 -> treated as barrier
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1), (0, 3)], [(2, 6)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
+
     assert_message_was_logged(
         "One or more of the start points have an invalid cost (must be > 0): "
         "{(0, 3)}",
@@ -664,7 +655,7 @@ def test_invalid_start_point_logged(
 def test_invalid_start_point_explicitly_allowed(
     sample_layered_data, assert_message_was_logged, tmp_path
 ):
-    """Test that only the invalid starting point is logged"""
+    """Test out-of-bounds points logging when ignore_invalid_costs is False"""
 
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
@@ -675,14 +666,13 @@ def test_invalid_start_point_explicitly_allowed(
     out_csv = tmp_path / "routes.csv"
 
     # (0, 3) in layer_1 is 0 -> treated as barrier
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1), (0, 3), (10000, 10000)], [(2, 6), (20000, 20000)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     assert_message_was_logged(
         "One or more of the start points are out of bounds for an array of "
@@ -730,14 +720,13 @@ def test_some_endpoints_include_barriers_but_one_valid(
     out_csv = tmp_path / "routes.csv"
 
     # include one barrier end (0,3) and one valid end (2,6)
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(0, 3), (2, 6)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
     assert len(output) == 1
@@ -761,14 +750,14 @@ def test_all_endpoints_are_barriers_returns_no_route(
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(0, 3), (0, 7)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
+
     assert_message_was_logged(
         "None of the end points have a valid cost (must be > 0): "
         "[(0, 3), (0, 7)]",
@@ -788,14 +777,14 @@ def test_bad_start_index_returns_no_route(
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(10000, 10000)], [(0, 3), (0, 7)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
+
     assert_message_was_logged(
         "One or more of the start points are out of bounds for an array of "
         "shape (7, 8): [(10000, 10000)]",
@@ -815,14 +804,14 @@ def test_bad_end_index_returns_no_route(
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(10000, 10000)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
+
     assert_message_was_logged(
         "One or more of the end points are out of bounds for an array of "
         "shape (7, 8): [(10000, 10000)]",
@@ -838,7 +827,7 @@ def test_bad_end_index_returns_no_route(
 def test_bad_index_skipped(
     sample_layered_data, assert_message_was_logged, tmp_path
 ):
-    """If any points are out-of-bounds, no route is returned"""
+    """Out-of-bounds points are skipped and routes are compute"""
 
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
@@ -846,14 +835,14 @@ def test_bad_index_skipped(
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(10000, 10000), (1, 1)], [(0, 3), (2, 6), (20000, 20000)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
+
     assert_message_was_logged(
         "One or more of the start points are out of bounds for an array of "
         "shape (7, 8): [(10000, 10000)]",
@@ -906,14 +895,13 @@ def test_missing_cost_layer_raises_key_error(sample_layered_data, tmp_path):
     with pytest.raises(
         revrtKeyError, match="Did not find layer 'not_there' in cost file"
     ):
-        find_all_routes(
-            scenario,
+        route_computer = BatchRouteProcessor(
+            routing_scenario=scenario,
             route_definitions=[
                 ([(1, 1)], [(1, 2)]),
             ],
-            out_fp=out_csv,
-            save_paths=False,
         )
+        route_computer.process(out_fp=out_csv, save_paths=False)
 
 
 def test_cost_multiplier_layer_and_scalar_applied(sample_layered_data):
@@ -926,7 +914,7 @@ def test_cost_multiplier_layer_and_scalar_applied(sample_layered_data):
         cost_multiplier_scalar=2.0,
     )
 
-    routing_layers = RoutingLayers(scenario).build()
+    routing_layers = RoutingLayerManager(scenario).build()
     try:
         cost_val = routing_layers.cost.isel(y=1, x=1).compute().item()
         layer_one = (
@@ -961,14 +949,14 @@ def test_length_invariant_layer_costs_ignore_path_length(
         ],
     )
 
-    routing_layers = RoutingLayers(scenario).build()
+    routing_layers = RoutingLayerManager(scenario).build()
     try:
         route = [(1, 1), (1, 2)]
-        result = RouteResult(
+        result = RouteMetrics(
             routing_layers,
             route,
             optimized_objective=0.0,
-        ).build()
+        ).compute()
 
         layer_two = (
             routing_layers._layer_fh["layer_2"]
@@ -995,14 +983,13 @@ def test_length_invariant_layers_sum_raw_values(sample_layered_data, tmp_path):
     )
 
     out_gpkg = tmp_path / "routes.gpkg"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
         ],
-        out_fp=out_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=out_gpkg, save_paths=True)
 
     output = gpd.read_file(out_gpkg)
     assert len(output) == 1
@@ -1073,14 +1060,13 @@ def test_length_invariant_hidden_and_friction_layers(
     )
 
     out_gpkg = tmp_path / "routes.gpkg"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
         ],
-        out_fp=out_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=out_gpkg, save_paths=True)
 
     output = gpd.read_file(out_gpkg)
     assert len(output) == 1
@@ -1144,7 +1130,7 @@ def test_tracked_layers_invalid_configs_warn(
     )
 
     with pytest.warns(revrtWarning) as warning_record:
-        routing_layers = RoutingLayers(scenario).build()
+        routing_layers = RoutingLayerManager(scenario).build()
 
     assert_message_was_logged("Did not find layer", "WARNING")
     assert_message_was_logged("Did not find method", "WARNING")
@@ -1177,7 +1163,7 @@ def test_friction_layers_and_lcp_agg_costs(sample_layered_data):
         ],
     )
 
-    routing_layers = RoutingLayers(scenario).build()
+    routing_layers = RoutingLayerManager(scenario).build()
     try:
         tracked_names = {layer.name for layer in routing_layers.tracked_layers}
         assert "layer_1" not in tracked_names
@@ -1208,7 +1194,7 @@ def test_friction_layer_include_in_report_adds_tracker(sample_layered_data):
         ],
     )
 
-    routing_layers = RoutingLayers(scenario).build()
+    routing_layers = RoutingLayerManager(scenario).build()
     try:
         tracked_names = {layer.name for layer in routing_layers.tracked_layers}
         assert "layer_4" in tracked_names
@@ -1238,28 +1224,27 @@ def test_friction_layer_influences_objective_without_reporting(
     )
 
     base_csv = tmp_path / "base.csv"
-    find_all_routes(
-        base_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=base_scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
         ],
-        out_fp=base_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=base_csv, save_paths=False)
 
     base_output = pd.read_csv(base_csv)
     assert len(base_output) == 1
     base_route = base_output.iloc[0]
 
     friction_csv = tmp_path / "friction.csv"
-    find_all_routes(
-        friction_scenario,
+
+    route_computer = BatchRouteProcessor(
+        routing_scenario=friction_scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
         ],
-        out_fp=friction_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=friction_csv, save_paths=False)
 
     friction_output = pd.read_csv(friction_csv)
     assert len(friction_output) == 1
@@ -1295,28 +1280,26 @@ def test_friction_layer_influences_objective(sample_layered_data, tmp_path):
     )
 
     base_csv = tmp_path / "base.csv"
-    find_all_routes(
-        base_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=base_scenario,
         route_definitions=[
             ([(1, 1)], [(3, 5)]),
         ],
-        out_fp=base_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=base_csv, save_paths=False)
 
     base_output = pd.read_csv(base_csv)
     assert len(base_output) == 1
     base_route = base_output.iloc[0]
 
     friction_csv = tmp_path / "friction.csv"
-    find_all_routes(
-        friction_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=friction_scenario,
         route_definitions=[
             ([(1, 1)], [(3, 5)]),
         ],
-        out_fp=friction_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=friction_csv, save_paths=False)
 
     friction_output = pd.read_csv(friction_csv)
     assert len(friction_output) == 1
@@ -1358,28 +1341,26 @@ def test_negative_friction_layer_influences_objective(
     )
 
     base_gpkg = tmp_path / "base.gpkg"
-    find_all_routes(
-        base_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=base_scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
         ],
-        out_fp=base_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=base_gpkg, save_paths=True)
 
     base_output = gpd.read_file(base_gpkg)
     assert len(base_output) == 1
     base_route = base_output.iloc[0]
 
     friction_gpkg = tmp_path / "friction.gpkg"
-    find_all_routes(
-        friction_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=friction_scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
         ],
-        out_fp=friction_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=friction_gpkg, save_paths=True)
 
     friction_output = gpd.read_file(friction_gpkg)
     assert len(friction_output) == 1
@@ -1421,28 +1402,26 @@ def test_negative_friction_layer_does_not_go_thru_barrier(
     )
 
     base_gpkg = tmp_path / "base.gpkg"
-    find_all_routes(
-        base_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=base_scenario,
         route_definitions=[
             ([(4, 0)], [(2, 7)]),
         ],
-        out_fp=base_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=base_gpkg, save_paths=True)
 
     base_output = gpd.read_file(base_gpkg)
     assert len(base_output) == 1
     base_route = base_output.iloc[0]
 
     friction_gpkg = tmp_path / "friction.gpkg"
-    find_all_routes(
-        friction_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=friction_scenario,
         route_definitions=[
             ([(4, 0)], [(2, 7)]),
         ],
-        out_fp=friction_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=friction_gpkg, save_paths=True)
 
     friction_output = gpd.read_file(friction_gpkg)
     assert len(friction_output) == 1
@@ -1475,14 +1454,13 @@ def test_include_in_final_cost_false_behaves_like_friction(
     )
 
     out_gpkg = tmp_path / "base.gpkg"
-    find_all_routes(
-        base_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=base_scenario,
         route_definitions=[
             ([(1, 1)], [(3, 5)]),
         ],
-        out_fp=out_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=out_gpkg, save_paths=True)
 
     base_output = gpd.read_file(out_gpkg)
     assert len(base_output) == 1
@@ -1502,14 +1480,13 @@ def test_include_in_final_cost_false_behaves_like_friction(
     )
 
     penalized_gpkg = tmp_path / "penalized.gpkg"
-    find_all_routes(
-        penalized_scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=penalized_scenario,
         route_definitions=[
             ([(1, 1)], [(3, 5)]),
         ],
-        out_fp=penalized_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=penalized_gpkg, save_paths=True)
 
     penalized_output = gpd.read_file(penalized_gpkg)
     assert len(penalized_output) == 1
@@ -1530,17 +1507,17 @@ def test_include_in_final_cost_false_behaves_like_friction(
 
 
 def test_route_result_geom_returns_point_for_single_cell(sample_layered_data):
-    """RouteResult.geom returns a Point geometry for single-cell routes"""
+    """RouteMetrics.geom returns a Point geometry for single-cell routes"""
 
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    routing_layers = RoutingLayers(scenario).build()
+    routing_layers = RoutingLayerManager(scenario).build()
     try:
         route = [(1, 1)]
-        result = RouteResult(
+        result = RouteMetrics(
             routing_layers,
             route,
             optimized_objective=0.0,
@@ -1561,7 +1538,7 @@ def test_characterized_layer_length_metric_uses_positive_mask(
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    routing_layers = RoutingLayers(scenario).build()
+    routing_layers = RoutingLayerManager(scenario).build()
     try:
         layer = next(
             tracked
@@ -1579,17 +1556,17 @@ def test_characterized_layer_length_metric_uses_positive_mask(
 def test_route_result_cached_properties_reuse_computed_values(
     sample_layered_data,
 ):
-    """RouteResult caches per-route lengths after first computation"""
+    """RouteMetrics caches per-route lengths after first computation"""
 
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    routing_layers = RoutingLayers(scenario).build()
+    routing_layers = RoutingLayerManager(scenario).build()
     try:
         route = [(1, 1), (1, 2), (2, 3)]
-        result = RouteResult(
+        result = RouteMetrics(
             routing_layers,
             route,
             optimized_objective=0.0,
@@ -1607,17 +1584,17 @@ def test_route_result_cached_properties_reuse_computed_values(
 
 
 def test_route_result_cost_property_returns_value(sample_layered_data):
-    """RouteResult.cost multiplies cell costs by cached travel lengths"""
+    """RouteMetrics.cost multiplies cell costs by cached travel lengths"""
 
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    routing_layers = RoutingLayers(scenario).build()
+    routing_layers = RoutingLayerManager(scenario).build()
     try:
         route = [(1, 1), (1, 2), (2, 3)]
-        result = RouteResult(
+        result = RouteMetrics(
             routing_layers,
             route,
             optimized_objective=0.0,
@@ -1636,7 +1613,7 @@ def test_characterized_layer_total_length_computation(sample_layered_data):
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    routing_layers = RoutingLayers(scenario, chunks=None).build()
+    routing_layers = RoutingLayerManager(scenario, chunks=None).build()
     try:
         layer = next(
             tracked
@@ -1665,14 +1642,13 @@ def test_negative_cost_path_returns_no_route(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(4, 0)], [(2, 7)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
     assert not out_csv.exists()
 
 
@@ -1728,7 +1704,7 @@ def test_friction_layer_requires_mask(sample_layered_data):
         friction_layers=[{"multiplier_scalar": 5}],
     )
 
-    routing_layers = RoutingLayers(scenario)
+    routing_layers = RoutingLayerManager(scenario)
     try:
         with pytest.raises(
             revrtKeyError,
@@ -1750,7 +1726,7 @@ def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
         cost_layers=[{"layer_name": "layer_1"}],
         ignore_invalid_costs=True,
     )
-    hard_layers = RoutingLayers(hard_scenario).build()
+    hard_layers = RoutingLayerManager(hard_scenario).build()
     try:
         hard_value = (
             hard_layers.final_routing_layer.isel(y=0, x=3).compute().item()
@@ -1763,7 +1739,7 @@ def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
         cost_layers=[{"layer_name": "layer_1"}],
         ignore_invalid_costs=False,
     )
-    soft_layers = RoutingLayers(soft_scenario).build()
+    soft_layers = RoutingLayerManager(soft_scenario).build()
     try:
         soft_value = (
             soft_layers.final_routing_layer.isel(y=0, x=3).compute().item()
@@ -1785,14 +1761,14 @@ def test_soft_barrier(sample_layered_data, ignore_invalid_costs, tmp_path):
     )
 
     out_gpkg = tmp_path / "routes.gpkg"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(4, 0)], [(4, 5)]),
         ],
-        out_fp=out_gpkg,
-        save_paths=True,
     )
+    route_computer.process(out_fp=out_gpkg, save_paths=True)
+
     if ignore_invalid_costs:
         assert not out_gpkg.exists()
     else:
@@ -1817,16 +1793,14 @@ def test_route_many_attrs(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    find_all_routes(
-        scenario,
+    route_computer = BatchRouteProcessor(
+        routing_scenario=scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)]),
             ([(1, 2)], [(2, 6)]),
             ([(1, 3)], [(2, 6)]),
             ([(1, 4)], [(2, 6)]),
         ],
-        out_fp=out_csv,
-        save_paths=False,
         route_attrs={
             frozenset({(1, 2), (2, 6)}): {"route_type": "A"},
             frozenset({(1, 4), (2, 6)}): {"my_attr": "B"},
@@ -1837,6 +1811,7 @@ def test_route_many_attrs(sample_layered_data, tmp_path):
             },
         },
     )
+    route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
     assert len(output) == 4

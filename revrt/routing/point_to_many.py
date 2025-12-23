@@ -121,14 +121,8 @@ class RoutingScenario:
             yield out_layer
 
 
-class RoutingLayers:
-    """Class to build a routing layer from user input"""
-
-    SOFT_BARRIER_MULTIPLIER = 100
-    """Multiplier to apply to max cost to use for barriers
-
-    This value is only used if ``ignore_invalid_costs=False``.
-    """
+class RoutingLayerManager:
+    """Class to build routing layers from user input"""
 
     def __init__(self, routing_scenario, chunks="auto"):
         """
@@ -161,7 +155,7 @@ class RoutingLayers:
         self.final_routing_layer = None
 
     def __repr__(self):
-        return f"RoutingLayers for {self.routing_scenario!r}"
+        return f"RoutingLayerManager for {self.routing_scenario!r}"
 
     @property
     def latitudes(self):
@@ -255,12 +249,9 @@ class RoutingLayers:
         self.final_routing_layer *= 1 + frictions
         self.final_routing_layer += self.li_cost
 
-        max_val = (
-            da.max(self.final_routing_layer) * self.SOFT_BARRIER_MULTIPLIER
-        )
         self.final_routing_layer.values = da.where(
             self.final_routing_layer <= 0,
-            -1 if self.routing_scenario.ignore_invalid_costs else max_val,
+            -1 if self.routing_scenario.ignore_invalid_costs else 1e10,
             self.final_routing_layer,
         )
 
@@ -417,7 +408,7 @@ class CharacterizedLayer:
         return {f"{self.name}_{self.agg_method}": aggregate.compute()}
 
 
-class RouteResult:
+class RouteMetrics:
     """Class to compute route characteristics given layer cost maps"""
 
     def __init__(
@@ -432,7 +423,7 @@ class RouteResult:
 
         Parameters
         ----------
-        routing_layers : RoutingLayers
+        routing_layers : RoutingLayerManager
             Routing layer manager containing cost and tracker arrays.
         route : list
             Ordered row and column indices defining the path.
@@ -523,7 +514,7 @@ class RouteResult:
         geom = Point if len(self._route) == 1 else LineString
         return geom(list(zip(x, y, strict=True)))
 
-    def build(self):
+    def compute(self):
         """Assemble route metrics and optional geometry payload"""
         results = {
             "length_km": self.total_path_length,
@@ -554,7 +545,7 @@ class RouteResult:
         )
 
 
-class RouteWriter:
+class IncrementalRouteWriter:
     """Stream results to disk by appending each new result to a file
 
     A new file is created if one does not exist.
@@ -573,7 +564,7 @@ class RouteWriter:
         """
         self.out_fp = Path(out_fp)
         self.crs = crs
-        self._headers = None
+        self._columns = None
 
     def save(self, result):
         """Write a single route result to file
@@ -581,7 +572,8 @@ class RouteWriter:
         Parameters
         ----------
         result : dict
-            Route result dictionary as built by ``RouteResult.build()``.
+            Route result dictionary as built by
+            ``RouteMetrics.compute()``.
         """
         if "geometry" in result:
             self._save_gpkg(result)
@@ -592,252 +584,263 @@ class RouteWriter:
         """Save route result to GeoPackage file"""
         data = gpd.GeoDataFrame([result], geometry="geometry", crs=self.crs)
         if self.out_fp.exists():
-            if self._headers is None:
-                self._headers = gpd.read_file(self.out_fp, rows=1)
-            data = pd.concat([self._headers, data]).iloc[1:]
+            if self._columns is None:
+                self._columns = gpd.read_file(self.out_fp, rows=1).columns
+            data = data.reindex(columns=self._columns)
         data.to_file(self.out_fp, driver="GPKG", mode="a")
 
     def _save_csv(self, result):
         """Save route result to CSV file"""
         data = pd.DataFrame([result])
         if self.out_fp.exists():
-            if self._headers is None:
-                self._headers = pd.read_csv(self.out_fp, nrows=0)
-            data = pd.concat([self._headers, data])
+            if self._columns is None:
+                self._columns = pd.read_csv(self.out_fp, nrows=0).columns
+            data = data.reindex(columns=self._columns)
         data.to_csv(
             self.out_fp, mode="a", index=False, header=not self.out_fp.exists()
         )
 
 
-def find_all_routes(
-    routing_scenario,
-    route_definitions,
-    out_fp,
-    save_paths=False,
-    route_attrs=None,
-):
-    """Compute and save least-cost routes for set of route nodes
+class BatchRouteProcessor:
+    """Class to manage batches of route computations"""
 
-    Parameters
-    ----------
-    routing_scenario : RoutingScenario
-        Scenario describing the cost layers and routing options.
-    route_definitions : Iterable
-        Sequence of ``(start_points, end_points)`` tuples defining which
-        points to route between. Each of ``start_points`` and
-        ``end_points`` should be a list of ``(row, col)`` index tuples.
-    out_fp : path-like
-        Path to output file. If ``save_paths=True``, a GeoPackage
-        will be created (recommend to pass in a filepath ending in
-        ".gpkg"). Otherwise, a CSV file will be created (recommend to
-        pass in a filepath ending in ".csv").
-    save_paths : bool, default=False
-        Include shapely geometries in the output when ``True``.
-        By default, ``False``.
-    route_attrs : dict, optional
-        Mapping of ``frozenset`` of start and end point tuples to
-        additional attributes to include in the output for each route.
-        By default, ``None``.
-    """
-    if not route_definitions:
-        return
+    def __init__(self, routing_scenario, route_definitions, route_attrs=None):
+        """
 
-    ts = time.monotonic()
-    routing_layers = RoutingLayers(routing_scenario).build()
-    try:
-        _compute_routes(
-            routing_scenario,
-            route_definitions,
-            routing_layers,
-            Path(out_fp),
-            save_paths=save_paths,
-            route_attrs=route_attrs,
-        )
-    finally:
-        routing_layers.close()
+        Parameters
+        ----------
+        routing_scenario : RoutingScenario
+            Scenario describing the cost layers and routing options.
+        route_definitions : Iterable
+            Sequence of ``(start_points, end_points)`` tuples defining
+            which points to route between. Each of ``start_points`` and
+            ``end_points`` should be a list of ``(row, col)`` index
+            tuples.
+        route_attrs : dict, optional
+            Mapping of ``frozenset`` of start and end point tuples to
+            additional attributes to include in the output for each
+            route. By default, ``None``.
+        """
+        self.routing_scenario = routing_scenario
+        self._route_definitions = route_definitions
+        self._route_attrs = route_attrs or {}
 
-    time_elapsed = f"{(time.monotonic() - ts) / 60:.4f} min"
-    logger.debug(
-        "Routing for %d route definitions computed in %s",
-        len(route_definitions),
-        time_elapsed,
-    )
+    @cached_property
+    def default_attrs(self):
+        """dict: Default attributes for all routes"""
+        keys = set().union(*[set(x) for x in self._route_attrs.values()])
+        return dict.fromkeys(keys)
 
+    @cached_property
+    def route_attrs(self):
+        """dict: Mapping of frozen route node pair sets to attributes"""
+        return {
+            k: {**self.default_attrs, **v}
+            for k, v in self._route_attrs.items()
+        }
 
-def _compute_routes(
-    routing_scenario,
-    route_definitions,
-    routing_layers,
-    out_fp,
-    save_paths,
-    route_attrs,
-):
-    """Evaluate route definitions and build result records"""
-    default_attrs = {}
-    if route_attrs:
-        route_attrs, default_attrs = _validate_route_attrs(route_attrs)
+    @cached_property
+    def route_definitions(self):
+        """list: Validated route definitions for computation"""
+        return self._compile_valid_route_definitions()
 
-    route_definitions = _compile_valid_route_definitions(
-        routing_scenario, route_definitions, routing_layers
-    )
+    @cached_property
+    def routing_layers(self):
+        """RoutingLayerManager: Built routing layers for the scenario"""
+        return RoutingLayerManager(self.routing_scenario).build()
 
-    writer = RouteWriter(out_fp, crs=routing_layers.cost_crs)
-    route_results = RouteFinder(
-        zarr_fp=routing_scenario.cost_fpath,
-        cost_function=routing_scenario.cost_function_json,
-        route_definitions=[
-            (rid, sp, ep) for rid, (sp, ep) in route_definitions.items()
-        ],
-        cache_size=250_000_000,
-    )
-    for indices, optimized_objective, attrs in _skip_failed_routes(
-        route_results, route_attrs, route_definitions, default_attrs
-    ):
-        route = RouteResult(
-            routing_layers,
-            indices,
-            optimized_objective,
-            add_geom=save_paths,
-            attrs=attrs,
-        )
-        result = route.build()
-        writer.save(result)
+    def process(self, out_fp, save_paths=False):
+        """Compute all routes and save to disk
 
+        Parameters
+        ----------
+        out_fp : path-like
+            Path to output file. If ``save_paths=True``, a GeoPackage
+            will be created (recommend to pass in a filepath ending in
+            ".gpkg"). Otherwise, a CSV file will be created (recommend
+            to pass in a filepath ending in ".csv").
+        save_paths : bool, default=False
+            Include shapely geometries in the output when ``True``.
+            By default, ``False``.
+        """
+        if not self.route_definitions:
+            return
 
-def _skip_failed_routes(
-    routing_results, route_attrs, route_definitions, default_attrs
-):
-    """Yield only successfully computed routes from Rust results"""
-    route_attrs = route_attrs or {}
-    results_iter = iter(routing_results)
-    while True:
+        ts = time.monotonic()
         try:
-            route_id, solutions = next(results_iter)
-            start_points, end_points = route_definitions[route_id]
-            if not solutions:
+            self._compute_routes(Path(out_fp), save_paths=save_paths)
+        finally:
+            self._reset_routing_layers()
+
+        time_elapsed = f"{(time.monotonic() - ts) / 60:.4f} min"
+        logger.debug(
+            "Routing for %d route definitions computed in %s",
+            len(self.route_definitions),
+            time_elapsed,
+        )
+
+    def _compute_routes(self, out_fp, save_paths):
+        """Evaluate route definitions and build result records"""
+
+        writer = IncrementalRouteWriter(
+            out_fp, crs=self.routing_layers.cost_crs
+        )
+        for indices, optimized_objective, attrs in self._route_results():
+            metrics = RouteMetrics(
+                self.routing_layers,
+                indices,
+                optimized_objective,
+                add_geom=save_paths,
+                attrs=attrs,
+            )
+            route_result = metrics.compute()
+            writer.save(route_result)
+
+    def _route_results(self):
+        """Generator yielding route results from Rust computations"""
+        route_results = RouteFinder(
+            zarr_fp=self.routing_scenario.cost_fpath,
+            cost_function=self.routing_scenario.cost_function_json,
+            route_definitions=[
+                (rid, sp, ep)
+                for rid, (sp, ep) in self.route_definitions.items()
+            ],
+            cache_size=250_000_000,
+        )
+        yield from self._skip_failed_routes(route_results)
+
+    def _compile_valid_route_definitions(self):
+        """Filter route definitions to those with valid route nodes"""
+        routes_to_compute = {}
+        for ind, (start_points, end_points) in enumerate(
+            self._route_definitions
+        ):
+            filtered_start_points = self._validate_start_points(start_points)
+            if not filtered_start_points:
                 msg = (
-                    f"Unable to find route from {start_points} to any of "
-                    f"{end_points} (route ID: {route_id}). Please verify that "
-                    "the start and end points are not separated by hard "
-                    "barriers or invalid cost cells."
+                    f"All start points are invalid for route definition "
+                    f"{ind}: {start_points}\nSkipping..."
                 )
-                logger.error(msg)
+                warn(msg, revrtWarning)
                 continue
 
-            logger.debug(
-                "Got result from Rust for route_id %d. Processing..."
-                "\n\t- Start points: %r\n\t- End points: %r",
-                route_id,
-                start_points,
-                end_points,
-            )
-            for indices, optimized_objective in solutions:
-                nodes = frozenset({indices[0], indices[-1]})
-                yield (
-                    indices,
-                    optimized_objective,
-                    route_attrs.get(nodes, default_attrs),
+            try:
+                filtered_end_points = self._validate_end_points(end_points)
+            except revrtLeastCostPathNotFoundError:
+                continue
+
+            if not filtered_end_points:
+                msg = (
+                    f"All end points are invalid for route definition {ind}: "
+                    f"{end_points}\nSkipping..."
                 )
-        except revrtRustError:  # pragma: no cover
-            logger.exception("Rust error when computing route")
-            continue
-        except StopIteration:
-            logger.debug("Routing complete")
-            break
+                warn(msg, revrtWarning)
+                continue
 
+            routes_to_compute[ind] = (
+                filtered_start_points,
+                filtered_end_points,
+            )
 
-def _compile_valid_route_definitions(
-    routing_scenario, route_definitions, routing_layers
-):
-    """Filter route definitions to those with valid route nodes"""
-    routes_to_compute = {}
-    for ind, (start_points, end_points) in enumerate(route_definitions):
-        filtered_start_points = _validate_start_points(
-            routing_layers,
-            start_points,
-            check_costs=routing_scenario.ignore_invalid_costs,
+        return routes_to_compute
+
+    def _skip_failed_routes(self, routing_results):
+        """Yield only successfully computed routes from Rust results"""
+
+        results_iter = iter(routing_results)
+        while True:
+            try:
+                route_id, solutions = next(results_iter)
+                start_points, end_points = self.route_definitions[route_id]
+                if not solutions:
+                    msg = (
+                        f"Unable to find route from {start_points} to any of "
+                        f"{end_points} (route ID: {route_id}). Please verify "
+                        "that the start and end points are not separated by "
+                        "hard barriers or invalid cost cells."
+                    )
+                    logger.error(msg)
+                    continue
+
+                logger.debug(
+                    "Got result from Rust for route_id %d. Processing..."
+                    "\n\t- Start points: %r\n\t- End points: %r",
+                    route_id,
+                    start_points,
+                    end_points,
+                )
+                for indices, optimized_objective in solutions:
+                    nodes = frozenset({indices[0], indices[-1]})
+                    yield (
+                        indices,
+                        optimized_objective,
+                        self.route_attrs.get(nodes, self.default_attrs),
+                    )
+            except revrtRustError:  # pragma: no cover
+                logger.exception("Rust error when computing route")
+                continue
+            except StopIteration:
+                logger.debug("Routing complete")
+                break
+
+    def _validate_start_points(self, points):
+        """Validate start points by removing cells invalid cost"""
+        points = _get_valid_points(
+            points, self.routing_layers.cost.shape, point_type="start"
         )
-        if not filtered_start_points:
-            msg = (
-                f"All start points are invalid for route definition {ind}: "
-                f"{start_points}\nSkipping..."
-            )
-            warn(msg, revrtWarning)
-            continue
+        if not points or not self.routing_scenario.ignore_invalid_costs:
+            return points
 
-        try:
-            filtered_end_points = _validate_end_points(
-                routing_layers,
-                end_points,
-                check_costs=routing_scenario.ignore_invalid_costs,
-            )
-        except revrtLeastCostPathNotFoundError:
-            continue
+        rows, cols = np.array(points).T
+        costs = self.routing_layers.cost.isel(
+            y=xr.DataArray(rows, dims="points"),
+            x=xr.DataArray(cols, dims="points"),
+        )
 
-        if not filtered_end_points:
-            msg = (
-                f"All end points are invalid for route definition {ind}: "
-                f"{end_points}\nSkipping..."
-            )
-            warn(msg, revrtWarning)
-            continue
+        cost_values = costs.compute()
+        bad_point_inds = np.where(np.isnan(cost_values) | (cost_values <= 0))[
+            0
+        ]
+        if not bad_point_inds.size:
+            return points
 
-        routes_to_compute[ind] = (filtered_start_points, filtered_end_points)
-
-    return routes_to_compute
-
-
-def _validate_start_points(routing_layers, points, check_costs):
-    """Raise when no end cell provides a positive traversal cost"""
-    points = _get_valid_points(
-        points, routing_layers.cost.shape, point_type="start"
-    )
-    if not points or not check_costs:
-        return points
-
-    rows, cols = np.array(points).T
-    costs = routing_layers.cost.isel(
-        y=xr.DataArray(rows, dims="points"),
-        x=xr.DataArray(cols, dims="points"),
-    )
-
-    cost_values = costs.compute()
-    bad_point_inds = np.where(np.isnan(cost_values) | (cost_values <= 0))[0]
-    if not bad_point_inds.size:
-        return points
-
-    invalid_points = {points[i] for i in bad_point_inds}
-    msg = (
-        f"One or more of the start points have an invalid cost "
-        f"(must be > 0): {invalid_points}\n"
-        "Dropping these from consideration..."
-    )
-    warn(msg, revrtWarning)
-
-    return [p for p in points if p not in invalid_points]
-
-
-def _validate_end_points(routing_layers, points, check_costs):
-    """Raise when no end cell provides a positive traversal cost"""
-    points = _get_valid_points(
-        points, routing_layers.cost.shape, point_type="end"
-    )
-    if not points or not check_costs:
-        return points
-
-    rows, cols = np.array(points).T
-    costs = routing_layers.cost.isel(
-        y=xr.DataArray(rows, dims="points"),
-        x=xr.DataArray(cols, dims="points"),
-    )
-
-    if not np.any(costs.compute() > 0):
+        invalid_points = {points[i] for i in bad_point_inds}
         msg = (
-            f"None of the end points have a valid cost (must be > 0): {points}"
+            f"One or more of the start points have an invalid cost "
+            f"(must be > 0): {invalid_points}\n"
+            "Dropping these from consideration..."
         )
-        raise revrtLeastCostPathNotFoundError(msg)
+        warn(msg, revrtWarning)
 
-    return points
+        return [p for p in points if p not in invalid_points]
+
+    def _validate_end_points(self, points):
+        """Filter out invalid endpoints; raise if all are invalid"""
+        points = _get_valid_points(
+            points, self.routing_layers.cost.shape, point_type="end"
+        )
+        if not points or not self.routing_scenario.ignore_invalid_costs:
+            return points
+
+        rows, cols = np.array(points).T
+        costs = self.routing_layers.cost.isel(
+            y=xr.DataArray(rows, dims="points"),
+            x=xr.DataArray(cols, dims="points"),
+        )
+
+        if not np.any(costs.compute() > 0):
+            msg = (
+                f"None of the end points have a valid cost (must be > 0): "
+                f"{points}"
+            )
+            raise revrtLeastCostPathNotFoundError(msg)
+
+        return points
+
+    def _reset_routing_layers(self):
+        """Close handler and remove built routing layers from memory"""
+        self.routing_layers.close()
+        del self.routing_layers
 
 
 def _get_valid_points(points, arr_shape, point_type):
@@ -865,13 +868,6 @@ def _is_valid_point(point, arr_shape):
     """Check if point is within array bounds"""
     row, col = point
     return 0 <= row < arr_shape[0] and 0 <= col < arr_shape[1]
-
-
-def _validate_route_attrs(route_attrs):
-    """Ensure all attrs have the same keys"""
-    keys = set().union(*[set(x) for x in route_attrs.values()])
-    def_attrs = dict.fromkeys(keys)
-    return {k: {**def_attrs, **v} for k, v in route_attrs.items()}, def_attrs
 
 
 def _compute_lens(route, cell_size):
