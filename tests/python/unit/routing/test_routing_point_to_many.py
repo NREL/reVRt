@@ -189,7 +189,7 @@ def test_basic_single_route_layered_file_short_path(
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(1, 2)], {}),
+            ([(1, 1)], [(1, 2)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -215,8 +215,8 @@ def test_basic_single_route_layered_file(sample_layered_data, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
-            ([(1, 2)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
+            ([(1, 2)], [(2, 6)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -256,11 +256,14 @@ def test_multi_layer_route_layered_file(sample_layered_data, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
-            ([(1, 2)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
+            ([(1, 2)], [(2, 6)]),
         ],
         out_fp=out_csv,
         save_paths=False,
+        route_attrs={
+            frozenset({(1, 2), (2, 6)}): {"route_type": "A"},
+        },
     )
 
     output = pd.read_csv(out_csv)
@@ -288,6 +291,7 @@ def test_multi_layer_route_layered_file(sample_layered_data, tmp_path):
     assert np.isclose(
         first_route["cost"], first_route["optimized_objective"], rtol=1e-6
     )
+    assert np.isnan(first_route["route_type"])
 
     second_route = output[
         (output["start_row"] == 1) & (output["start_col"] == 2)
@@ -311,6 +315,7 @@ def test_multi_layer_route_layered_file(sample_layered_data, tmp_path):
     assert np.isclose(
         second_route["cost"], second_route["optimized_objective"], rtol=1e-6
     )
+    assert second_route["route_type"] == "A"
 
 
 def test_save_paths_returns_expected_geometry(sample_layered_data, tmp_path):
@@ -325,8 +330,8 @@ def test_save_paths_returns_expected_geometry(sample_layered_data, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
-            ([(1, 2)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
+            ([(1, 2)], [(2, 6)]),
         ],
         out_fp=out_gpkg,
         save_paths=True,
@@ -431,8 +436,8 @@ def test_multi_layer_route_with_multiplier(sample_layered_data, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
-            ([(1, 2)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
+            ([(1, 2)], [(2, 6)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -518,7 +523,7 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(1, 2)], {}),
+            ([(1, 1)], [(1, 2)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -558,7 +563,7 @@ def test_routing_with_tracked_layers(sample_layered_data, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(1, 2)], {}),
+            ([(1, 1)], [(1, 2)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -600,7 +605,7 @@ def test_start_point_on_barrier_returns_no_route(
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(3, 1)], [(2, 6)], {}),
+            ([(3, 1)], [(2, 6)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -629,7 +634,7 @@ def test_some_endpoints_include_barriers_but_one_valid(
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(0, 3), (2, 6)], {}),
+            ([(1, 1)], [(0, 3), (2, 6)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -660,7 +665,7 @@ def test_all_endpoints_are_barriers_returns_no_route(
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(0, 3), (0, 7)], {}),
+            ([(1, 1)], [(0, 3), (0, 7)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -668,6 +673,33 @@ def test_all_endpoints_are_barriers_returns_no_route(
     assert_message_was_logged(
         "None of the end idx have a valid cost (must be > 0)! "
         "[(0, 3), (0, 7)]",
+        "ERROR",
+    )
+    assert not out_csv.exists()
+
+
+def test_bad_index_returns_no_route(
+    sample_layered_data, assert_message_was_logged, tmp_path
+):
+    """If any points are out-of-bounds, no route is returned"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
+        scenario,
+        route_definitions=[
+            ([(10000, 10000)], [(0, 3), (0, 7)]),
+        ],
+        out_fp=out_csv,
+        save_paths=False,
+    )
+    assert_message_was_logged(
+        "One or more of the start idx are out of bounds for an array of "
+        "shape (7, 8): [(10000, 10000)]",
         "ERROR",
     )
     assert not out_csv.exists()
@@ -706,7 +738,7 @@ def test_missing_cost_layer_raises_key_error(sample_layered_data, tmp_path):
         find_all_routes(
             scenario,
             route_definitions=[
-                ([(1, 1)], [(1, 2)], {}),
+                ([(1, 1)], [(1, 2)]),
             ],
             out_fp=out_csv,
             save_paths=False,
@@ -795,7 +827,7 @@ def test_length_invariant_layers_sum_raw_values(sample_layered_data, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
         ],
         out_fp=out_gpkg,
         save_paths=True,
@@ -873,7 +905,7 @@ def test_length_invariant_hidden_and_friction_layers(
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
         ],
         out_fp=out_gpkg,
         save_paths=True,
@@ -1038,7 +1070,7 @@ def test_friction_layer_influences_objective_without_reporting(
     find_all_routes(
         base_scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
         ],
         out_fp=base_csv,
         save_paths=False,
@@ -1052,7 +1084,7 @@ def test_friction_layer_influences_objective_without_reporting(
     find_all_routes(
         friction_scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
         ],
         out_fp=friction_csv,
         save_paths=False,
@@ -1095,7 +1127,7 @@ def test_friction_layer_influences_objective(sample_layered_data, tmp_path):
     find_all_routes(
         base_scenario,
         route_definitions=[
-            ([(1, 1)], [(3, 5)], {}),
+            ([(1, 1)], [(3, 5)]),
         ],
         out_fp=base_csv,
         save_paths=False,
@@ -1109,7 +1141,7 @@ def test_friction_layer_influences_objective(sample_layered_data, tmp_path):
     find_all_routes(
         friction_scenario,
         route_definitions=[
-            ([(1, 1)], [(3, 5)], {}),
+            ([(1, 1)], [(3, 5)]),
         ],
         out_fp=friction_csv,
         save_paths=False,
@@ -1158,7 +1190,7 @@ def test_negative_friction_layer_influences_objective(
     find_all_routes(
         base_scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
         ],
         out_fp=base_gpkg,
         save_paths=True,
@@ -1172,7 +1204,7 @@ def test_negative_friction_layer_influences_objective(
     find_all_routes(
         friction_scenario,
         route_definitions=[
-            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)]),
         ],
         out_fp=friction_gpkg,
         save_paths=True,
@@ -1221,7 +1253,7 @@ def test_negative_friction_layer_does_not_go_thru_barrier(
     find_all_routes(
         base_scenario,
         route_definitions=[
-            ([(4, 0)], [(2, 7)], {}),
+            ([(4, 0)], [(2, 7)]),
         ],
         out_fp=base_gpkg,
         save_paths=True,
@@ -1235,7 +1267,7 @@ def test_negative_friction_layer_does_not_go_thru_barrier(
     find_all_routes(
         friction_scenario,
         route_definitions=[
-            ([(4, 0)], [(2, 7)], {}),
+            ([(4, 0)], [(2, 7)]),
         ],
         out_fp=friction_gpkg,
         save_paths=True,
@@ -1275,7 +1307,7 @@ def test_include_in_final_cost_false_behaves_like_friction(
     find_all_routes(
         base_scenario,
         route_definitions=[
-            ([(1, 1)], [(3, 5)], {}),
+            ([(1, 1)], [(3, 5)]),
         ],
         out_fp=out_gpkg,
         save_paths=True,
@@ -1302,7 +1334,7 @@ def test_include_in_final_cost_false_behaves_like_friction(
     find_all_routes(
         penalized_scenario,
         route_definitions=[
-            ([(1, 1)], [(3, 5)], {}),
+            ([(1, 1)], [(3, 5)]),
         ],
         out_fp=penalized_gpkg,
         save_paths=True,
@@ -1324,36 +1356,6 @@ def test_include_in_final_cost_false_behaves_like_friction(
         rel=1e-6,
     )
     assert "layer_5_cost" not in penalized_route
-
-
-def test_route_result_build_warns_on_attr_mismatch(
-    sample_layered_data, assert_message_was_logged
-):
-    """RouteResult build warns when provided attrs contradict results"""
-
-    scenario = RoutingScenario(
-        cost_fpath=sample_layered_data,
-        cost_layers=[{"layer_name": "layer_1"}],
-    )
-
-    routing_layers = RoutingLayers(scenario).build()
-    try:
-        route = [(1, 1), (1, 2)]
-        with pytest.warns(revrtWarning):
-            result = RouteResult(
-                routing_layers,
-                route,
-                optimized_objective=0.0,
-                add_geom=True,
-                attrs={"start_row": 0},
-            ).build()
-
-        assert_message_was_logged("does not match", "WARNING")
-
-        assert result["geometry"].geom_type == "LineString"
-        assert result["start_row"] == 0
-    finally:
-        routing_layers.close()
 
 
 def test_route_result_geom_returns_point_for_single_cell(sample_layered_data):
@@ -1495,7 +1497,7 @@ def test_negative_cost_path_returns_no_route(sample_layered_data, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(4, 0)], [(2, 7)], {}),
+            ([(4, 0)], [(2, 7)]),
         ],
         out_fp=out_csv,
         save_paths=False,
@@ -1615,7 +1617,7 @@ def test_soft_barrier(sample_layered_data, ignore_invalid_costs, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(4, 0)], [(4, 5)], {}),
+            ([(4, 0)], [(4, 5)]),
         ],
         out_fp=out_gpkg,
         save_paths=True,
@@ -1631,6 +1633,70 @@ def test_soft_barrier(sample_layered_data, ignore_invalid_costs, tmp_path):
         x, y = route["geometry"].xy
         assert np.allclose(x, np.linspace(0.5, 5.5, num=6))
         assert np.allclose(y, 2.5)
+
+
+def test_route_many_attrs(sample_layered_data, tmp_path):
+    """Test routing with multiple layers and a scalar multiplier"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[
+            {"layer_name": "layer_1"},
+        ],
+    )
+
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
+        scenario,
+        route_definitions=[
+            ([(1, 1)], [(2, 6)]),
+            ([(1, 2)], [(2, 6)]),
+            ([(1, 3)], [(2, 6)]),
+            ([(1, 4)], [(2, 6)]),
+        ],
+        out_fp=out_csv,
+        save_paths=False,
+        route_attrs={
+            frozenset({(1, 2), (2, 6)}): {"route_type": "A"},
+            frozenset({(1, 4), (2, 6)}): {"my_attr": "B"},
+            frozenset({(1, 3), (2, 6)}): {
+                "route_type": "C",
+                "my_attr": "D",
+                "final": True,
+            },
+        },
+    )
+
+    output = pd.read_csv(out_csv)
+    assert len(output) == 4
+
+    first_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 1)
+    ].iloc[0]
+    assert np.isnan(first_route["route_type"])
+    assert np.isnan(first_route["my_attr"])
+    assert np.isnan(first_route["final"])
+
+    second_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 2)
+    ].iloc[0]
+    assert second_route["route_type"] == "A"
+    assert np.isnan(second_route["my_attr"])
+    assert np.isnan(second_route["final"])
+
+    third_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 3)
+    ].iloc[0]
+    assert third_route["route_type"] == "C"
+    assert third_route["my_attr"] == "D"
+    assert third_route["final"]
+
+    fourth_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 4)
+    ].iloc[0]
+    assert np.isnan(fourth_route["route_type"])
+    assert fourth_route["my_attr"] == "B"
+    assert np.isnan(fourth_route["final"])
 
 
 if __name__ == "__main__":

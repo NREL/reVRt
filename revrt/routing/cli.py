@@ -415,14 +415,7 @@ def _run_lcp(
         route_fl = _update_multipliers(
             friction_layers or [], polarity, voltage, transmission_config
         )
-        route_definitions = [
-            (
-                [(info["start_row"], info["start_col"])],
-                [(info["end_row"], info["end_col"])],
-                info.to_dict(),
-            )
-            for __, info in routes.iterrows()
-        ]
+        route_definitions, route_attrs = _convert_to_route_definitions(routes)
 
         scenario = RoutingScenario(
             cost_fpath=cost_fpath,
@@ -439,6 +432,7 @@ def _run_lcp(
             route_definitions=route_definitions,
             save_paths=save_paths,
             out_fp=out_fp,
+            route_attrs=route_attrs,
         )
 
     time_elapsed = f"{(time.monotonic() - ts) / 3600:.4f} hour(s)"
@@ -453,8 +447,8 @@ def _paths_to_compute(route_points, out_fp):
     """Yield route groups that still require computation"""
     existing_routes = _collect_existing_routes(out_fp)
 
-    group_cols = ["start_row", "start_col", "polarity", "voltage"]
-    for check_col in ["polarity", "voltage"]:
+    group_cols = ["polarity", "voltage"]
+    for check_col in group_cols:
         if check_col not in route_points.columns:
             route_points[check_col] = "unknown"
 
@@ -479,6 +473,32 @@ def _paths_to_compute(route_points, out_fp):
 
         *__, polarity, voltage = group_info
         yield polarity, voltage, routes
+
+
+def _convert_to_route_definitions(routes):
+    """Convert route DataFrame to route definitions format"""
+    cols = ["start_row", "start_col", "end_row", "end_col"]
+    num_unique_start_points = len(routes.groupby(["start_row", "start_col"]))
+    num_unique_end_points = len(routes.groupby(["end_row", "end_col"]))
+    if num_unique_end_points > num_unique_start_points:
+        logger.info(
+            "Less unique starting points detected! Swapping start and "
+            "end point set for optimal routing performance"
+        )
+        cols = ["end_row", "end_col", "start_row", "start_col"]
+
+    route_definitions = []
+    route_attrs = {}
+    for end_idx, sub_routes in routes.groupby(cols[2:]):
+        start_points = []
+        for __, info in sub_routes.iterrows():
+            start_idx = tuple(info[cols[:2]])
+            route_attrs[frozenset([start_idx, end_idx])] = info.to_dict()
+            start_points.append(start_idx)
+
+        route_definitions.append((start_points, [end_idx]))
+
+    return route_definitions, route_attrs
 
 
 def _collect_existing_routes(out_fp):
