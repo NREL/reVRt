@@ -664,7 +664,7 @@ def test_invalid_start_point_logged(
 def test_invalid_start_point_explicitly_allowed(
     sample_layered_data, assert_message_was_logged, tmp_path
 ):
-    """Test that only the invalid starting point is logged"""
+    """Test out-of-bounds points logging when ignore_invalid_costs is False"""
 
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
@@ -838,7 +838,7 @@ def test_bad_end_index_returns_no_route(
 def test_bad_index_skipped(
     sample_layered_data, assert_message_was_logged, tmp_path
 ):
-    """If any points are out-of-bounds, no route is returned"""
+    """Out-of-bounds points are skipped and routes are compute"""
 
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,

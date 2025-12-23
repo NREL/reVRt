@@ -788,7 +788,7 @@ def _compile_valid_route_definitions(
 
 
 def _validate_start_points(routing_layers, points, check_costs):
-    """Raise when no end cell provides a positive traversal cost"""
+    """Validate start points by removing cells with non positive cost"""
     points = _get_valid_points(
         points, routing_layers.cost.shape, point_type="start"
     )
@@ -818,7 +818,7 @@ def _validate_start_points(routing_layers, points, check_costs):
 
 
 def _validate_end_points(routing_layers, points, check_costs):
-    """Raise when no end cell provides a positive traversal cost"""
+    """Filter out invalid endpoints; raise if all are invalid"""
     points = _get_valid_points(
         points, routing_layers.cost.shape, point_type="end"
     )
