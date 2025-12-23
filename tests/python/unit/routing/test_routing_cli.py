@@ -2,6 +2,7 @@
 
 import os
 import json
+import shutil
 import platform
 from pathlib import Path
 
@@ -569,7 +570,7 @@ def test_get_polarity_multiplier_unknown_voltage():
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_route_points_skips_precomputed_routes(  # noqa: C901
+def test_cli_route_points_skips_precomputed_routes(
     cli_runner, sample_layered_data, tmp_path
 ):
     """route-points CLI should append only new routes"""
@@ -582,45 +583,26 @@ def test_cli_route_points_skips_precomputed_routes(  # noqa: C901
     route_table_fp = tmp_path / "route_points.csv"
     routes.iloc[:1].to_csv(route_table_fp, index=False)
 
-    out_dir = tmp_path / "cli_outputs"
-
     config = {
         "cost_fpath": str(sample_layered_data),
         "route_table": str(route_table_fp),
         "cost_layers": [{"layer_name": "layer_1"}],
-        "out_dir": str(out_dir),
-        "job_name": "grid_routes",
-        "ignore_invalid_costs": True,
     }
-
     config_fp = tmp_path / "route_points_config.json"
     config_fp.write_text(json.dumps(config))
-
-    def _read_routes(csv_fp):
-        frame = pd.read_csv(csv_fp)
-        if "route_id" in frame.columns:
-            mask = frame["route_id"].astype(str) != "route_id"
-            frame = frame[mask].reset_index(drop=True)
-        drop_cols = [c for c in frame.columns if c.startswith("Unnamed")]
-        if drop_cols:
-            frame = frame.drop(columns=drop_cols)
-        return frame
 
     first_result = cli_runner.invoke(
         main, ["route-points", "-c", str(config_fp)]
     )
     assert first_result.exit_code == 0, first_result.output
 
-    out_fp = out_dir / "grid_routes.csv"
+    out_fp = list(tmp_path.glob("*test*.csv"))
+    assert len(out_fp) == 1
+    out_fp = out_fp[0]
     assert out_fp.exists()
 
-    first_run = _read_routes(out_fp)
+    first_run = pd.read_csv(out_fp)
     assert len(first_run) == 1
-
-    numeric_cols = ["cost", "length_km", "optimized_objective"]
-    for col in numeric_cols:
-        if col in first_run.columns:
-            first_run[col] = pd.to_numeric(first_run[col])
 
     base_route_id = routes.iloc[0]["route_id"]
     assert first_run["route_id"].tolist() == [base_route_id]
@@ -637,17 +619,15 @@ def test_cli_route_points_skips_precomputed_routes(  # noqa: C901
 
     routes.to_csv(route_table_fp, index=False)
 
+    shutil.rmtree(tmp_path / ".gaps")
     second_result = cli_runner.invoke(
         main, ["route-points", "-c", str(config_fp)]
     )
     assert second_result.exit_code == 0, second_result.output
 
-    all_routes = _read_routes(out_fp)
+    assert len(list(tmp_path.glob("*test*.csv"))) == 1
+    all_routes = pd.read_csv(out_fp)
     assert len(all_routes) == 2
-
-    for col in numeric_cols:
-        if col in all_routes.columns:
-            all_routes[col] = pd.to_numeric(all_routes[col])
 
     counts = all_routes["route_id"].value_counts()
     for route_id in routes["route_id"]:
@@ -656,9 +636,9 @@ def test_cli_route_points_skips_precomputed_routes(  # noqa: C901
     first_after = all_routes.loc[all_routes["route_id"] == base_route_id].iloc[
         0
     ]
-    for col in [c for c in numeric_cols if c != "length_km"]:
-        if col in all_routes.columns:
-            assert first_after[col] == pytest.approx(first_row[col])
+
+    for col in ["cost", "optimized_objective"]:
+        assert first_after[col] == pytest.approx(first_row[col])
 
     if "length_km" in all_routes.columns:
         assert first_after["length_km"] == pytest.approx(sentinel_length)
