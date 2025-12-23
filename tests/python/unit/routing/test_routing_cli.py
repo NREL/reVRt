@@ -909,5 +909,65 @@ def test_build_route_costs_command_metadata():
     assert tuple(build_route_costs_command.preprocessor_args) == ("config",)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_route_points_flip_start_end(
+    cli_runner, sample_layered_data, tmp_path
+):
+    """route-points CLI that internally flips start and end points"""
+
+    to_test_routes = [
+        # More unique endpoints than start points,
+        # so computation will flip them
+        ((1, 1), (2, 3)),
+        ((1, 1), (3, 4)),
+        ((1, 1), (4, 5)),
+        ((1, 2), (5, 6)),
+        ((1, 3), (5, 6)),
+    ]
+
+    routes = _build_route_table(
+        sample_layered_data,
+        rows_cols=to_test_routes,
+    )
+    route_table_fp = tmp_path / "route_points.csv"
+    routes.to_csv(route_table_fp, index=False)
+
+    config = {
+        "cost_fpath": str(sample_layered_data),
+        "route_table": str(route_table_fp),
+        "cost_layers": [{"layer_name": "layer_1"}],
+    }
+    config_fp = tmp_path / "route_points_config.json"
+    config_fp.write_text(json.dumps(config))
+
+    first_result = cli_runner.invoke(
+        main, ["route-points", "-c", str(config_fp)]
+    )
+    assert first_result.exit_code == 0, first_result.output
+
+    out_fp = list(tmp_path.glob("*test*.csv"))
+    assert len(out_fp) == 1
+    out_fp = out_fp[0]
+    assert out_fp.exists()
+
+    output = pd.read_csv(out_fp)
+    assert len(output) == len(routes)
+    for route_id, route in enumerate(to_test_routes):
+        (start_row, start_col), (end_row, end_col) = route
+
+        output_route = output.loc[
+            output["route_id"] == f"route_{route_id}"
+        ].iloc[0]
+
+        assert output_route["start_row"] == start_row
+        assert output_route["start_col"] == start_col
+        assert output_route["end_row"] == end_row
+        assert output_route["end_col"] == end_col
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
