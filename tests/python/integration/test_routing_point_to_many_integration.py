@@ -73,7 +73,7 @@ def test_soft_barrier_with_large_dataset(
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(5, 0)], [(5, 900)], {}),
+            ([(5, 0)], [(5, 900)]),
         ],
         out_fp=out_gpkg,
         save_paths=True,
