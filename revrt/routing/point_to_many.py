@@ -536,17 +536,6 @@ class RouteResult:
             "end_col": self._route[-1][1],
             "optimized_objective": self._optimized_objective,
         }
-        for check_key in ["start_row", "start_col", "end_row", "end_col"]:
-            if (
-                check_key in self._attrs
-                and results[check_key] != self._attrs[check_key]
-            ):
-                msg = (
-                    f"Computed {check_key}={results[check_key]} does "
-                    f"not match expected {check_key}="
-                    f"{self._attrs[check_key]}!"
-                )
-                warn(msg, revrtWarning)
 
         results.update(self._attrs)
         for layer in self._routing_layers.tracked_layers:
