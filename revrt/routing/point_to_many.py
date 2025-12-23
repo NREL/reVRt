@@ -750,43 +750,115 @@ def _compile_valid_route_definitions(routing_layers, route_definitions):
     """Filter route definitions to those with valid route nodes"""
     routes_to_compute = {}
     for ind, (start_points, end_points) in enumerate(route_definitions):
+        filtered_start_points = _validate_start_points(
+            routing_layers, start_points
+        )
+        if not filtered_start_points:
+            msg = (
+                f"All start points are invalid for route definition {ind}: "
+                f"{start_points}\nSkipping..."
+            )
+            warn(msg, revrtWarning)
+            continue
+
         try:
-            _validate_route_nodes(
-                routing_layers, start_points, point_type="start"
+            filtered_end_points = _validate_end_points(
+                routing_layers, end_points
             )
         except revrtLeastCostPathNotFoundError:
             continue
 
-        try:
-            _validate_route_nodes(routing_layers, end_points, point_type="end")
-        except revrtLeastCostPathNotFoundError:
+        if not filtered_end_points:
+            msg = (
+                f"All end points are invalid for route definition {ind}: "
+                f"{end_points}\nSkipping..."
+            )
+            warn(msg, revrtWarning)
             continue
-        routes_to_compute[ind] = (start_points, end_points)
+
+        routes_to_compute[ind] = (filtered_start_points, filtered_end_points)
 
     return routes_to_compute
 
 
-def _validate_route_nodes(routing_layers, points, point_type):
+def _validate_start_points(routing_layers, points):
     """Raise when no end cell provides a positive traversal cost"""
+    points = _get_valid_points(
+        points, routing_layers.cost.shape, point_type="start"
+    )
+    if not points:
+        return points
+
     rows, cols = np.array(points).T
-    try:
-        costs = routing_layers.cost.isel(
-            y=xr.DataArray(rows, dims="points"),
-            x=xr.DataArray(cols, dims="points"),
-        )
-    except IndexError:
-        msg = (
-            f"One or more of the {point_type} idx are out of bounds for an "
-            f"array of shape {routing_layers.cost.shape}: {points}"
-        )
-        raise revrtLeastCostPathNotFoundError(msg) from None
+    costs = routing_layers.cost.isel(
+        y=xr.DataArray(rows, dims="points"),
+        x=xr.DataArray(cols, dims="points"),
+    )
+
+    cost_values = costs.compute()
+    bad_point_inds = np.where(np.isnan(cost_values) | (cost_values <= 0))[0]
+    if not bad_point_inds.size:
+        return points
+
+    invalid_points = {points[i] for i in bad_point_inds}
+    msg = (
+        f"One or more of the start points have an invalid cost "
+        f"(must be > 0): {invalid_points}\n"
+        "Dropping these from consideration..."
+    )
+    warn(msg, revrtWarning)
+
+    return [p for p in points if p not in invalid_points]
+
+
+def _validate_end_points(routing_layers, points):
+    """Raise when no end cell provides a positive traversal cost"""
+    points = _get_valid_points(
+        points, routing_layers.cost.shape, point_type="end"
+    )
+    if not points:
+        return points
+
+    rows, cols = np.array(points).T
+    costs = routing_layers.cost.isel(
+        y=xr.DataArray(rows, dims="points"),
+        x=xr.DataArray(cols, dims="points"),
+    )
 
     if not np.any(costs.compute() > 0):
         msg = (
-            f"None of the {point_type} idx have a valid cost (must be > 0)! "
-            f"{points}"
+            f"None of the end points have a valid cost (must be > 0): {points}"
         )
         raise revrtLeastCostPathNotFoundError(msg)
+
+    return points
+
+
+def _get_valid_points(points, arr_shape, point_type):
+    """Get only points that are within array bounds"""
+    valid_points = []
+    invalid_points = []
+    for point in points:
+        if _is_valid_point(point, arr_shape):
+            valid_points.append(point)
+        else:
+            invalid_points.append(point)
+
+    if invalid_points:
+        msg = (
+            f"One or more of the {point_type} points are out of bounds for an "
+            f"array of shape {arr_shape}: {invalid_points}\n"
+            "Dropping these from consideration..."
+        )
+        warn(msg, revrtWarning)
+
+    return valid_points
+
+
+def _is_valid_point(point, arr_shape):
+    """Check if point is within array bounds"""
+    row, col = point
+    return 0 <= row < arr_shape[0] and 0 <= col < arr_shape[1]
 
 
 def _validate_route_attrs(route_attrs):
