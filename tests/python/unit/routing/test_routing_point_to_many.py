@@ -673,6 +673,33 @@ def test_all_endpoints_are_barriers_returns_no_route(
     assert not out_csv.exists()
 
 
+def test_bad_index_returns_no_route(
+    sample_layered_data, assert_message_was_logged, tmp_path
+):
+    """If any points are out-of-bounds, no route is returned"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
+    )
+
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
+        scenario,
+        route_definitions=[
+            ([(10000, 10000)], [(0, 3), (0, 7)], {}),
+        ],
+        out_fp=out_csv,
+        save_paths=False,
+    )
+    assert_message_was_logged(
+        "One or more of the start idx are out of bounds for an array of "
+        "shape (7, 8): [(10000, 10000)]",
+        "ERROR",
+    )
+    assert not out_csv.exists()
+
+
 def test_routing_scenario_repr_contains_fields(sample_layered_data):
     """RoutingScenario repr surfaces configured layer metadata"""
 

@@ -664,7 +664,7 @@ def _skip_failed_routes(routing_results, route_attrs):
             )
             indices, optimized_objective = solutions[0]
             yield indices, optimized_objective, attrs
-        except revrtRustError:
+        except revrtRustError:  # pragma: no cover
             logger.exception("Rust error when computing route")
             continue
         except StopIteration:
