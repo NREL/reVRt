@@ -441,7 +441,7 @@ def _run_lcp(
             out_fp=out_fp,
         )
 
-    time_elapsed = f"{(time.monotonic() - ts) / 3600:.4f} ho+ur(s)"
+    time_elapsed = f"{(time.monotonic() - ts) / 3600:.4f} hour(s)"
     logger.info(
         "Routing for %d points completed in %s",
         len(route_points),
