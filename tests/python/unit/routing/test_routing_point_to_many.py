@@ -335,6 +335,10 @@ def test_save_paths_returns_expected_geometry(sample_layered_data, tmp_path):
     output = gpd.read_file(out_gpkg)
     assert len(output) == 2
 
+    output = output.sort_values(by=["start_col"], ascending=True).reset_index(
+        drop=True
+    )
+
     route_geoms = [route["geometry"] for __, route in output.iterrows()]
 
     expected_geometries = [
