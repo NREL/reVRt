@@ -718,8 +718,8 @@ class BatchRouteProcessor:
             filtered_start_points = self._validate_start_points(start_points)
             if not filtered_start_points:
                 msg = (
-                    f"All start points are invalid for route definition "
-                    f"{ind}: {start_points}\nSkipping..."
+                    f"All start points are invalid for route with ID "
+                    f"{route_id}: {start_points}\nSkipping..."
                 )
                 warn(msg, revrtWarning)
                 continue
@@ -731,8 +731,8 @@ class BatchRouteProcessor:
 
             if not filtered_end_points:
                 msg = (
-                    f"All end points are invalid for route definition {ind}: "
-                    f"{end_points}\nSkipping..."
+                    f"All end points are invalid for route with ID "
+                    f"{route_id}: {end_points}\nSkipping..."
                 )
                 warn(msg, revrtWarning)
                 continue

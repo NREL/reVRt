@@ -607,7 +607,7 @@ def test_start_point_on_barrier_returns_no_route(
         "WARNING",
     )
     assert_message_was_logged(
-        "All start points are invalid for route definition 0: [(3, 1)]",
+        "All start points are invalid for route with ID 0: [(3, 1)]",
         "WARNING",
     )
     assert not out_csv.exists()
@@ -818,7 +818,7 @@ def test_bad_end_index_returns_no_route(
         "WARNING",
     )
     assert_message_was_logged(
-        "All end points are invalid for route definition 0: [(10000, 10000)]",
+        "All end points are invalid for route with ID 0: [(10000, 10000)]",
         "WARNING",
     )
     assert not out_csv.exists()
