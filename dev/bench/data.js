@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766470703186,
+  "lastUpdate": 1766517438211,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3275,6 +3275,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 400062673,
             "range": "± 6094556",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a19c8acad1b1c1053d836f9b815b90a10ab3d56b",
+          "message": "Better route definitions (#187)\n\n* WIP!!\n\n* More WIP\n\n* Working code\n\n* WIP\n\n* Add `ParRouting`\n\n* New lazy scout function\n\n* New types\n\n* New type\n\n* More lenient types\n\n* Add `RouteFinder` generator class\n\n* Minor updates to types\n\n* Routes are now defined with integers ID's to link back to results\n\n* Add `revrtRustError`\n\n* Use new rust class for routing\n\n* Update CLI for new function behavior\n\n* Include class in documentation\n\n* WIP\n\n* PR review comments\n\n* Make test deterministic\n\n* Fix coverage\n\n* Fix up test\n\n* Add python-side tests for `RouteFinder`\n\n* Add test for repeatred writing to GPKG\n\n* Add test for the case where route start and end points might flip\n\n* Simplified route definition input\n\n* Add test for new attributes input to function\n\n* Simpler route definition input\n\n* New grouping methodology\n\n* Add `RouteWriter`\n\n* No more check key warnings\n\n* Update logic to pass tests",
+          "timestamp": "2025-12-23T12:00:41-07:00",
+          "tree_id": "c36a5aa9230ae8db3fd2e4e4580df5910fcaf770",
+          "url": "https://github.com/NREL/reVRt/commit/a19c8acad1b1c1053d836f9b815b90a10ab3d56b"
+        },
+        "date": 1766517437668,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 154139166,
+            "range": "± 1607500",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 206931862,
+            "range": "± 1697794",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 258006255,
+            "range": "± 15383765",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 354140929,
+            "range": "± 19639605",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 682947360,
+            "range": "± 20751408",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 152353877,
+            "range": "± 3164099",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 157092603,
+            "range": "± 752419",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 172722244,
+            "range": "± 1110023",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 223243211,
+            "range": "± 2346124",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 408923584,
+            "range": "± 6855374",
             "unit": "ns/iter"
           }
         ]
