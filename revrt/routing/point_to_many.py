@@ -565,6 +565,61 @@ class RouteResult:
         )
 
 
+class RouteWriter:
+    """Stream results to disk by appending each new result to a file
+
+    A new file is created if one does not exist.
+    """
+
+    def __init__(self, out_fp, crs=None):
+        """
+
+        Parameters
+        ----------
+        out_fp : path-like
+            Path to output file.
+        crs : rasterio.crs.CRS or dict, optional
+            Coordinate reference system for geometries when saving to
+            GeoPackage. By default, ``None``.
+        """
+        self.out_fp = Path(out_fp)
+        self.crs = crs
+        self._headers = None
+
+    def save(self, result):
+        """Write a single route result to file
+
+        Parameters
+        ----------
+        result : dict
+            Route result dictionary as built by ``RouteResult.build()``.
+        """
+        if "geometry" in result:
+            self._save_gpkg(result)
+            return
+        self._save_csv(result)
+
+    def _save_gpkg(self, result):
+        """Save route result to GeoPackage file"""
+        data = gpd.GeoDataFrame([result], geometry="geometry", crs=self.crs)
+        if self.out_fp.exists():
+            if self._headers is None:
+                self._headers = gpd.read_file(self.out_fp, rows=1)
+            data = pd.concat([self._headers, data]).iloc[1:]
+        data.to_file(self.out_fp, driver="GPKG", mode="a")
+
+    def _save_csv(self, result):
+        """Save route result to CSV file"""
+        data = pd.DataFrame([result])
+        if self.out_fp.exists():
+            if self._headers is None:
+                self._headers = pd.read_csv(self.out_fp, nrows=0)
+            data = pd.concat([self._headers, data])
+        data.to_csv(
+            self.out_fp, mode="a", index=False, header=not self.out_fp.exists()
+        )
+
+
 def find_all_routes(
     routing_scenario, route_definitions, out_fp, save_paths=False
 ):
