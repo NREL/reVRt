@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766205618287,
+  "lastUpdate": 1766470703186,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3191,6 +3191,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 403712021,
             "range": "± 7450603",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b03a8e56c287be7ec3a12ad6d1ec4cc3baeb2523",
+          "message": "MVP of parallel iterator from Rust (#186)\n\n* WIP!!\n\n* More WIP\n\n* Working code\n\n* WIP\n\n* Add `ParRouting`\n\n* New lazy scout function\n\n* New types\n\n* New type\n\n* More lenient types\n\n* Add `RouteFinder` generator class\n\n* Minor updates to types\n\n* Routes are now defined with integers ID's to link back to results\n\n* Add `revrtRustError`\n\n* Use new rust class for routing\n\n* Update CLI for new function behavior\n\n* Include class in documentation\n\n* PR review comments\n\n* Make test deterministic",
+          "timestamp": "2025-12-22T23:07:20-07:00",
+          "tree_id": "cc10e004d2d262d03579657ed59342a09e374250",
+          "url": "https://github.com/NREL/reVRt/commit/b03a8e56c287be7ec3a12ad6d1ec4cc3baeb2523"
+        },
+        "date": 1766470702487,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 150198457,
+            "range": "± 2317700",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 182634215,
+            "range": "± 2251327",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 256832832,
+            "range": "± 13923770",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 349792076,
+            "range": "± 17800608",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 671678889,
+            "range": "± 22593774",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 150095098,
+            "range": "± 2128531",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155040959,
+            "range": "± 758324",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 169808810,
+            "range": "± 1589142",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 220103260,
+            "range": "± 2164472",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 400062673,
+            "range": "± 6094556",
             "unit": "ns/iter"
           }
         ]
