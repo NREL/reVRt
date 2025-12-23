@@ -617,9 +617,11 @@ class BatchRouteProcessor:
             ``end_points`` should be a list of ``(row, col)`` index
             tuples.
         route_attrs : dict, optional
-            Mapping of ``frozenset`` of start and end point tuples to
-            additional attributes to include in the output for each
-            route. By default, ``None``.
+            Mapping of tuples of the form (int, (int, int)) where the
+            first integer represents the route ID and the tuple of
+            integers represents the starting index to additional
+            attributes to include in the output for that route.
+            By default, ``None``.
         """
         self.routing_scenario = routing_scenario
         self._route_definitions = route_definitions
@@ -775,12 +777,9 @@ class BatchRouteProcessor:
                     end_points,
                 )
                 for indices, optimized_objective in solutions:
-                    nodes = frozenset({indices[0], indices[-1]})
-                    yield (
-                        indices,
-                        optimized_objective,
-                        self.route_attrs.get(nodes, self.default_attrs),
-                    )
+                    attrs_key = (route_id, indices[0])
+                    attrs = self.route_attrs.get(attrs_key, self.default_attrs)
+                    yield indices, optimized_objective, attrs
             except revrtRustError:  # pragma: no cover
                 logger.exception("Rust error when computing route")
                 continue
