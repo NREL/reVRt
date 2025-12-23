@@ -711,10 +711,15 @@ class BatchRouteProcessor:
 
     def _compile_valid_route_definitions(self):
         """Filter route definitions to those with valid route nodes"""
+        if not self._route_definitions:
+            return {}
+
+        sample_definition = self._route_definitions[0]
+        if len(sample_definition) == 2:  # noqa: PLR2004
+            self._route_definitions = _add_route_ids(self._route_definitions)
+
         routes_to_compute = {}
-        for ind, (start_points, end_points) in enumerate(
-            self._route_definitions
-        ):
+        for route_id, start_points, end_points in self._route_definitions:
             filtered_start_points = self._validate_start_points(start_points)
             if not filtered_start_points:
                 msg = (
@@ -737,7 +742,7 @@ class BatchRouteProcessor:
                 warn(msg, revrtWarning)
                 continue
 
-            routes_to_compute[ind] = (
+            routes_to_compute[route_id] = (
                 filtered_start_points,
                 filtered_end_points,
             )
@@ -868,6 +873,18 @@ def _is_valid_point(point, arr_shape):
     """Check if point is within array bounds"""
     row, col = point
     return 0 <= row < arr_shape[0] and 0 <= col < arr_shape[1]
+
+
+def _add_route_ids(route_definitions):
+    """Add route IDs to route definitions missing them"""
+    logger.info(
+        "Route ID's missing from route definitions - adding definition "
+        "index as route ID..."
+    )
+    return [
+        (ind, start_points, end_points)
+        for ind, (start_points, end_points) in enumerate(route_definitions)
+    ]
 
 
 def _compute_lens(route, cell_size):
