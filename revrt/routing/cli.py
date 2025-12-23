@@ -477,22 +477,24 @@ def _paths_to_compute(route_points, out_fp):
 
 def _convert_to_route_definitions(routes):
     """Convert route DataFrame to route definitions format"""
-    cols = ["start_row", "start_col", "end_row", "end_col"]
-    num_unique_start_points = len(routes.groupby(["start_row", "start_col"]))
-    num_unique_end_points = len(routes.groupby(["end_row", "end_col"]))
+    start_point_cols = ["start_row", "start_col"]
+    end_point_cols = ["end_row", "end_col"]
+    num_unique_start_points = len(routes.groupby(start_point_cols))
+    num_unique_end_points = len(routes.groupby(end_point_cols))
     if num_unique_end_points > num_unique_start_points:
         logger.info(
             "Less unique starting points detected! Swapping start and "
             "end point set for optimal routing performance"
         )
-        cols = ["end_row", "end_col", "start_row", "start_col"]
+        start_point_cols = ["end_row", "end_col"]
+        end_point_cols = ["start_row", "start_col"]
 
     route_definitions = []
     route_attrs = {}
-    for end_idx, sub_routes in routes.groupby(cols[2:]):
+    for end_idx, sub_routes in routes.groupby(end_point_cols):
         start_points = []
         for __, info in sub_routes.iterrows():
-            start_idx = tuple(info[cols[:2]])
+            start_idx = tuple(info[start_point_cols])
             route_attrs[frozenset([start_idx, end_idx])] = info.to_dict()
             start_points.append(start_idx)
 
