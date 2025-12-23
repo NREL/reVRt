@@ -661,7 +661,9 @@ def test_invalid_start_point_logged(
     assert route["end_col"] == 6
 
 
-def test_invalid_start_point_explicitly_allowed(sample_layered_data, tmp_path):
+def test_invalid_start_point_explicitly_allowed(
+    sample_layered_data, assert_message_was_logged, tmp_path
+):
     """Test that only the invalid starting point is logged"""
 
     scenario = RoutingScenario(
@@ -676,17 +678,28 @@ def test_invalid_start_point_explicitly_allowed(sample_layered_data, tmp_path):
     find_all_routes(
         scenario,
         route_definitions=[
-            ([(1, 1), (0, 3)], [(2, 6)]),
+            ([(1, 1), (0, 3), (10000, 10000)], [(2, 6), (20000, 20000)]),
         ],
         out_fp=out_csv,
         save_paths=False,
+    )
+
+    assert_message_was_logged(
+        "One or more of the start points are out of bounds for an array of "
+        "shape (7, 8): [(10000, 10000)]",
+        "WARNING",
+    )
+    assert_message_was_logged(
+        "One or more of the end points are out of bounds for an array of "
+        "shape (7, 8): [(20000, 20000)]",
+        "WARNING",
     )
 
     output = pd.read_csv(out_csv)
     assert len(output) == 2
 
     first_route = output[
-        (output["start_row"] == 1) & (output["start_col"] == 2)
+        (output["start_row"] == 1) & (output["start_col"] == 1)
     ].iloc[0]
     assert first_route["cost"] == pytest.approx(11.192389)
     assert first_route["length_km"] == pytest.approx(0.0090710678)
