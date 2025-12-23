@@ -257,6 +257,7 @@ impl RouteOutputIter {
 
         match recv_result {
             Ok((id, solutions)) => Ok(Some((id, solutions.into_iter().map(Into::into).collect()))),
+            // Ok(Err(err)) => Err(err.into()),
             Err(_) => {
                 slf.finished = true;
                 Ok(None)

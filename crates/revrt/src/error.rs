@@ -14,6 +14,11 @@ pub enum Error {
     #[error(transparent)]
     ZarrsStorage(#[from] zarrs::storage::StorageError),
 
+    // #[error("All route end points are invalid: {0}")]
+    // InvalidRouteEnd(String),
+
+    // #[error("All route start points are invalid: {0}")]
+    // InvalidRouteStart(String),
     #[allow(dead_code)]
     #[error("Undefined error")]
     // Used during development while it is not clear a category of error
