@@ -4,10 +4,11 @@ from pathlib import Path
 
 import pytest
 import numpy as np
+import pandas as pd
 import xarray as xr
+import geopandas as gpd
 from rasterio.transform import from_origin
 
-from revrt.routing import point_to_many
 from revrt.utilities import LayeredFile
 from revrt.routing.point_to_many import (
     find_all_routes,
@@ -15,7 +16,7 @@ from revrt.routing.point_to_many import (
     RoutingLayers,
     RoutingScenario,
 )
-from revrt.exceptions import revrtKeyError, revrtLeastCostPathNotFoundError
+from revrt.exceptions import revrtKeyError
 from revrt.warn import revrtWarning, revrtDeprecationWarning
 
 
@@ -174,7 +175,9 @@ def sample_layered_data(tmp_path_factory):
     return layered_fp
 
 
-def test_basic_single_route_layered_file_short_path(sample_layered_data):
+def test_basic_single_route_layered_file_short_path(
+    sample_layered_data, tmp_path
+):
     """Test routing using a LayeredFile-generated cost surface"""
 
     scenario = RoutingScenario(
@@ -182,22 +185,25 @@ def test_basic_single_route_layered_file_short_path(sample_layered_data):
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    output = find_all_routes(
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(1, 2)], {}),
+            ([(1, 1)], [(1, 2)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
 
+    output = pd.read_csv(out_csv)
     assert len(output) == 1
-    route = output[0]
+    route = output.iloc[0]
     assert route["cost"] == pytest.approx((1 + 2) / 2)
     assert route["length_km"] == 1 / 1000
     assert route["cost"] == route["optimized_objective"]
 
 
-def test_basic_single_route_layered_file(sample_layered_data):
+def test_basic_single_route_layered_file(sample_layered_data, tmp_path):
     """Test routing using a LayeredFile-generated cost surface"""
 
     scenario = RoutingScenario(
@@ -205,22 +211,29 @@ def test_basic_single_route_layered_file(sample_layered_data):
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
+    out_csv = tmp_path / "routes.csv"
     output = find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
-            ((1, 2), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 2)], [(2, 6)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
 
+    output = pd.read_csv(out_csv)
     assert len(output) == 2
-    first_route = output[0]
+    first_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 1)
+    ].iloc[0]
     assert first_route["cost"] == pytest.approx(11.192389)
     assert first_route["length_km"] == pytest.approx(0.0090710678)
     assert np.isclose(first_route["cost"], first_route["optimized_objective"])
 
-    second_route = output[1]
+    second_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 2)
+    ].iloc[0]
     assert second_route["cost"] == pytest.approx(12.278174)
     assert second_route["length_km"] == pytest.approx(0.008656854)
     assert np.isclose(
@@ -228,7 +241,7 @@ def test_basic_single_route_layered_file(sample_layered_data):
     )
 
 
-def test_multi_layer_route_layered_file(sample_layered_data):
+def test_multi_layer_route_layered_file(sample_layered_data, tmp_path):
     """Test routing across multiple cost layers"""
 
     scenario = RoutingScenario(
@@ -239,18 +252,23 @@ def test_multi_layer_route_layered_file(sample_layered_data):
         ],
     )
 
+    out_csv = tmp_path / "routes.csv"
     output = find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
-            ((1, 2), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 2)], [(2, 6)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
 
+    output = pd.read_csv(out_csv)
     assert len(output) == 2
 
-    first_route = output[0]
+    first_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 1)
+    ].iloc[0]
     assert first_route["cost"] == pytest.approx(
         27.606602,
         rel=1e-4,
@@ -271,7 +289,9 @@ def test_multi_layer_route_layered_file(sample_layered_data):
         first_route["cost"], first_route["optimized_objective"], rtol=1e-6
     )
 
-    second_route = output[1]
+    second_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 2)
+    ].iloc[0]
     assert second_route["cost"] == pytest.approx(
         25.106602,
         rel=1e-4,
@@ -293,7 +313,7 @@ def test_multi_layer_route_layered_file(sample_layered_data):
     )
 
 
-def test_save_paths_returns_expected_geometry(sample_layered_data):
+def test_save_paths_returns_expected_geometry(sample_layered_data, tmp_path):
     """Saving paths returns expected geometries for each route"""
 
     scenario = RoutingScenario(
@@ -301,19 +321,21 @@ def test_save_paths_returns_expected_geometry(sample_layered_data):
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
+    out_gpkg = tmp_path / "routes.gpkg"
     output = find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
-            ((1, 2), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 2)], [(2, 6)], {}),
         ],
+        out_fp=out_gpkg,
         save_paths=True,
     )
 
-    assert isinstance(output, list)
+    output = gpd.read_file(out_gpkg)
     assert len(output) == 2
 
-    route_geoms = [route["geometry"] for route in output]
+    route_geoms = [route["geometry"] for __, route in output.iterrows()]
 
     expected_geometries = [
         [
@@ -347,26 +369,8 @@ def test_save_paths_returns_expected_geometry(sample_layered_data):
         )
 
 
-def test_empty_route_definitions_returns_empty_dataframe(sample_layered_data):
-    """Empty route definitions return an empty dataframe"""
-
-    scenario = RoutingScenario(
-        cost_fpath=sample_layered_data,
-        cost_layers=[{"layer_name": "layer_1"}],
-    )
-
-    output = find_all_routes(
-        scenario,
-        route_definitions=[],
-        save_paths=False,
-    )
-
-    assert isinstance(output, list)
-    assert not output
-
-
-def test_empty_route_definitions_returns_empty_geo_dataframe(
-    sample_layered_data,
+def test_empty_route_definitions_returns_empty_dataframe(
+    sample_layered_data, tmp_path
 ):
     """Empty route definitions return an empty dataframe"""
 
@@ -375,17 +379,37 @@ def test_empty_route_definitions_returns_empty_geo_dataframe(
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    output = find_all_routes(
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
         scenario,
         route_definitions=[],
-        save_paths=True,
+        out_fp=out_csv,
+        save_paths=False,
+    )
+    assert not out_csv.exists()
+
+
+def test_empty_route_definitions_returns_empty_geo_dataframe(
+    sample_layered_data, tmp_path
+):
+    """Empty route definitions return an empty dataframe"""
+
+    scenario = RoutingScenario(
+        cost_fpath=sample_layered_data,
+        cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    assert isinstance(output, list)
-    assert not output
+    out_gpkg = tmp_path / "routes.gpkg"
+    find_all_routes(
+        scenario,
+        route_definitions=[],
+        out_fp=out_gpkg,
+        save_paths=True,
+    )
+    assert not out_gpkg.exists()
 
 
-def test_multi_layer_route_with_multiplier(sample_layered_data):
+def test_multi_layer_route_with_multiplier(sample_layered_data, tmp_path):
     """Test routing with multiple layers and a scalar multiplier"""
 
     scenario = RoutingScenario(
@@ -399,18 +423,23 @@ def test_multi_layer_route_with_multiplier(sample_layered_data):
         ],
     )
 
-    output = find_all_routes(
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
-            ((1, 2), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
+            ([(1, 2)], [(2, 6)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
 
+    output = pd.read_csv(out_csv)
     assert len(output) == 2
 
-    first_route = output[0]
+    first_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 1)
+    ].iloc[0]
     assert first_route["cost"] == pytest.approx(
         22.588835,
         rel=1e-4,
@@ -433,7 +462,9 @@ def test_multi_layer_route_with_multiplier(sample_layered_data):
         rtol=1e-4,
     )
 
-    second_route = output[1]
+    second_route = output[
+        (output["start_row"] == 1) & (output["start_col"] == 2)
+    ].iloc[0]
     assert second_route["cost"] == pytest.approx(
         20.588835,
         rel=1e-4,
@@ -458,7 +489,7 @@ def test_multi_layer_route_with_multiplier(sample_layered_data):
 
 
 def test_multi_layer_route_with_scalar_and_layer_multipliers(
-    sample_layered_data,
+    sample_layered_data, tmp_path
 ):
     """Test routing when combining scalar and layer multipliers"""
 
@@ -479,17 +510,20 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
         ],
     )
 
-    output = find_all_routes(
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(1, 2)], {}),
+            ([(1, 1)], [(1, 2)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
 
+    output = pd.read_csv(out_csv)
     assert len(output) == 1
 
-    route = output[0]
+    route = output.iloc[0]
     assert route["cost"] == pytest.approx(2.0, rel=1e-4)
     assert route["length_km"] == pytest.approx(0.001, rel=1e-4)
     assert route["layer_1_cost"] == pytest.approx(1.5, rel=1e-4)
@@ -503,7 +537,7 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
     assert np.isclose(route["cost"], route["optimized_objective"], rtol=1e-6)
 
 
-def test_routing_with_tracked_layers(sample_layered_data):
+def test_routing_with_tracked_layers(sample_layered_data, tmp_path):
     """Tracked layers report aggregated stats alongside routing results"""
 
     scenario = RoutingScenario(
@@ -516,16 +550,19 @@ def test_routing_with_tracked_layers(sample_layered_data):
         },
     )
 
-    output = find_all_routes(
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(1, 2)], {}),
+            ([(1, 1)], [(1, 2)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
 
+    output = pd.read_csv(out_csv)
     assert len(output) == 1
-    route = output[0]
+    route = output.iloc[0]
 
     assert {
         "layer_1_mean",
@@ -540,7 +577,7 @@ def test_routing_with_tracked_layers(sample_layered_data):
 
 @pytest.mark.parametrize("use_friction", [True, False])
 def test_start_point_on_barrier_returns_no_route(
-    sample_layered_data, assert_message_was_logged, use_friction
+    sample_layered_data, assert_message_was_logged, use_friction, tmp_path
 ):
     """If the start point is on a barrier (cost <= 0) no route is returned"""
 
@@ -553,24 +590,28 @@ def test_start_point_on_barrier_returns_no_route(
             {"mask": "layer_5", "multiplier_scalar": -10}
         ]
 
+    out_csv = tmp_path / "routes.csv"
+
     # (3, 1) in layer_6 is -1 -> treated as barrier
-    output = find_all_routes(
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((3, 1), [(2, 6)], {}),
+            ([(3, 1)], [(2, 6)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
     assert_message_was_logged(
-        "Start idx (3, 1) does not have a valid cost: 0.00 (must be > 0)!",
+        "None of the start idx have a valid cost (must be > 0)! [(3, 1)]",
         "ERROR",
     )
 
-    assert isinstance(output, list)
-    assert not output
+    assert not out_csv.exists()
 
 
-def test_some_endpoints_include_barriers_but_one_valid(sample_layered_data):
+def test_some_endpoints_include_barriers_but_one_valid(
+    sample_layered_data, tmp_path
+):
     """If some end points <=0 but at least one is valid, route is found"""
 
     scenario = RoutingScenario(
@@ -578,18 +619,22 @@ def test_some_endpoints_include_barriers_but_one_valid(sample_layered_data):
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
+    out_csv = tmp_path / "routes.csv"
+
     # include one barrier end (0,3) and one valid end (2,6)
-    output = find_all_routes(
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(0, 3), (2, 6)], {}),
+            ([(1, 1)], [(0, 3), (2, 6)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
 
+    output = pd.read_csv(out_csv)
     assert len(output) == 1
     # At least one valid endpoint must be reached and cost must be positive.
-    route = output[0]
+    route = output.iloc[0]
     assert route["cost"] > 0
 
     end_row = int(route["end_row"])
@@ -598,7 +643,7 @@ def test_some_endpoints_include_barriers_but_one_valid(sample_layered_data):
 
 
 def test_all_endpoints_are_barriers_returns_no_route(
-    sample_layered_data, assert_message_was_logged
+    sample_layered_data, assert_message_was_logged, tmp_path
 ):
     """If all end points are barriers, no route is returned"""
 
@@ -607,20 +652,21 @@ def test_all_endpoints_are_barriers_returns_no_route(
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    output = find_all_routes(
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(0, 3), (0, 7)], {}),
+            ([(1, 1)], [(0, 3), (0, 7)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
     assert_message_was_logged(
-        "None of the end idx [(0, 3), (0, 7)] have a valid cost (must be > 0)",
+        "None of the end idx have a valid cost (must be > 0)! "
+        "[(0, 3), (0, 7)]",
         "ERROR",
     )
-
-    assert isinstance(output, list)
-    assert not output
+    assert not out_csv.exists()
 
 
 def test_routing_scenario_repr_contains_fields(sample_layered_data):
@@ -641,7 +687,7 @@ def test_routing_scenario_repr_contains_fields(sample_layered_data):
     assert "cost_multiplier_scalar: 1.5" in representation
 
 
-def test_missing_cost_layer_raises_key_error(sample_layered_data):
+def test_missing_cost_layer_raises_key_error(sample_layered_data, tmp_path):
     """Missing layers surface a revrtKeyError during build"""
 
     scenario = RoutingScenario(
@@ -649,14 +695,16 @@ def test_missing_cost_layer_raises_key_error(sample_layered_data):
         cost_layers=[{"layer_name": "not_there"}],
     )
 
+    out_csv = tmp_path / "routes.csv"
     with pytest.raises(
         revrtKeyError, match="Did not find layer 'not_there' in cost file"
     ):
         find_all_routes(
             scenario,
             route_definitions=[
-                ((1, 1), [(1, 2)], {}),
+                ([(1, 1)], [(1, 2)], {}),
             ],
+            out_fp=out_csv,
             save_paths=False,
         )
 
@@ -716,7 +764,10 @@ def test_length_invariant_layer_costs_ignore_path_length(
         ).build()
 
         layer_two = (
-            routing_layers._layer_fh["layer_2"].isel(band=0).compute().values
+            routing_layers._layer_fh["layer_2"]
+            .isel(band=0)
+            .compute()
+            .to_numpy()
         )
         expected = sum(layer_two[row, col] for row, col in route[1:])
 
@@ -725,7 +776,7 @@ def test_length_invariant_layer_costs_ignore_path_length(
         routing_layers.close()
 
 
-def test_length_invariant_layers_sum_raw_values(sample_layered_data):
+def test_length_invariant_layers_sum_raw_values(sample_layered_data, tmp_path):
     """Length invariant layers sum raw cell values without distance scaling"""
 
     scenario = RoutingScenario(
@@ -736,16 +787,19 @@ def test_length_invariant_layers_sum_raw_values(sample_layered_data):
         ],
     )
 
-    output = find_all_routes(
+    out_gpkg = tmp_path / "routes.gpkg"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
         ],
+        out_fp=out_gpkg,
         save_paths=True,
     )
 
+    output = gpd.read_file(out_gpkg)
     assert len(output) == 1
-    route = output[0]
+    route = output.iloc[0]
 
     with xr.open_dataset(
         sample_layered_data,
@@ -753,8 +807,8 @@ def test_length_invariant_layers_sum_raw_values(sample_layered_data):
         engine="zarr",
     ) as ds:
         layer_two = ds["layer_2"].isel(band=0)
-        x_coords = ds["x"].values
-        y_coords = ds["y"].values
+        x_coords = ds["x"].to_numpy()
+        y_coords = ds["y"].to_numpy()
         xs, ys = route["geometry"].xy
         route_indices = [
             (
@@ -786,7 +840,9 @@ def test_length_invariant_layers_sum_raw_values(sample_layered_data):
     )
 
 
-def test_length_invariant_hidden_and_friction_layers(sample_layered_data):
+def test_length_invariant_hidden_and_friction_layers(
+    sample_layered_data, tmp_path
+):
     """Combined layer settings preserve cost reporting expectations"""
 
     scenario = RoutingScenario(
@@ -809,16 +865,19 @@ def test_length_invariant_hidden_and_friction_layers(sample_layered_data):
         ],
     )
 
+    out_gpkg = tmp_path / "routes.gpkg"
     output = find_all_routes(
         scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
         ],
+        out_fp=out_gpkg,
         save_paths=True,
     )
 
+    output = gpd.read_file(out_gpkg)
     assert len(output) == 1
-    route = output[0]
+    route = output.iloc[0]
 
     assert route["length_km"] == pytest.approx(
         0.00682842712474619,
@@ -951,7 +1010,7 @@ def test_friction_layer_include_in_report_adds_tracker(sample_layered_data):
 
 
 def test_friction_layer_influences_objective_without_reporting(
-    sample_layered_data,
+    sample_layered_data, tmp_path
 ):
     """Friction layers alter routing objective without affecting reports"""
 
@@ -971,27 +1030,33 @@ def test_friction_layer_influences_objective_without_reporting(
         ],
     )
 
-    base_output = find_all_routes(
+    base_csv = tmp_path / "base.csv"
+    find_all_routes(
         base_scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
         ],
+        out_fp=base_csv,
         save_paths=False,
     )
 
+    base_output = pd.read_csv(base_csv)
     assert len(base_output) == 1
-    base_route = base_output[0]
+    base_route = base_output.iloc[0]
 
-    friction_output = find_all_routes(
+    friction_csv = tmp_path / "friction.csv"
+    find_all_routes(
         friction_scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
         ],
+        out_fp=friction_csv,
         save_paths=False,
     )
 
+    friction_output = pd.read_csv(friction_csv)
     assert len(friction_output) == 1
-    friction_route = friction_output[0]
+    friction_route = friction_output.iloc[0]
 
     # Friction is unavoidable, so cost and path should be roughly the same
     assert np.allclose(base_route["cost"], friction_route["cost"])
@@ -1003,7 +1068,7 @@ def test_friction_layer_influences_objective_without_reporting(
     assert "layer_2_dist_km" not in friction_route
 
 
-def test_friction_layer_influences_objective(sample_layered_data):
+def test_friction_layer_influences_objective(sample_layered_data, tmp_path):
     """Friction layers alter routing objective without affecting reports"""
 
     base_scenario = RoutingScenario(
@@ -1022,27 +1087,33 @@ def test_friction_layer_influences_objective(sample_layered_data):
         ],
     )
 
-    base_output = find_all_routes(
+    base_csv = tmp_path / "base.csv"
+    find_all_routes(
         base_scenario,
         route_definitions=[
-            ((1, 1), [(3, 5)], {}),
+            ([(1, 1)], [(3, 5)], {}),
         ],
+        out_fp=base_csv,
         save_paths=False,
     )
 
+    base_output = pd.read_csv(base_csv)
     assert len(base_output) == 1
-    base_route = base_output[0]
+    base_route = base_output.iloc[0]
 
-    friction_output = find_all_routes(
+    friction_csv = tmp_path / "friction.csv"
+    find_all_routes(
         friction_scenario,
         route_definitions=[
-            ((1, 1), [(3, 5)], {}),
+            ([(1, 1)], [(3, 5)], {}),
         ],
+        out_fp=friction_csv,
         save_paths=False,
     )
 
+    friction_output = pd.read_csv(friction_csv)
     assert len(friction_output) == 1
-    friction_route = friction_output[0]
+    friction_route = friction_output.iloc[0]
 
     # Friction path is shorter but more expensive
     assert friction_route["cost"] > base_route["cost"]
@@ -1058,7 +1129,9 @@ def test_friction_layer_influences_objective(sample_layered_data):
     assert "layer_5_dist_km" not in friction_route
 
 
-def test_negative_friction_layer_influences_objective(sample_layered_data):
+def test_negative_friction_layer_influences_objective(
+    sample_layered_data, tmp_path
+):
     """Friction layers alter routing objective without affecting reports"""
 
     base_scenario = RoutingScenario(
@@ -1077,27 +1150,33 @@ def test_negative_friction_layer_influences_objective(sample_layered_data):
         ],
     )
 
-    base_output = find_all_routes(
+    base_gpkg = tmp_path / "base.gpkg"
+    find_all_routes(
         base_scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
         ],
+        out_fp=base_gpkg,
         save_paths=True,
     )
 
+    base_output = gpd.read_file(base_gpkg)
     assert len(base_output) == 1
-    base_route = base_output[0]
+    base_route = base_output.iloc[0]
 
-    friction_output = find_all_routes(
+    friction_gpkg = tmp_path / "friction.gpkg"
+    find_all_routes(
         friction_scenario,
         route_definitions=[
-            ((1, 1), [(2, 6)], {}),
+            ([(1, 1)], [(2, 6)], {}),
         ],
+        out_fp=friction_gpkg,
         save_paths=True,
     )
 
+    friction_output = gpd.read_file(friction_gpkg)
     assert len(friction_output) == 1
-    friction_route = friction_output[0]
+    friction_route = friction_output.iloc[0]
 
     # Friction path is shorter but more expensive
     assert friction_route["cost"] > base_route["cost"]
@@ -1113,7 +1192,9 @@ def test_negative_friction_layer_influences_objective(sample_layered_data):
     assert "layer_5_dist_km" not in friction_route
 
 
-def test_negative_friction_layer_does_not_go_thru_barrier(sample_layered_data):
+def test_negative_friction_layer_does_not_go_thru_barrier(
+    sample_layered_data, tmp_path
+):
     """Friction layers alter routing objective without affecting reports"""
 
     base_scenario = RoutingScenario(
@@ -1132,27 +1213,33 @@ def test_negative_friction_layer_does_not_go_thru_barrier(sample_layered_data):
         ],
     )
 
-    base_output = find_all_routes(
+    base_gpkg = tmp_path / "base.gpkg"
+    find_all_routes(
         base_scenario,
         route_definitions=[
-            ((4, 0), [(2, 7)], {}),
+            ([(4, 0)], [(2, 7)], {}),
         ],
+        out_fp=base_gpkg,
         save_paths=True,
     )
 
+    base_output = gpd.read_file(base_gpkg)
     assert len(base_output) == 1
-    base_route = base_output[0]
+    base_route = base_output.iloc[0]
 
-    friction_output = find_all_routes(
+    friction_gpkg = tmp_path / "friction.gpkg"
+    find_all_routes(
         friction_scenario,
         route_definitions=[
-            ((4, 0), [(2, 7)], {}),
+            ([(4, 0)], [(2, 7)], {}),
         ],
+        out_fp=friction_gpkg,
         save_paths=True,
     )
 
+    friction_output = gpd.read_file(friction_gpkg)
     assert len(friction_output) == 1
-    friction_route = friction_output[0]
+    friction_route = friction_output.iloc[0]
 
     # Friction path is shorter but more expensive
     assert friction_route["cost"] == pytest.approx(base_route["cost"])
@@ -1171,7 +1258,7 @@ def test_negative_friction_layer_does_not_go_thru_barrier(sample_layered_data):
 
 
 def test_include_in_final_cost_false_behaves_like_friction(
-    sample_layered_data,
+    sample_layered_data, tmp_path
 ):
     """Non-final cost layers steer routing but stay out of reports"""
 
@@ -1180,13 +1267,19 @@ def test_include_in_final_cost_false_behaves_like_friction(
         cost_layers=[{"layer_name": "layer_1"}],
     )
 
-    base_route = find_all_routes(
+    out_gpkg = tmp_path / "base.gpkg"
+    find_all_routes(
         base_scenario,
         route_definitions=[
-            ((1, 1), [(3, 5)], {}),
+            ([(1, 1)], [(3, 5)], {}),
         ],
+        out_fp=out_gpkg,
         save_paths=True,
-    )[0]
+    )
+
+    base_output = gpd.read_file(out_gpkg)
+    assert len(base_output) == 1
+    base_route = base_output.iloc[0]
 
     penalized_scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
@@ -1201,13 +1294,19 @@ def test_include_in_final_cost_false_behaves_like_friction(
         ],
     )
 
-    penalized_route = find_all_routes(
+    penalized_gpkg = tmp_path / "penalized.gpkg"
+    find_all_routes(
         penalized_scenario,
         route_definitions=[
-            ((1, 1), [(3, 5)], {}),
+            ([(1, 1)], [(3, 5)], {}),
         ],
+        out_fp=penalized_gpkg,
         save_paths=True,
-    )[0]
+    )
+
+    penalized_output = gpd.read_file(penalized_gpkg)
+    assert len(penalized_output) == 1
+    penalized_route = penalized_output.iloc[0]
 
     assert not base_route["geometry"].equals(penalized_route["geometry"])
     assert (
@@ -1376,48 +1475,7 @@ def test_characterized_layer_total_length_computation(sample_layered_data):
         routing_layers.close()
 
 
-def test_find_paths_exception_yields_no_routes(
-    sample_layered_data, monkeypatch
-):
-    """find_paths failures propagate as revrtLeastCostPathNotFoundError"""
-
-    scenario = RoutingScenario(
-        cost_fpath=sample_layered_data,
-        cost_layers=[{"layer_name": "layer_1"}],
-    )
-
-    def boom(**_):
-        msg = "boom"
-        raise RuntimeError(msg)
-
-    monkeypatch.setattr("revrt.routing.point_to_many.find_paths", boom)
-
-    output = find_all_routes(
-        scenario,
-        route_definitions=[
-            ((1, 1), [(1, 2)], {}),
-        ],
-        save_paths=False,
-    )
-
-    assert output == []
-
-    routing_layers = RoutingLayers(scenario).build()
-    try:
-        with pytest.raises(
-            revrtLeastCostPathNotFoundError, match="Unable to find path"
-        ):
-            point_to_many._compute_valid_path(
-                scenario,
-                routing_layers,
-                (1, 1),
-                [(1, 2)],
-            )
-    finally:
-        routing_layers.close()
-
-
-def test_negative_cost_path_returns_no_route(sample_layered_data):
+def test_negative_cost_path_returns_no_route(sample_layered_data, tmp_path):
     """If all points between start and end are negative, return no route"""
 
     scenario = RoutingScenario(
@@ -1429,16 +1487,16 @@ def test_negative_cost_path_returns_no_route(sample_layered_data):
         friction_layers=[{"mask": "layer_5", "multiplier_scalar": -10}],
     )
 
-    output = find_all_routes(
+    out_csv = tmp_path / "routes.csv"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((4, 0), [(2, 7)], {}),
+            ([(4, 0)], [(2, 7)], {}),
         ],
+        out_fp=out_csv,
         save_paths=False,
     )
-
-    assert isinstance(output, list)
-    assert not output
+    assert not out_csv.exists()
 
 
 def test_friction_layer_with_layer_name_warns(sample_layered_data):
@@ -1541,7 +1599,7 @@ def test_soft_barrier_setting_controls_barrier_value(sample_layered_data):
 
 
 @pytest.mark.parametrize("ignore_invalid_costs", [True, False])
-def test_soft_barrier(sample_layered_data, ignore_invalid_costs):
+def test_soft_barrier(sample_layered_data, ignore_invalid_costs, tmp_path):
     """Test that soft barriers work as expected in point-to-many routing"""
     scenario = RoutingScenario(
         cost_fpath=sample_layered_data,
@@ -1549,19 +1607,21 @@ def test_soft_barrier(sample_layered_data, ignore_invalid_costs):
         ignore_invalid_costs=ignore_invalid_costs,
     )
 
-    output = find_all_routes(
+    out_gpkg = tmp_path / "routes.gpkg"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((4, 0), [(4, 5)], {}),
+            ([(4, 0)], [(4, 5)], {}),
         ],
+        out_fp=out_gpkg,
         save_paths=True,
     )
     if ignore_invalid_costs:
-        assert isinstance(output, list)
-        assert not output
+        assert not out_gpkg.exists()
     else:
+        output = gpd.read_file(out_gpkg)
         assert len(output) == 1
-        route = output[0]
+        route = output.iloc[0]
         assert route["cost"] == pytest.approx(6)
         assert route["length_km"] == pytest.approx(0.005)
         x, y = route["geometry"].xy

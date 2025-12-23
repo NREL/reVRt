@@ -3,21 +3,24 @@
 import json
 import time
 import logging
+from pathlib import Path
 from warnings import warn
 from functools import cached_property
 
 import rasterio
 import numpy as np
 import xarray as xr
+import pandas as pd
 import dask.array as da
+import geopandas as gpd
 from shapely.geometry import Point
 from shapely.geometry.linestring import LineString
 
-from revrt import find_paths
-
+from revrt import RouteFinder
 from revrt.exceptions import (
     revrtKeyError,
     revrtLeastCostPathNotFoundError,
+    revrtRustError,
 )
 from revrt.warn import revrtWarning, revrtDeprecationWarning
 
@@ -562,8 +565,10 @@ class RouteResult:
         )
 
 
-def find_all_routes(routing_scenario, route_definitions, save_paths=False):
-    """Compute least-cost routes for each start and destination set
+def find_all_routes(
+    routing_scenario, route_definitions, out_fp, save_paths=False
+):
+    """Compute and save least-cost routes for set of route nodes
 
     Parameters
     ----------
@@ -573,50 +578,57 @@ def find_all_routes(routing_scenario, route_definitions, save_paths=False):
         Sequence of ``(start_point, end_points, attrs)`` tuples
         defining which points to route between. The `attrs` dictionary
         will be appended to the output for each route.
+    out_fp : path-like
+        Path to output file. If ``save_paths=True``, a GeoPackage
+        will be created (recommend to pass in a filepath ending in
+        ".gpkg"). Otherwise, a CSV file will be created (recommend to
+        pass in a filepath ending in ".csv").
     save_paths : bool, default=False
         Include shapely geometries in the output when ``True``.
         By default, ``False``.
-
-    Returns
-    -------
-    list
-        Route summaries for each successfully computed path.
     """
     if not route_definitions:
-        return []
+        return
 
     ts = time.monotonic()
 
     routing_layers = RoutingLayers(routing_scenario).build()
     try:
-        routes = _compute_routes(
+        _compute_routes(
             routing_scenario,
             route_definitions,
             routing_layers,
+            Path(out_fp),
             save_paths=save_paths,
         )
     finally:
         routing_layers.close()
 
     time_elapsed = f"{(time.monotonic() - ts) / 60:.4f} min"
-    logger.debug("Least Cost tie-line computed in %s", time_elapsed)
-
-    return routes
+    logger.debug(
+        "Routing for %d route definitions computed in %s",
+        len(route_definitions),
+        time_elapsed,
+    )
 
 
 def _compute_routes(
-    routing_scenario, route_definitions, routing_layers, save_paths
+    routing_scenario, route_definitions, routing_layers, out_fp, save_paths
 ):
     """Evaluate route definitions and build result records"""
-    routes = []
-    for start_point, end_points, attrs in route_definitions:
-        try:
-            indices, optimized_objective = _compute_valid_path(
-                routing_scenario, routing_layers, start_point, end_points
-            )
-        except revrtLeastCostPathNotFoundError:
-            continue
+    rust_route_definitions, route_attrs = _compile_valid_route_definitions(
+        routing_layers, route_definitions
+    )
 
+    route_results = RouteFinder(
+        zarr_fp=routing_scenario.cost_fpath,
+        cost_function=routing_scenario.cost_function_json,
+        route_definitions=rust_route_definitions,
+        cache_size=250_000_000,
+    )
+    for indices, optimized_objective, attrs in _skip_failed_routes(
+        route_results, route_attrs
+    ):
         route = RouteResult(
             routing_layers,
             indices,
@@ -624,64 +636,107 @@ def _compute_routes(
             add_geom=save_paths,
             attrs=attrs,
         )
-        routes.append(route.build())
+        result = route.build()
+        if save_paths:
+            gpd.GeoDataFrame(
+                [result], geometry="geometry", crs=routing_layers.cost_crs
+            ).to_file(out_fp, driver="GPKG", mode="a")
+        else:
+            pd.DataFrame([result]).to_csv(
+                out_fp, mode="a", index=False, header=not out_fp.exists()
+            )
 
-    return routes
+
+def _skip_failed_routes(routing_results, route_attrs):
+    """Yield only successfully computed routes from Rust results"""
+    results_iter = iter(routing_results)
+    while True:
+        try:
+            route_id, solutions = next(results_iter)
+            start_points, end_points, attrs = route_attrs[route_id]
+            if _unexpected_number_of_solutions(
+                solutions, route_id, start_points, end_points
+            ):
+                continue
+
+            logger.debug(
+                "Got result from rust for route_id %d. Processing...", route_id
+            )
+            indices, optimized_objective = solutions[0]
+            yield indices, optimized_objective, attrs
+        except revrtRustError:
+            logger.exception("Rust error when computing route")
+            continue
+        except StopIteration:
+            logger.debug("Routing complete")
+            break
 
 
-def _compute_valid_path(
-    routing_scenario, routing_layers, start_point, end_points
+def _unexpected_number_of_solutions(
+    solutions, route_id, start_points, end_points
 ):
-    """Validate provided indices then solve for the least-cost path"""
-    _validate_starting_point(routing_layers, start_point)
-    _validate_end_points(routing_layers, end_points)
-
-    try:
-        route_result = find_paths(
-            zarr_fp=routing_scenario.cost_fpath,
-            cost_function=routing_scenario.cost_function_json,
-            start=[start_point],
-            end=end_points,
-        )
-    except Exception as ex:
+    """Check if route should be skipped based on number of solutions"""
+    if not solutions:
         msg = (
-            f"Unable to find path from {start_point} any of {end_points}: {ex}"
+            f"Unable to find route from {start_points} any of {end_points} "
+            f"(route ID: {route_id}). Please verify that the start and end "
+            "points are not separated by hard barriers or invalid cost cells."
         )
-        raise revrtLeastCostPathNotFoundError(msg) from ex
+        logger.error(msg)
+        return True
 
-    if not route_result:
-        msg = f"Unable to find path from {start_point} any of {end_points}"
-        raise revrtLeastCostPathNotFoundError(msg)
-
-    return route_result[0]
-
-
-def _validate_starting_point(routing_layers, start_point):
-    """Raise when the starting cell lacks a positive traversal cost"""
-    start_row, start_col = start_point
-    start_cost = (
-        routing_layers.cost.isel(y=start_row, x=start_col).compute().item()
-    )
-
-    if start_cost <= 0:
+    if (num_solutions := len(solutions)) > 1:  # pragma: no cover
         msg = (
-            f"Start idx {start_point} does not have a valid cost: "
-            f"{start_cost:.2f} (must be > 0)!"
+            f"Somehow found {num_solutions} solutions for route_id {route_id}!"
         )
-        raise revrtLeastCostPathNotFoundError(msg)
+        logger.error(msg)
+        return True
+
+    return False
 
 
-def _validate_end_points(routing_layers, end_points):
+def _compile_valid_route_definitions(routing_layers, route_definitions):
+    """Filter route definitions to those with valid route nodes"""
+    rust_route_definitions = []
+    route_attrs = {}
+    for ind, (start_points, end_points, attrs) in enumerate(route_definitions):
+        try:
+            _validate_route_nodes(
+                routing_layers, start_points, point_type="start"
+            )
+        except revrtLeastCostPathNotFoundError:
+            continue
+
+        try:
+            _validate_route_nodes(routing_layers, end_points, point_type="end")
+        except revrtLeastCostPathNotFoundError:
+            continue
+
+        rust_route_definitions.append((ind, start_points, end_points))
+        route_attrs[ind] = (start_points, end_points, attrs)
+
+    return rust_route_definitions, route_attrs
+
+
+def _validate_route_nodes(routing_layers, points, point_type):
     """Raise when no end cell provides a positive traversal cost"""
-    end_rows, end_cols = np.array(end_points).T
-    end_costs = routing_layers.cost.isel(
-        y=xr.DataArray(end_rows, dims="points"),
-        x=xr.DataArray(end_cols, dims="points"),
-    )
-    if not np.any(end_costs.compute() > 0):
+    rows, cols = np.array(points).T
+    try:
+        costs = routing_layers.cost.isel(
+            y=xr.DataArray(rows, dims="points"),
+            x=xr.DataArray(cols, dims="points"),
+        )
+    except IndexError:
         msg = (
-            f"None of the end idx {end_points} have a valid cost "
-            f"(must be > 0)!"
+            f"One or more of the {point_type} idx are out of bounds for an "
+            f"array of shape {routing_layers.cost.shape}: {points}"
+        )
+        raise revrtLeastCostPathNotFoundError(msg) from None
+
+    if not np.any(costs.compute() > 0):
+        msg = (
+            f"None of the {point_type} idx have a valid cost (must be > 0)! "
+            f"{points}"
         )
         raise revrtLeastCostPathNotFoundError(msg)
 
