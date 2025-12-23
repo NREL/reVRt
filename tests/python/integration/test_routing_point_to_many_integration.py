@@ -2,9 +2,10 @@
 
 from pathlib import Path
 
-import numpy as np
 import pytest
+import numpy as np
 import xarray as xr
+import geopandas as gpd
 from rasterio.transform import from_origin
 
 from revrt.utilities import LayeredFile
@@ -59,7 +60,7 @@ def sample_large_layered_data(tmp_path_factory):
 
 @pytest.mark.parametrize("ignore_invalid_costs", [True, False])
 def test_soft_barrier_with_large_dataset(
-    sample_large_layered_data, ignore_invalid_costs
+    sample_large_layered_data, ignore_invalid_costs, tmp_path
 ):
     """Test that soft barriers work as expected in point-to-many routing"""
     scenario = RoutingScenario(
@@ -68,19 +69,21 @@ def test_soft_barrier_with_large_dataset(
         ignore_invalid_costs=ignore_invalid_costs,
     )
 
-    output = find_all_routes(
+    out_gpkg = tmp_path / "routes.gpkg"
+    find_all_routes(
         scenario,
         route_definitions=[
-            ((5, 0), [(5, 900)], {}),
+            ([(5, 0)], [(5, 900)], {}),
         ],
+        out_fp=out_gpkg,
         save_paths=True,
     )
     if ignore_invalid_costs:
-        assert isinstance(output, list)
-        assert not output
+        assert not out_gpkg.exists()
     else:
+        output = gpd.read_file(out_gpkg)
         assert len(output) == 1
-        route = output[0]
+        route = output.iloc[0]
         assert route["cost"] == pytest.approx(550.0)
         assert route["length_km"] == pytest.approx(0.9)
         x, y = route["geometry"].xy

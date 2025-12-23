@@ -390,7 +390,7 @@ def _run_lcp(
     save_paths = out_fp.suffix.lower() == ".gpkg"
 
     if route_points.empty:
-        logger.info("Found no paths to compute!")
+        logger.info("Found no routes to compute!")
         return
 
     with xr.open_dataset(cost_fpath, consolidated=False, engine="zarr") as ds:
@@ -401,9 +401,14 @@ def _run_lcp(
             shape=ds.rio.shape,
         )
 
-    logger.info("Computing Least Cost Paths")
-    num_computed = 0
+    logger.info("Computing best routes for %d point pairs", len(route_points))
     for polarity, voltage, routes in _paths_to_compute(route_points, out_fp):
+        logger.info(
+            "Computing routes for %d points with polarity: %r and voltage: %r",
+            len(routes),
+            polarity,
+            voltage,
+        )
         route_cl = _update_multipliers(
             cost_layers, polarity, voltage, transmission_config
         )
@@ -412,7 +417,7 @@ def _run_lcp(
         )
         route_definitions = [
             (
-                (info["start_row"], info["start_col"]),
+                [(info["start_row"], info["start_col"])],
                 [(info["end_row"], info["end_col"])],
                 info.to_dict(),
             )
@@ -429,23 +434,19 @@ def _run_lcp(
             ignore_invalid_costs=ignore_invalid_costs,
         )
 
-        out = find_all_routes(
+        find_all_routes(
             scenario,
             route_definitions=route_definitions,
             save_paths=save_paths,
+            out_fp=out_fp,
         )
 
-        num_computed += len(out)
-
-        if save_paths:
-            gpd.GeoDataFrame(out, geometry="geometry").to_file(
-                out_fp, driver="GPKG", mode="a"
-            )
-        else:
-            pd.DataFrame(out).to_csv(out_fp, mode="a")
-
     time_elapsed = f"{(time.monotonic() - ts) / 3600:.4f} hour(s)"
-    logger.info("%d paths were computed in %s", num_computed, time_elapsed)
+    logger.info(
+        "Routing for %d points completed in %s",
+        len(route_points),
+        time_elapsed,
+    )
 
 
 def _paths_to_compute(route_points, out_fp):

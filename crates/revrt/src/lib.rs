@@ -9,10 +9,12 @@ mod ffi;
 mod routing;
 mod solution;
 
+use std::sync::mpsc;
+
 use cost::CostFunction;
 use error::Result;
-use routing::Routing;
-use solution::Solution;
+use routing::{ParRouting, RouteDefinition, Routing};
+use solution::{RevrtRoutingSolutions, Solution};
 
 #[allow(missing_docs)]
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -41,15 +43,31 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     cache_size: u64,
     start: &[ArrayIndex],
     end: Vec<ArrayIndex>,
-) -> Result<Vec<(Vec<ArrayIndex>, f32)>> {
+) -> Result<RevrtRoutingSolutions> {
     let cost_function = CostFunction::from_json(cost_function)?;
     tracing::trace!("Cost function: {:?}", cost_function);
     let mut simulation: Routing = Routing::new(store_path, cost_function, cache_size).unwrap();
-    let result = simulation
-        .compute(start, end)
-        .map(|solution| (solution.route().clone(), *solution.total_cost()))
-        .collect();
+    let result = simulation.compute(start, end).collect();
     Ok(result)
+}
+
+#[allow(missing_docs)]
+pub(crate) fn resolve_generator<P, I>(
+    store_path: P,
+    cost_function: &str,
+    route_definitions: I,
+    tx: mpsc::Sender<(u32, RevrtRoutingSolutions)>,
+    cache_size: u64,
+) -> Result<()>
+where
+    P: AsRef<std::path::Path>,
+    I: rayon::prelude::IntoParallelIterator<Item = RouteDefinition> + Send + 'static,
+    I::Iter: Send,
+{
+    let cost_function = crate::cost::CostFunction::from_json(cost_function)?;
+    let simulation = ParRouting::new(store_path, cost_function, cache_size)?;
+    simulation.lazy_scout(route_definitions, tx);
+    Ok(())
 }
 
 #[inline]

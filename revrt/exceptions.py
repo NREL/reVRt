@@ -1,7 +1,9 @@
-# ruff: noqa: N801
+# ruff: noqa: N801, F401
 """Custom Exceptions and Errors for revrt"""
 
 import logging
+
+from revrt._rust import revrtRustError
 
 
 logger = logging.getLogger("revrt")
