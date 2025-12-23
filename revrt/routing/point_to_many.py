@@ -575,7 +575,7 @@ def find_all_routes(
     routing_scenario : RoutingScenario
         Scenario describing the cost layers and routing options.
     route_definitions : Iterable
-        Sequence of ``(start_point, end_points, attrs)`` tuples
+        Sequence of ``(start_points, end_points, attrs)`` tuples
         defining which points to route between. The `attrs` dictionary
         will be appended to the output for each route.
     out_fp : path-like
@@ -678,7 +678,7 @@ def _unexpected_number_of_solutions(
     """Check if route should be skipped based on number of solutions"""
     if not solutions:
         msg = (
-            f"Unable to find route from {start_points} any of {end_points} "
+            f"Unable to find route from {start_points} to any of {end_points} "
             f"(route ID: {route_id}). Please verify that the start and end "
             "points are not separated by hard barriers or invalid cost cells."
         )

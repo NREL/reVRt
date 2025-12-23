@@ -212,7 +212,7 @@ def test_basic_single_route_layered_file(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    output = find_all_routes(
+    find_all_routes(
         scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)], {}),
@@ -253,7 +253,7 @@ def test_multi_layer_route_layered_file(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    output = find_all_routes(
+    find_all_routes(
         scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)], {}),
@@ -322,7 +322,7 @@ def test_save_paths_returns_expected_geometry(sample_layered_data, tmp_path):
     )
 
     out_gpkg = tmp_path / "routes.gpkg"
-    output = find_all_routes(
+    find_all_routes(
         scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)], {}),
@@ -866,7 +866,7 @@ def test_length_invariant_hidden_and_friction_layers(
     )
 
     out_gpkg = tmp_path / "routes.gpkg"
-    output = find_all_routes(
+    find_all_routes(
         scenario,
         route_definitions=[
             ([(1, 1)], [(2, 6)], {}),
