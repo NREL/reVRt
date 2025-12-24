@@ -669,7 +669,8 @@ def test_cli_collect_routes_merges_csv(cli_runner, tmp_path):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_collect_routes_merges_gpkg(cli_runner, tmp_path):
+@pytest.mark.parametrize("tol", [None, 0.01])
+def test_cli_collect_routes_merges_gpkg(cli_runner, tmp_path, tol):
     """collect-routes CLI should merge GeoPackage chunk outputs"""
 
     chunk_dir = tmp_path / "geoms"
@@ -717,7 +718,7 @@ def test_cli_collect_routes_merges_gpkg(cli_runner, tmp_path):
     config = {
         "collect_pattern": "geoms/segment_*.gpkg",
         "chunk_size": 1,
-        "simplify_geo_tolerance": 0.01,
+        "simplify_geo_tolerance": tol,
         "out_fp": str(tmp_path / "merged_routes.gpkg"),
         "purge_chunks": True,
     }
