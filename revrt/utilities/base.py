@@ -611,7 +611,11 @@ def num_feats_in_gpkg(filename):
         cursor.execute(
             "SELECT table_name, column_name FROM gpkg_geometry_columns;"
         )
-        geom_table_suffix = "_".join(cursor.fetchall()[0])
+        try:
+            geom_table_suffix = "_".join(cursor.fetchall()[0])
+        except IndexError:
+            return 0  # No geometry columns found
+
         geom_table = f"rtree_{geom_table_suffix}"
 
         q = f"SELECT COUNT(distinct id) FROM {geom_table};"  # noqa
