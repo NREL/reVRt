@@ -1,5 +1,6 @@
 """reVRt routing CLI functions"""
 
+import glob
 import time
 import shutil
 import logging
@@ -425,17 +426,20 @@ def merge_output(
         msg = "Collect pattern has no wildcard (`*`)! No collection performed"
         raise revrtValueError(msg)
 
-    out_fp = resolve_path(
+    collect_pattern = resolve_path(
         collect_pattern
         if collect_pattern.startswith("/")
         else f"./{collect_pattern}",
         project_dir,
     )
+
     if out_fp is None:
         out_fp = str(collect_pattern).replace("*", "")
 
+    logger.info("Collecting routing outputs to: %s", out_fp)
+
     out_fp = Path(out_fp)
-    files_to_collect = list(Path.glob(str(collect_pattern)))
+    files_to_collect = list(glob.glob(str(collect_pattern)))  # noqa
     if not files_to_collect:
         msg = f"No files found using collect pattern: {collect_pattern}"
         raise revrtFileNotFoundError(msg)
