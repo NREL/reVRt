@@ -490,14 +490,16 @@ def _convert_to_route_definitions(routes):
 
     route_definitions = []
     route_attrs = {}
-    for end_idx, sub_routes in routes.groupby(end_point_cols):
+    for route_id, (end_idx, sub_routes) in enumerate(
+        routes.groupby(end_point_cols)
+    ):
         start_points = []
         for __, info in sub_routes.iterrows():
             start_idx = tuple(info[start_point_cols])
-            route_attrs[frozenset([start_idx, end_idx])] = info.to_dict()
+            route_attrs[(route_id, start_idx)] = info.to_dict()
             start_points.append(start_idx)
 
-        route_definitions.append((start_points, [end_idx]))
+        route_definitions.append((route_id, start_points, [end_idx]))
 
     return route_definitions, route_attrs
 

@@ -617,9 +617,11 @@ class BatchRouteProcessor:
             ``end_points`` should be a list of ``(row, col)`` index
             tuples.
         route_attrs : dict, optional
-            Mapping of ``frozenset`` of start and end point tuples to
-            additional attributes to include in the output for each
-            route. By default, ``None``.
+            Mapping of tuples of the form (int, (int, int)) where the
+            first integer represents the route ID and the tuple of
+            integers represents the starting index to additional
+            attributes to include in the output for that route.
+            By default, ``None``.
         """
         self.routing_scenario = routing_scenario
         self._route_definitions = route_definitions
@@ -711,15 +713,20 @@ class BatchRouteProcessor:
 
     def _compile_valid_route_definitions(self):
         """Filter route definitions to those with valid route nodes"""
+        if not self._route_definitions:
+            return {}
+
+        sample_definition = self._route_definitions[0]
+        if len(sample_definition) == 2:  # noqa: PLR2004
+            self._route_definitions = _add_route_ids(self._route_definitions)
+
         routes_to_compute = {}
-        for ind, (start_points, end_points) in enumerate(
-            self._route_definitions
-        ):
+        for route_id, start_points, end_points in self._route_definitions:
             filtered_start_points = self._validate_start_points(start_points)
             if not filtered_start_points:
                 msg = (
-                    f"All start points are invalid for route definition "
-                    f"{ind}: {start_points}\nSkipping..."
+                    f"All start points are invalid for route with ID "
+                    f"{route_id}: {start_points}\nSkipping..."
                 )
                 warn(msg, revrtWarning)
                 continue
@@ -731,13 +738,13 @@ class BatchRouteProcessor:
 
             if not filtered_end_points:
                 msg = (
-                    f"All end points are invalid for route definition {ind}: "
-                    f"{end_points}\nSkipping..."
+                    f"All end points are invalid for route with ID "
+                    f"{route_id}: {end_points}\nSkipping..."
                 )
                 warn(msg, revrtWarning)
                 continue
 
-            routes_to_compute[ind] = (
+            routes_to_compute[route_id] = (
                 filtered_start_points,
                 filtered_end_points,
             )
@@ -770,12 +777,9 @@ class BatchRouteProcessor:
                     end_points,
                 )
                 for indices, optimized_objective in solutions:
-                    nodes = frozenset({indices[0], indices[-1]})
-                    yield (
-                        indices,
-                        optimized_objective,
-                        self.route_attrs.get(nodes, self.default_attrs),
-                    )
+                    attrs_key = (route_id, indices[0])
+                    attrs = self.route_attrs.get(attrs_key, self.default_attrs)
+                    yield indices, optimized_objective, attrs
             except revrtRustError:  # pragma: no cover
                 logger.exception("Rust error when computing route")
                 continue
@@ -868,6 +872,18 @@ def _is_valid_point(point, arr_shape):
     """Check if point is within array bounds"""
     row, col = point
     return 0 <= row < arr_shape[0] and 0 <= col < arr_shape[1]
+
+
+def _add_route_ids(route_definitions):
+    """Add route IDs to route definitions missing them"""
+    logger.info(
+        "Route ID's missing from route definitions - adding definition "
+        "index as route ID..."
+    )
+    return [
+        (ind, start_points, end_points)
+        for ind, (start_points, end_points) in enumerate(route_definitions)
+    ]
 
 
 def _compute_lens(route, cell_size):

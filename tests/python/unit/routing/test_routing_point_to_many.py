@@ -239,7 +239,10 @@ def test_basic_single_route_layered_file(sample_layered_data, tmp_path):
     )
 
 
-def test_multi_layer_route_layered_file(sample_layered_data, tmp_path):
+@pytest.mark.parametrize("single_rd", [True, False])
+def test_multi_layer_route_layered_file(
+    sample_layered_data, tmp_path, single_rd
+):
     """Test routing across multiple cost layers"""
 
     scenario = RoutingScenario(
@@ -251,16 +254,27 @@ def test_multi_layer_route_layered_file(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    route_computer = BatchRouteProcessor(
-        routing_scenario=scenario,
-        route_definitions=[
-            ([(1, 1)], [(2, 6)]),
-            ([(1, 2)], [(2, 6)]),
-        ],
-        route_attrs={
-            frozenset({(1, 2), (2, 6)}): {"route_type": "A"},
-        },
-    )
+    if single_rd:
+        route_computer = BatchRouteProcessor(
+            routing_scenario=scenario,
+            route_definitions=[
+                (1, [(1, 1), (1, 2)], [(2, 6)]),
+            ],
+            route_attrs={
+                (1, (1, 2)): {"route_type": "A"},
+            },
+        )
+    else:
+        route_computer = BatchRouteProcessor(
+            routing_scenario=scenario,
+            route_definitions=[
+                (1, [(1, 1)], [(2, 6)]),
+                (2, [(1, 2)], [(2, 6)]),
+            ],
+            route_attrs={
+                (2, (1, 2)): {"route_type": "A"},
+            },
+        )
     route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
@@ -607,7 +621,7 @@ def test_start_point_on_barrier_returns_no_route(
         "WARNING",
     )
     assert_message_was_logged(
-        "All start points are invalid for route definition 0: [(3, 1)]",
+        "All start points are invalid for route with ID 0: [(3, 1)]",
         "WARNING",
     )
     assert not out_csv.exists()
@@ -818,7 +832,7 @@ def test_bad_end_index_returns_no_route(
         "WARNING",
     )
     assert_message_was_logged(
-        "All end points are invalid for route definition 0: [(10000, 10000)]",
+        "All end points are invalid for route with ID 0: [(10000, 10000)]",
         "WARNING",
     )
     assert not out_csv.exists()
@@ -1782,7 +1796,8 @@ def test_soft_barrier(sample_layered_data, ignore_invalid_costs, tmp_path):
         assert np.allclose(y, 2.5)
 
 
-def test_route_many_attrs(sample_layered_data, tmp_path):
+@pytest.mark.parametrize("single_rd", [True, False])
+def test_route_many_attrs(sample_layered_data, tmp_path, single_rd):
     """Test routing with multiple layers and a scalar multiplier"""
 
     scenario = RoutingScenario(
@@ -1793,24 +1808,41 @@ def test_route_many_attrs(sample_layered_data, tmp_path):
     )
 
     out_csv = tmp_path / "routes.csv"
-    route_computer = BatchRouteProcessor(
-        routing_scenario=scenario,
-        route_definitions=[
-            ([(1, 1)], [(2, 6)]),
-            ([(1, 2)], [(2, 6)]),
-            ([(1, 3)], [(2, 6)]),
-            ([(1, 4)], [(2, 6)]),
-        ],
-        route_attrs={
-            frozenset({(1, 2), (2, 6)}): {"route_type": "A"},
-            frozenset({(1, 4), (2, 6)}): {"my_attr": "B"},
-            frozenset({(1, 3), (2, 6)}): {
-                "route_type": "C",
-                "my_attr": "D",
-                "final": True,
+    if single_rd:
+        route_computer = BatchRouteProcessor(
+            routing_scenario=scenario,
+            route_definitions=[
+                (1, [(1, 1), (1, 2), (1, 3), (1, 4)], [(2, 6)]),
+            ],
+            route_attrs={
+                (1, (1, 2)): {"route_type": "A"},
+                (1, (1, 4)): {"my_attr": "B"},
+                (1, (1, 3)): {
+                    "route_type": "C",
+                    "my_attr": "D",
+                    "final": True,
+                },
             },
-        },
-    )
+        )
+    else:
+        route_computer = BatchRouteProcessor(
+            routing_scenario=scenario,
+            route_definitions=[
+                (6, [(1, 1)], [(2, 6)]),
+                (7, [(1, 2)], [(2, 6)]),
+                (8, [(1, 3)], [(2, 6)]),
+                (9, [(1, 4)], [(2, 6)]),
+            ],
+            route_attrs={
+                (7, (1, 2)): {"route_type": "A"},
+                (9, (1, 4)): {"my_attr": "B"},
+                (8, (1, 3)): {
+                    "route_type": "C",
+                    "my_attr": "D",
+                    "final": True,
+                },
+            },
+        )
     route_computer.process(out_fp=out_csv, save_paths=False)
 
     output = pd.read_csv(out_csv)
