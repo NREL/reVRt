@@ -13,4 +13,4 @@ from .base import (
     save_data_using_layer_file_profile,
     save_data_using_custom_props,
 )
-from .handlers import LayeredFile
+from .handlers import LayeredFile, IncrementalWriter

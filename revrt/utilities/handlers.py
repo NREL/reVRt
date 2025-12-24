@@ -10,10 +10,12 @@ from functools import cached_property
 
 import zarr
 import dask
-from pyproj import Transformer
 import rioxarray
 import numpy as np
+import pandas as pd
 import xarray as xr
+import geopandas as gpd
+from pyproj import Transformer
 
 from revrt.exceptions import (
     revrtFileExistsError,
@@ -38,6 +40,86 @@ _ZARR_COMPRESSORS = zarr.codecs.BloscCodec(  # cspell:disable-line
     clevel=9,  # cspell:disable-line
     shuffle=zarr.codecs.BloscShuffle.shuffle,  # cspell:disable-line
 )
+
+
+class IncrementalWriter:
+    """Stream results to disk by appending result in chunks to a file
+
+    File can be of type CSV or GeoPackage. A new file is created if one
+    does not exist.
+    """
+
+    def __init__(self, out_fp):
+        """
+
+        Parameters
+        ----------
+        out_fp : path-like
+            Path to output file.
+        """
+        self.out_fp = Path(out_fp)
+        self._columns = None
+
+    def preprocess_chunk(self, chunk):  # noqa
+        """Preprocess chunk before saving
+
+        By default this method just passes the data through (underlying
+        assumption is that the chunk data is already in a DataFrame).
+        If the underlying data is not in a DataFrame, users can subclass
+        and overwrite this method to covert the data into a DataFrame
+        for writing.
+
+        Parameters
+        ----------
+        chunk : any
+            A chunk of data that will eventually be written to file.
+
+        Returns
+        -------
+        pandas.DataFrame or geopandas.GeoDataFrame
+            A dataframe holding the chunk of data to be written to file.
+        """
+        return chunk
+
+    @property
+    def _is_gpkg(self):
+        """bool: Check if output file is GeoPackage"""
+        return self.out_fp.suffix.lower() == ".gpkg"
+
+    def save(self, result):
+        """Write result chunk to file
+
+        Parameters
+        ----------
+        result : dict
+            Route result dictionary as built by
+            ``RouteMetrics.compute()``.
+        """
+        result = self.preprocess_chunk(result)
+        if self._is_gpkg:
+            self._save_gpkg(result)
+            return
+        self._save_csv(result)
+
+    def _save_gpkg(self, data):
+        """Save route result to GeoPackage file"""
+        if self.out_fp.exists():
+            if self._columns is None:
+                self._columns = gpd.read_file(self.out_fp, rows=1).columns
+            data = data.reindex(columns=self._columns)
+
+        data.to_file(self.out_fp, driver="GPKG", mode="a")
+
+    def _save_csv(self, data):
+        """Save route result to CSV file"""
+        if self.out_fp.exists():
+            if self._columns is None:
+                self._columns = pd.read_csv(self.out_fp, nrows=0).columns
+            data = data.reindex(columns=self._columns)
+
+        data.to_csv(
+            self.out_fp, mode="a", index=False, header=not self.out_fp.exists()
+        )
 
 
 class LayeredFile:
@@ -82,7 +164,7 @@ class LayeredFile:
         logger.debug("\t- Extracting %s from %s", layer, self.fp)
         with xr.open_dataset(self.fp, consolidated=False, engine="zarr") as ds:
             profile = _layer_profile_from_open_ds(layer, ds)
-            values = ds[layer].values
+            values = ds[layer].to_numpy()
 
         return profile, values
 
