@@ -745,7 +745,7 @@ def _collect_geo_files(
     for i, data_fp in enumerate(files_to_collect, start=1):
         logger.info("Loading %s (%i/%i)", data_fp, i, len(files_to_collect))
         total_rows = num_feats_in_gpkg(data_fp)
-        logger.info(
+        logger.debug(
             "\t- Processing GeoPackage with %d rows in chunks of %d",
             total_rows,
             chunk_size,
@@ -757,9 +757,6 @@ def _collect_geo_files(
             )
 
             df = gpd.read_file(data_fp, rows=slice(chunk_start, chunk_end))
-            if len(df) == 0:
-                continue
-
             if simplify_geo_tolerance:
                 df.geometry = df.geometry.simplify(simplify_geo_tolerance)
 
@@ -773,7 +770,7 @@ def _collect_csv_files(files_to_collect, out_fp, chunk_size, purge_chunks):
     writer = IncrementalWriter(out_fp)
     for i, data_fp in enumerate(files_to_collect, start=1):
         logger.info("Loading %s (%i/%i)", data_fp, i, len(files_to_collect))
-        logger.info(
+        logger.debug(
             "\t- Processing CSV with in chunks of %d",
             chunk_size,
         )
@@ -781,10 +778,6 @@ def _collect_csv_files(files_to_collect, out_fp, chunk_size, purge_chunks):
             pd.read_csv(data_fp, chunksize=chunk_size)  # cspell:disable-line
         ):
             logger.debug("\t\t- Processing CSV chunk %d", chunk_idx)
-
-            if len(df) == 0:
-                continue
-
             writer.save(df)
 
         _handle_chunk_file(Path(out_fp).parent, data_fp, purge_chunks)
