@@ -66,12 +66,12 @@ class IncrementalWriter:
         By default this method just passes the data through (underlying
         assumption is that the chunk data is already in a DataFrame).
         If the underlying data is not in a DataFrame, users can subclass
-        and overwrite this method to covert the data into a DataFrame
+        and overwrite this method to convert the data into a DataFrame
         for writing.
 
         Parameters
         ----------
-        chunk : any
+        chunk : pandas.DataFrame or geopandas.GeoDataFrame
             A chunk of data that will eventually be written to file.
 
         Returns
@@ -91,9 +91,8 @@ class IncrementalWriter:
 
         Parameters
         ----------
-        result : dict
-            Route result dictionary as built by
-            ``RouteMetrics.compute()``.
+        result : pandas.DataFrame or geopandas.GeoDataFrame
+            A chunk of data that will eventually be written to file.
         """
         result = self.preprocess_chunk(result)
         if self._is_gpkg:

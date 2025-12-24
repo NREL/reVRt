@@ -446,7 +446,7 @@ def merge_output(
 
     if simplify_geo_tolerance:
         logger.info(
-            "Simplifying geometries using a tolerance of  %r",
+            "Simplifying geometries using a tolerance of %r",
             simplify_geo_tolerance,
         )
 
@@ -771,7 +771,7 @@ def _collect_csv_files(files_to_collect, out_fp, chunk_size, purge_chunks):
     for i, data_fp in enumerate(files_to_collect, start=1):
         logger.info("Loading %s (%i/%i)", data_fp, i, len(files_to_collect))
         logger.debug(
-            "\t- Processing CSV with in chunks of %d",
+            "\t- Processing CSV in chunks of %d",
             chunk_size,
         )
         for chunk_idx, df in enumerate(

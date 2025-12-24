@@ -581,7 +581,7 @@ def test_merge_routes_bad_collect_pattern(tmp_path):
 
 
 def test_merge_routes_no_files(tmp_path):
-    """merge_output should raise when collect pattern lacks wildcard"""
+    """merge_output should raise when no files match collect pattern"""
     with pytest.raises(
         revrtFileNotFoundError, match="No files found using collect pattern:"
     ):
