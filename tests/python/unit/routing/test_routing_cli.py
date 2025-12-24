@@ -664,12 +664,12 @@ def test_cli_collect_routes_merges_csv(cli_runner, tmp_path):
     assert relocated_fp.exists()
 
 
+@pytest.mark.parametrize("tol", [None, 0.01])
 @pytest.mark.skipif(
     (os.environ.get("TOX_RUNNING") == "True")
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-@pytest.mark.parametrize("tol", [None, 0.01])
 def test_cli_collect_routes_merges_gpkg(cli_runner, tmp_path, tol):
     """collect-routes CLI should merge GeoPackage chunk outputs"""
 
