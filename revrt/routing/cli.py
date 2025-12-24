@@ -771,7 +771,6 @@ def _collect_geo_files(
 def _collect_csv_files(files_to_collect, out_fp, chunk_size, purge_chunks):
     """Collect CSV files into a single output file"""
     writer = IncrementalWriter(out_fp)
-    pd.read_csv()
     for i, data_fp in enumerate(files_to_collect, start=1):
         logger.info("Loading %s (%i/%i)", data_fp, i, len(files_to_collect))
         logger.info(
