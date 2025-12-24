@@ -18,11 +18,16 @@ from rasterio.transform import from_origin
 from revrt._cli import main
 from revrt.utilities import LayeredFile
 from revrt.routing.utilities import map_to_costs
-from revrt.exceptions import revrtKeyError
+from revrt.exceptions import (
+    revrtKeyError,
+    revrtValueError,
+    revrtFileNotFoundError,
+)
 from revrt.routing.cli import (
     compute_lcp_routes,
     build_routing_layer,
     build_route_costs_command,
+    merge_output,
     _run_lcp,
     _collect_existing_routes,
     _update_multipliers,
@@ -565,6 +570,24 @@ def test_get_polarity_multiplier_unknown_voltage():
         _get_polarity_multiplier(config, "138", "ac")
 
 
+def test_merge_routes_bad_collect_pattern(tmp_path):
+    """merge_output should raise when collect pattern lacks wildcard"""
+    with pytest.raises(
+        revrtValueError, match="Collect pattern has no wildcard"
+    ):
+        merge_output(
+            collect_pattern="no_wildcard_here.csv", project_dir=tmp_path
+        )
+
+
+def test_merge_routes_no_files(tmp_path):
+    """merge_output should raise when collect pattern lacks wildcard"""
+    with pytest.raises(
+        revrtFileNotFoundError, match="No files found using collect pattern:"
+    ):
+        merge_output(collect_pattern="dne*.csv", project_dir=tmp_path)
+
+
 @pytest.mark.skipif(
     (os.environ.get("TOX_RUNNING") == "True")
     and (platform.system() == "Windows"),
@@ -602,7 +625,7 @@ def test_cli_collect_routes_merges_csv(cli_runner, tmp_path):
     for idx, frame in enumerate(chunk_frames):
         frame.to_csv(chunk_dir / f"routes_part_{idx}.csv", index=False)
 
-    chunk_fp = chunk_dir / "routes_part_999.gpkg"
+    chunk_fp = chunk_dir / "routes_part_999.csv"
     pd.DataFrame(columns=["route_id"]).to_csv(chunk_fp, index=False)
 
     config = {
@@ -634,6 +657,11 @@ def test_cli_collect_routes_merges_csv(cli_runner, tmp_path):
         relocated_fp = chunk_files_dir / f"routes_part_{idx}.csv"
         assert not original_fp.exists()
         assert relocated_fp.exists()
+
+    original_fp = chunk_dir / "routes_part_999.csv"
+    relocated_fp = chunk_files_dir / "routes_part_999.csv"
+    assert not original_fp.exists()
+    assert relocated_fp.exists()
 
 
 @pytest.mark.skipif(
@@ -716,6 +744,7 @@ def test_cli_collect_routes_merges_gpkg(cli_runner, tmp_path):
 
     for idx in range(len(chunk_geometries)):
         assert not (chunk_dir / f"segment_{idx}.gpkg").exists()
+    assert not (chunk_dir / "segment_999.gpkg").exists()
     assert not (chunk_dir / "chunk_files").exists()
 
 

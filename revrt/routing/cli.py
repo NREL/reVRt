@@ -778,6 +778,8 @@ def _collect_csv_files(files_to_collect, out_fp, chunk_size, purge_chunks):
             pd.read_csv(data_fp, chunksize=chunk_size)  # cspell:disable-line
         ):
             logger.debug("\t\t- Processing CSV chunk %d", chunk_idx)
+            if len(df) == 0:
+                continue
             writer.save(df)
 
         _handle_chunk_file(Path(out_fp).parent, data_fp, purge_chunks)
