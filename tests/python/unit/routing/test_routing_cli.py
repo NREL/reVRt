@@ -602,6 +602,9 @@ def test_cli_collect_routes_merges_csv(cli_runner, tmp_path):
     for idx, frame in enumerate(chunk_frames):
         frame.to_csv(chunk_dir / f"routes_part_{idx}.csv", index=False)
 
+    chunk_fp = chunk_dir / "routes_part_999.gpkg"
+    pd.DataFrame(columns=["route_id"]).to_csv(chunk_fp, index=False)
+
     config = {
         "collect_pattern": "outputs/routes_part_*.csv",
         "chunk_size": 1,
@@ -679,6 +682,9 @@ def test_cli_collect_routes_merges_gpkg(cli_runner, tmp_path):
         chunk_fp = chunk_dir / f"segment_{idx}.gpkg"
         gdf.to_file(chunk_fp, driver="GPKG")
         chunk_geometries.append(gdf)
+
+    chunk_fp = chunk_dir / "segment_999.gpkg"
+    gpd.GeoDataFrame(columns=["route_id"]).to_file(chunk_fp, driver="GPKG")
 
     config = {
         "collect_pattern": "geoms/segment_*.gpkg",
