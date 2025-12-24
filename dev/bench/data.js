@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766533727762,
+  "lastUpdate": 1766539764457,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3527,6 +3527,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 398382244,
             "range": "± 10908008",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5f45a74e325417afa4e6e8df11e4cb69ce14427a",
+          "message": "More general route attributes (#190)\n\n* Clean up function slightly\n\n* Much more rigorous start/end point handling\n\n* Update tests for new start/end point handling\n\n* Increase time limit\n\n* Don't check costs if user asked not to\n\n* Finalize tests\n\n* Fix docstrings\n\n* Refactor to remove concat operation\n\n* Move logic to class\n\n* Refactor into class\n\n* Update messages\n\n* Allow routes to have route ID with the input\n\n* Generalize route attrs key",
+          "timestamp": "2025-12-23T18:18:14-07:00",
+          "tree_id": "ae266eacc5c727dfefe92489f095634f5fdab069",
+          "url": "https://github.com/NREL/reVRt/commit/5f45a74e325417afa4e6e8df11e4cb69ce14427a"
+        },
+        "date": 1766539763296,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 150300111,
+            "range": "± 2797345",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 206773036,
+            "range": "± 1850717",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 254033172,
+            "range": "± 14407927",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 346006431,
+            "range": "± 15978915",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 674190153,
+            "range": "± 20318626",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 148619447,
+            "range": "± 1781241",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155474964,
+            "range": "± 648448",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170014404,
+            "range": "± 1607562",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 220290630,
+            "range": "± 2678959",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 400447518,
+            "range": "± 6529650",
             "unit": "ns/iter"
           }
         ]
