@@ -2,6 +2,7 @@
 
 import shutil
 import psutil
+import sqlite3
 import logging
 from pathlib import Path
 from warnings import warn
@@ -586,3 +587,33 @@ def elapsed_time_as_str(seconds_elapsed):
     if days:
         time_str = f"{days:,d} day{'s' if abs(days) != 1 else ''}, {time_str}"
     return time_str
+
+
+def num_feats_in_gpkg(filename):
+    """Lightweight func to get number of features in GeoPackage file
+
+    This function does not load the entire GeoPackage into memory.
+    Instead, it queries the internal SQLite database to get the number
+    of features.
+
+    Parameters
+    ----------
+    filename : path-like
+        Path to GeoPackage file.
+
+    Returns
+    -------
+    int
+        Number of features in the GeoPackage file.
+    """
+    with sqlite3.connect(filename) as con:
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT table_name, column_name FROM gpkg_geometry_columns;"
+        )
+        geom_table_suffix = "_".join(cursor.fetchall()[0])
+        geom_table = f"rtree_{geom_table_suffix}"
+
+        q = f"SELECT COUNT(distinct id) FROM {geom_table};"  # noqa
+        cursor.execute(q)
+        return cursor.fetchall()[0][0]
