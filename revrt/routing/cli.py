@@ -22,11 +22,8 @@ from revrt.routing.point_to_many import (
     RoutingScenario,
     RoutingLayerManager,
 )
-from revrt.routing.utilities import (
-    map_to_costs,
-    num_feats_in_gpkg,
-    IncrementalWriter,
-)
+from revrt.routing.utilities import map_to_costs
+from revrt.utilities import num_feats_in_gpkg, IncrementalWriter
 from revrt.exceptions import (
     revrtKeyError,
     revrtValueError,
