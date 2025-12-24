@@ -15,9 +15,9 @@ from gaps.config import load_config
 
 from revrt.costs.config import parse_config
 from revrt.routing.point_to_many import (
-    find_all_routes,
+    BatchRouteProcessor,
     RoutingScenario,
-    RoutingLayers,
+    RoutingLayerManager,
 )
 from revrt.routing.utilities import map_to_costs
 from revrt.exceptions import revrtKeyError
@@ -357,7 +357,7 @@ def build_routing_layer(lcp_config_fp, out_dir, polarity=None, voltage=None):
         ignore_invalid_costs=config.get("ignore_invalid_costs", False),
     )
 
-    rl = RoutingLayers(routing_scenario)
+    rl = RoutingLayerManager(routing_scenario)
     rl.build()
 
     cost_out_fp = out_dir / "agg_costs.tif"
@@ -390,7 +390,7 @@ def _run_lcp(
     save_paths = out_fp.suffix.lower() == ".gpkg"
 
     if route_points.empty:
-        logger.info("Found no paths to compute!")
+        logger.info("Found no routes to compute!")
         return
 
     with xr.open_dataset(cost_fpath, consolidated=False, engine="zarr") as ds:
@@ -401,23 +401,21 @@ def _run_lcp(
             shape=ds.rio.shape,
         )
 
-    logger.info("Computing Least Cost Paths")
-    num_computed = 0
+    logger.info("Computing best routes for %d point pairs", len(route_points))
     for polarity, voltage, routes in _paths_to_compute(route_points, out_fp):
+        logger.info(
+            "Computing routes for %d points with polarity: %r and voltage: %r",
+            len(routes),
+            polarity,
+            voltage,
+        )
         route_cl = _update_multipliers(
             cost_layers, polarity, voltage, transmission_config
         )
         route_fl = _update_multipliers(
             friction_layers or [], polarity, voltage, transmission_config
         )
-        route_definitions = [
-            (
-                (info["start_row"], info["start_col"]),
-                [(info["end_row"], info["end_col"])],
-                info.to_dict(),
-            )
-            for __, info in routes.iterrows()
-        ]
+        route_definitions, route_attrs = _convert_to_route_definitions(routes)
 
         scenario = RoutingScenario(
             cost_fpath=cost_fpath,
@@ -429,31 +427,27 @@ def _run_lcp(
             ignore_invalid_costs=ignore_invalid_costs,
         )
 
-        out = find_all_routes(
-            scenario,
+        route_computer = BatchRouteProcessor(
+            routing_scenario=scenario,
             route_definitions=route_definitions,
-            save_paths=save_paths,
+            route_attrs=route_attrs,
         )
-
-        num_computed += len(out)
-
-        if save_paths:
-            gpd.GeoDataFrame(out, geometry="geometry").to_file(
-                out_fp, driver="GPKG", mode="a"
-            )
-        else:
-            pd.DataFrame(out).to_csv(out_fp, mode="a")
+        route_computer.process(out_fp=out_fp, save_paths=save_paths)
 
     time_elapsed = f"{(time.monotonic() - ts) / 3600:.4f} hour(s)"
-    logger.info("%d paths were computed in %s", num_computed, time_elapsed)
+    logger.info(
+        "Routing for %d points completed in %s",
+        len(route_points),
+        time_elapsed,
+    )
 
 
 def _paths_to_compute(route_points, out_fp):
     """Yield route groups that still require computation"""
     existing_routes = _collect_existing_routes(out_fp)
 
-    group_cols = ["start_row", "start_col", "polarity", "voltage"]
-    for check_col in ["polarity", "voltage"]:
+    group_cols = ["polarity", "voltage"]
+    for check_col in group_cols:
         if check_col not in route_points.columns:
             route_points[check_col] = "unknown"
 
@@ -478,6 +472,36 @@ def _paths_to_compute(route_points, out_fp):
 
         *__, polarity, voltage = group_info
         yield polarity, voltage, routes
+
+
+def _convert_to_route_definitions(routes):
+    """Convert route DataFrame to route definitions format"""
+    start_point_cols = ["start_row", "start_col"]
+    end_point_cols = ["end_row", "end_col"]
+    num_unique_start_points = len(routes.groupby(start_point_cols))
+    num_unique_end_points = len(routes.groupby(end_point_cols))
+    if num_unique_end_points > num_unique_start_points:
+        logger.info(
+            "Less unique starting points detected! Swapping start and "
+            "end point set for optimal routing performance"
+        )
+        start_point_cols = ["end_row", "end_col"]
+        end_point_cols = ["start_row", "start_col"]
+
+    route_definitions = []
+    route_attrs = {}
+    for route_id, (end_idx, sub_routes) in enumerate(
+        routes.groupby(end_point_cols)
+    ):
+        start_points = []
+        for __, info in sub_routes.iterrows():
+            start_idx = tuple(info[start_point_cols])
+            route_attrs[(route_id, start_idx)] = info.to_dict()
+            start_points.append(start_idx)
+
+        route_definitions.append((route_id, start_points, [end_idx]))
+
+    return route_definitions, route_attrs
 
 
 def _collect_existing_routes(out_fp):

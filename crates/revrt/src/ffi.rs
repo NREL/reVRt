@@ -1,10 +1,44 @@
 use std::path::PathBuf;
+use std::sync::mpsc;
 
 use pyo3::exceptions::{PyException, PyIOError};
 use pyo3::prelude::*;
 
 use crate::error::{Error, Result};
-use crate::{ArrayIndex, resolve};
+use crate::routing::RouteDefinition;
+use crate::{ArrayIndex, RevrtRoutingSolutions, Solution, resolve, resolve_generator};
+
+type PyRoutePoint = (u64, u64);
+type PyPossibleRouteNodes = Vec<PyRoutePoint>;
+type PyRouteResult = (Vec<PyRoutePoint>, f32);
+type PyRoutingSolutions = Vec<PyRouteResult>;
+type PyRouteYield = PyResult<Option<(u32, PyRoutingSolutions)>>;
+type PyRouteDefinition = (u32, PyPossibleRouteNodes, PyPossibleRouteNodes);
+
+impl From<&PyRouteDefinition> for RouteDefinition {
+    fn from(route: &PyRouteDefinition) -> RouteDefinition {
+        let (id, start_points, end_points) = route;
+        RouteDefinition {
+            route_id: *id,
+            start_inds: start_points
+                .iter()
+                .map(|(i, j)| ArrayIndex { i: *i, j: *j })
+                .collect(),
+            end_inds: end_points
+                .iter()
+                .map(|(i, j)| ArrayIndex { i: *i, j: *j })
+                .collect(),
+        }
+    }
+}
+
+impl From<Solution<ArrayIndex, f32>> for PyRouteResult {
+    fn from(solution: Solution<ArrayIndex, f32>) -> Self {
+        let Solution { route, total_cost } = solution;
+        let path = route.into_iter().map(Into::into).collect();
+        (path, total_cost)
+    }
+}
 
 pyo3::create_exception!(_rust, revrtRustError, PyException);
 
@@ -25,6 +59,7 @@ impl From<Error> for PyErr {
 fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_paths, m)?)?;
     m.add("revrtRustError", py.get_type::<revrtRustError>())?;
+    m.add_class::<RouteFinder>()?;
     Ok(())
 }
 
@@ -41,17 +76,12 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// ----------
 /// zarr_fp : path-like
 ///     Path to zarr file containing cost layers.
-/// cost_layers : str
-///     JSON string representation of a list of dictionaries
-///     that define the cost layer computation. Each dictionary
-///     must have at least one key: "layer_name". This key points
-///     to the layer in the Zarr file that should be read in. The
-///     other optional keys are "multiplier_layer", which is the
-///     name of a layer in the Zarr file that should be multiplied
-///     onto the original layer and "multiplier_scalar", which
-///     should be a float that should be applied to scale the layer.
-///     All of the layers in the list are processed this way and then
-///     summed to obtain the final cost layer for routing.
+/// cost_function : str
+///     JSON string representation of the cost function. The following
+///     keys are allowed in the cost function: "cost_layers",
+///     "friction_layers", and "ignore_invalid_costs". See the
+///     documentation of the cost function for details on each of these
+///     inputs.
 /// start : list of tuple
 ///     List of two-tuples containing non-negative integers representing
 ///     the indices in the array for the pixel from which routing should
@@ -74,23 +104,164 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     route goes through and the second element is the final
 ///     route cost.
 #[pyfunction]
-#[pyo3(signature = (zarr_fp, cost_layers, start, end, cache_size=250_000_000))]
+#[pyo3(signature = (zarr_fp, cost_function, start, end, cache_size=250_000_000))]
 #[allow(clippy::type_complexity)]
 fn find_paths(
     zarr_fp: PathBuf,
-    cost_layers: String,
+    cost_function: String,
     start: Vec<(u64, u64)>,
     end: Vec<(u64, u64)>,
     cache_size: u64,
-) -> Result<Vec<(Vec<(u64, u64)>, f32)>> {
+) -> Result<PyRoutingSolutions> {
     let start: Vec<ArrayIndex> = start
         .into_iter()
         .map(|(i, j)| ArrayIndex { i, j })
         .collect();
     let end: Vec<ArrayIndex> = end.into_iter().map(|(i, j)| ArrayIndex { i, j }).collect();
-    let paths = resolve(zarr_fp, &cost_layers, cache_size, &start, end)?;
-    Ok(paths
-        .into_iter()
-        .map(|(path, cost)| (path.into_iter().map(Into::into).collect(), cost))
-        .collect())
+    let paths = resolve(zarr_fp, &cost_function, cache_size, &start, end)?;
+    Ok(paths.into_iter().map(Into::into).collect())
+}
+
+/// Find least-cost paths for one or more starting points in parallel.
+///
+/// Parameters
+/// ----------
+/// zarr_fp : path-like
+///     Path to zarr file containing cost layers.
+/// cost_function : str
+///     JSON string representation of the cost function. The following
+///     keys are allowed in the cost function: "cost_layers",
+///     "friction_layers", and "ignore_invalid_costs". See the
+///     documentation of the cost function for details on each of these
+///     inputs.
+/// route_definitions : list of tuple
+///     List of tuples containing path definitions. Each path definition
+///     tuple should be of the form (int, list, list). The int input is
+///     a route ID (non-negative) that you can use to link results to
+///     input route definitions. The first list contains the starting
+///     points and the second list contains the ending points. Each point
+///     is represented as a two-tuple of non-negative integers representing
+///     the indices in the array for the pixel indicating where routing should
+///     begin/end. A unique path will be returned for each of the starting
+///     points in each of the path definition tuples (assuming a valid path
+///     exists).
+/// cache_size : int, default=250_000_000
+///     Cache size to use for computation, in bytes.
+///     By default, `250,000,000` (250MB).
+///
+/// Yields
+/// ------
+/// tuple
+///     A tuple representing the route finding result for a single
+///     path definition. The first element is the route definition ID
+///     (as given in the input) and the second element is a list of path
+///     routing results. Each result is a tuple where the first element
+///     is a list of points that the route goes through and the second
+///     element is the final route cost. The result list will contain
+///     multiple tuples if the path definition had multiple starting points.
+///     An empty list will be returned if no paths were found from any of
+///     the starting points to any of the ending points. This generator
+///     will yield one tuple per path definition. Order is not guaranteed,
+///     so use the route ID input to match results to inputs.
+#[pyclass]
+struct RouteFinder {
+    zarr_fp: PathBuf,
+    cost_function: String,
+    route_definitions: Vec<PyRouteDefinition>,
+    cache_size: u64,
+}
+
+#[pymethods]
+impl RouteFinder {
+    #[new]
+    #[pyo3(signature = (zarr_fp, cost_function, route_definitions, cache_size=250_000_000))]
+    fn new(
+        zarr_fp: PathBuf,
+        cost_function: String,
+        route_definitions: Vec<PyRouteDefinition>,
+        cache_size: u64,
+    ) -> Self {
+        Self {
+            zarr_fp,
+            cost_function,
+            route_definitions,
+            cache_size,
+        }
+    }
+
+    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<RouteOutputIter>> {
+        let iter = RouteOutputIter::new(&slf)?;
+        Py::new(slf.py(), iter)
+    }
+
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!(
+            "`RouteFinder` instance for {} routes",
+            self.route_definitions.len()
+        ))
+    }
+}
+
+#[pyclass(unsendable)]
+struct RouteOutputIter {
+    receiver: Option<mpsc::Receiver<(u32, RevrtRoutingSolutions)>>,
+    finished: bool,
+}
+
+impl RouteOutputIter {
+    fn new(user_input: &RouteFinder) -> Result<Self> {
+        let (tx, rx) = mpsc::channel();
+        resolve_generator(
+            &user_input.zarr_fp,
+            &user_input.cost_function,
+            user_input
+                .route_definitions
+                .iter()
+                .map(Into::into)
+                .collect::<Vec<_>>(),
+            tx,
+            user_input.cache_size,
+        )?;
+        Ok(Self {
+            receiver: Some(rx),
+            finished: false,
+        })
+    }
+}
+
+#[pymethods]
+impl RouteOutputIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> PyRouteYield {
+        if slf.finished {
+            return Ok(None);
+        }
+
+        let receiver = match slf.receiver.take() {
+            Some(receiver) => receiver,
+            None => {
+                slf.finished = true;
+                return Ok(None);
+            }
+        };
+
+        let py = slf.py();
+        let (recv_result, receiver) = py.detach(move || {
+            let result = receiver.recv();
+            (result, receiver)
+        });
+        slf.receiver = Some(receiver);
+
+        match recv_result {
+            Ok((id, solutions)) => Ok(Some((id, solutions.into_iter().map(Into::into).collect()))),
+            // Ok(Err(err)) => Err(err.into()),
+            Err(_) => {
+                slf.finished = true;
+                Ok(None)
+            }
+        }
+    }
 }

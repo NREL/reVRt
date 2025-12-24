@@ -13,10 +13,7 @@ fn basic_routing_in_data() {
     let end = vec![revrt::ArrayIndex::new(20, 20)];
     let result = resolve(
         layers_path.to_str().expect("test data path is valid UTF-8"),
-        r#"{
-            "cost_layers": [{"layer_name": "tie_line_costs_102MW"}],
-            "ignore_invalid_costs": true
-        }"#,
+        r#"{"cost_layers": [{"layer_name": "tie_line_costs_102MW"}]}"#,
         250_000_000,
         std::slice::from_ref(start),
         end,
@@ -24,6 +21,6 @@ fn basic_routing_in_data() {
     .unwrap();
     dbg!(&result);
     assert_eq!(result.len(), 1);
-    assert!(result[0].0.len() > 1);
-    assert!(result[0].1 > 0.);
+    assert!(result[0].route().len() > 1);
+    assert!(result[0].total_cost() > &0.);
 }

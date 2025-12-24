@@ -1,10 +1,12 @@
 mod features;
 mod scenario;
 
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::debug;
+use std::sync::{Arc, mpsc};
 
-use crate::{ArrayIndex, Solution, error::Result};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use tracing::{debug, trace};
+
+use crate::{ArrayIndex, RevrtRoutingSolutions, Solution, error::Result};
 use features::Features;
 use scenario::Scenario;
 
@@ -53,6 +55,84 @@ impl Routing {
             })
             .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
             .collect()
+    }
+}
+
+pub(super) struct RouteDefinition {
+    pub(super) route_id: u32,
+    pub(super) start_inds: Vec<ArrayIndex>,
+    pub(super) end_inds: Vec<ArrayIndex>,
+}
+
+pub(super) struct ParRouting {
+    scenario: Arc<Scenario>,
+}
+
+impl ParRouting {
+    pub(super) fn new<P: AsRef<std::path::Path>>(
+        store_path: P,
+        cost_function: crate::cost::CostFunction,
+        cache_size: u64,
+    ) -> Result<Self> {
+        let scenario = Scenario::new(store_path, cost_function, cache_size)?;
+
+        Ok(Self {
+            scenario: Arc::new(scenario),
+        })
+    }
+    pub(super) fn lazy_scout<I>(
+        &self,
+        route_definitions: I,
+        tx: mpsc::Sender<(u32, RevrtRoutingSolutions)>,
+    ) where
+        I: IntoParallelIterator<Item = RouteDefinition> + Send + 'static,
+        I::Iter: Send,
+    {
+        let scenario = Arc::clone(&self.scenario);
+        rayon::spawn(move || {
+            let _ = route_definitions.into_par_iter().try_for_each_with(
+                tx,
+                |sender,
+                 RouteDefinition {
+                     route_id,
+                     start_inds,
+                     end_inds,
+                 }| {
+                    debug!("Computing routes between {start_inds:?} and {end_inds:?}");
+                    // if end_inds.last() == Some(&ArrayIndex { i: 2, j: 6 }) {
+                    //     use std::thread;
+                    //     use std::time::Duration;
+                    //     // let mut rng = rand::rng();
+                    //     // let delay_secs = rng.random_range(3..=7);
+                    //     let delay_secs = if start_inds.first() == Some(&ArrayIndex { i: 1, j: 1 }) {
+                    //         6
+                    //         // return sender.send(Err(InvalidRouteStart(
+                    //         //     "start index ArrayIndex { i: 1, j: 1 } is invalid".into(),
+                    //         // )));
+                    //     } else {
+                    //         10
+                    //     };
+                    //     // println!("Sleeping {delay_secs}s before yielding");
+                    //     // io::stdout().flush().expect("Failed to flush stdout");
+                    //     thread::sleep(Duration::from_secs(delay_secs));
+                    // }
+                    let routes: RevrtRoutingSolutions = start_inds
+                        .into_par_iter()
+                        .filter_map(|s| {
+                            pathfinding::prelude::dijkstra(
+                                &s,
+                                |p| scenario.successors(p),
+                                |p| end_inds.contains(p),
+                            )
+                        })
+                        .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
+                        .collect();
+                    let num_routes = routes.len();
+                    trace!("Finished computing {num_routes} to {end_inds:?}");
+                    sender.send((route_id, routes))
+                },
+            );
+        });
     }
 }
 

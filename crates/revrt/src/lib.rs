@@ -9,10 +9,12 @@ mod ffi;
 mod routing;
 mod solution;
 
+use std::sync::mpsc;
+
 use cost::CostFunction;
 use error::Result;
-use routing::Routing;
-use solution::Solution;
+use routing::{ParRouting, RouteDefinition, Routing};
+use solution::{RevrtRoutingSolutions, Solution};
 
 #[allow(missing_docs)]
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -41,15 +43,31 @@ pub fn resolve<P: AsRef<std::path::Path>>(
     cache_size: u64,
     start: &[ArrayIndex],
     end: Vec<ArrayIndex>,
-) -> Result<Vec<(Vec<ArrayIndex>, f32)>> {
+) -> Result<RevrtRoutingSolutions> {
     let cost_function = CostFunction::from_json(cost_function)?;
     tracing::trace!("Cost function: {:?}", cost_function);
     let mut simulation: Routing = Routing::new(store_path, cost_function, cache_size).unwrap();
-    let result = simulation
-        .compute(start, end)
-        .map(|solution| (solution.route().clone(), *solution.total_cost()))
-        .collect();
+    let result = simulation.compute(start, end).collect();
     Ok(result)
+}
+
+#[allow(missing_docs)]
+pub(crate) fn resolve_generator<P, I>(
+    store_path: P,
+    cost_function: &str,
+    route_definitions: I,
+    tx: mpsc::Sender<(u32, RevrtRoutingSolutions)>,
+    cache_size: u64,
+) -> Result<()>
+where
+    P: AsRef<std::path::Path>,
+    I: rayon::prelude::IntoParallelIterator<Item = RouteDefinition> + Send + 'static,
+    I::Iter: Send,
+{
+    let cost_function = crate::cost::CostFunction::from_json(cost_function)?;
+    let simulation = ParRouting::new(store_path, cost_function, cache_size)?;
+    simulation.lazy_scout(route_definitions, tx);
+    Ok(())
 }
 
 #[inline]
@@ -70,8 +88,7 @@ pub fn bench_minimalist(
             {"layer_name": "B", "multiplier_scalar": 100},
             {"layer_name": "A", "multiplier_layer": "B"},
             {"layer_name": "C", "multiplier_layer": "A", "multiplier_scalar": 2}
-            ],
-        "ignore_invalid_costs": true
+        ]
     }"#
     .to_string();
     let cost_function = CostFunction::from_json(&cost_json).unwrap();
@@ -137,10 +154,8 @@ mod tests {
         expected_cost: f32,
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(1.0);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = vec![ArrayIndex { i: ei, j: ej }];
@@ -160,10 +175,8 @@ mod tests {
         expected_cost: f32,
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(1.0);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = endpoints
@@ -191,10 +204,8 @@ mod tests {
         cost_array_fill: f32,
     ) {
         let store_path = dataset::samples::constant_value_cost_zarr(cost_array_fill);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![ArrayIndex { i: si, j: sj }];
         let end = endpoints
@@ -220,10 +231,8 @@ mod tests {
     // Due to truncation solution to handle f32 costs.
     fn routing_many_to_many() {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![
             ArrayIndex { i: 1, j: 1 },
@@ -254,10 +263,8 @@ mod tests {
     #[test]
     fn routing_many_to_one() {
         let store_path = dataset::samples::constant_value_cost_zarr(1.);
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
         let start = vec![ArrayIndex { i: 1, j: 1 }, ArrayIndex { i: 5, j: 5 }];
         let end = vec![ArrayIndex { i: 3, j: 3 }];
@@ -326,10 +333,8 @@ mod tests {
             )
             .unwrap();
 
-        let cost_function = CostFunction::from_json(
-            r#"{"cost_layers": [{"layer_name": "cost"}], "ignore_invalid_costs": true}"#,
-        )
-        .unwrap();
+        let cost_function =
+            CostFunction::from_json(r#"{"cost_layers": [{"layer_name": "cost"}]}"#).unwrap();
         let mut simulation = Routing::new(&store_path, cost_function, 1_000).unwrap();
 
         let start = vec![ArrayIndex { i: 0, j: 0 }];
