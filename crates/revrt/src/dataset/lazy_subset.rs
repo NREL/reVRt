@@ -90,15 +90,17 @@ impl<T: ElementOwned> LazySubset<T> {
 
                 let variable =
                     Array::open(self.source.clone(), &format!("/{varname}")).map_err(|err| {
-                        Error::Undefined(format!("Failed to open variable {varname}: {err}"))
+                        Error::IO(std::io::Error::other(format!(
+                            "Failed to open variable {varname}: {err}"
+                        )))
                     })?;
 
                 let values = variable
                     .retrieve_array_subset_ndarray(&self.subset)
                     .map_err(|err| {
-                        Error::Undefined(format!(
+                        Error::IO(std::io::Error::other(format!(
                             "Failed to retrieve array subset for {varname}: {err}"
-                        ))
+                        )))
                     })?;
 
                 self.data.insert(varname.to_string(), values.clone());
