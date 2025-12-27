@@ -24,7 +24,7 @@ from revrt.routing.point_to_many import (
     RoutingLayerManager,
 )
 from revrt.routing.utilities import map_to_costs
-from revrt.utilities import num_feats_in_gpkg, IncrementalWriter
+from revrt.utilities import IncrementalWriter, chunked_read_gpkg
 from revrt.exceptions import (
     revrtKeyError,
     revrtValueError,
@@ -744,19 +744,7 @@ def _collect_geo_files(
     writer = IncrementalWriter(out_fp)
     for i, data_fp in enumerate(files_to_collect, start=1):
         logger.info("Loading %s (%i/%i)", data_fp, i, len(files_to_collect))
-        total_rows = num_feats_in_gpkg(data_fp)
-        logger.debug(
-            "\t- Processing GeoPackage with %d rows in chunks of %d",
-            total_rows,
-            chunk_size,
-        )
-        for chunk_start in range(0, total_rows, chunk_size):
-            chunk_end = min(chunk_start + chunk_size, total_rows)
-            logger.debug(
-                "\t\t- Processing rows %d to %d", chunk_start, chunk_end
-            )
-
-            df = gpd.read_file(data_fp, rows=slice(chunk_start, chunk_end))
+        for df in chunked_read_gpkg(data_fp, chunk_size):
             if simplify_geo_tolerance:
                 df.geometry = df.geometry.simplify(simplify_geo_tolerance)
 
