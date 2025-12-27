@@ -95,7 +95,11 @@ impl<T: ElementOwned> LazySubset<T> {
 
                 let values = variable
                     .retrieve_array_subset_ndarray(&self.subset)
-                    .expect("Failed to retrieve array subset");
+                    .map_err(|err| {
+                        Error::Undefined(format!(
+                            "Failed to retrieve array subset for {varname}: {err}"
+                        ))
+                    })?;
 
                 self.data.insert(varname.to_string(), values.clone());
 
