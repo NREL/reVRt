@@ -12,35 +12,41 @@ LOGGING_META_FILES = {"log.py", "exceptions.py", "warnings.py"}
 
 @pytest.fixture(scope="module")
 def repo_dir():
-    """Return Path to top-level repo directory."""
+    """Return Path to top-level repo directory"""
     return Path(__file__).parent.parent.parent
 
 
 @pytest.fixture(scope="module")
 def test_dir(repo_dir):
-    """Return Path to test directory."""
+    """Return Path to test directory"""
     return repo_dir / "tests"
 
 
 @pytest.fixture(scope="module")
 def test_data_dir(test_dir):
-    """Return Path to test data directory."""
+    """Return Path to test data directory"""
     return test_dir / "data"
 
 
 @pytest.fixture(scope="module")
 def test_utility_data_dir(test_data_dir):
-    """Return Path to test data directory."""
+    """Return Path to test data directory"""
     return test_data_dir / "utilities"
+
+
+@pytest.fixture(scope="module")
+def revx_transmission_layers(test_utility_data_dir):
+    """Return Path to test data directory"""
+    return test_utility_data_dir / "transmission_layers.zarr"
 
 
 @pytest.fixture
 def assert_message_was_logged(caplog):
-    """Assert that a particular (partial) message was logged."""
+    """Assert that a particular (partial) message was logged"""
     caplog.clear()
 
     def assert_message(msg, log_level=None, clear_records=False):
-        """Assert that a message was logged."""
+        """Assert that a message was logged"""
         assert caplog.records
 
         for record in caplog.records:
