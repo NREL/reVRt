@@ -24,9 +24,9 @@ use std::collections::HashMap;
 use std::fmt;
 
 use tracing::trace;
-use zarrs::array::{Array, ElementOwned};
+use zarrs::array::{Array, DataType, ElementOwned};
 use zarrs::array_subset::ArraySubset;
-use zarrs::storage::ReadableListableStorage;
+use zarrs::storage::{ReadableListableStorage, ReadableListableStorageTraits};
 
 use crate::error::{Error, Result};
 
@@ -69,12 +69,14 @@ impl<T: ElementOwned> LazySubset<T> {
     pub(crate) fn subset(&self) -> &ArraySubset {
         &self.subset
     }
+}
 
+impl LazySubset<f32> {
     /// Get a data for a specific variable.
     pub(crate) fn get(
         &mut self,
         varname: &str,
-    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<T>, ndarray::Dim<ndarray::IxDynImpl>>> {
+    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>> {
         trace!("Getting data subset for variable: {}", varname);
 
         let data = match self.data.get(varname) {
@@ -95,13 +97,7 @@ impl<T: ElementOwned> LazySubset<T> {
                         )))
                     })?;
 
-                let values = variable
-                    .retrieve_array_subset_ndarray(&self.subset)
-                    .map_err(|err| {
-                        Error::IO(std::io::Error::other(format!(
-                            "Failed to retrieve array subset for the '{varname}' layer: {err}"
-                        )))
-                    })?;
+                let values = Self::load_as_f32(&variable, &self.subset, varname)?;
 
                 self.data.insert(varname.to_string(), values.clone());
 
@@ -110,6 +106,90 @@ impl<T: ElementOwned> LazySubset<T> {
         };
 
         Ok(data)
+    }
+
+    fn load_as_f32<TStorage: ?Sized + ReadableListableStorageTraits + 'static>(
+        variable: &Array<TStorage>,
+        subset: &ArraySubset,
+        varname: &str,
+    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>> {
+        let dtype = variable.data_type();
+
+        match dtype {
+            DataType::Float32 => {
+                Self::retrieve_and_convert::<f32, TStorage, _>(variable, subset, varname, |v| v)
+            }
+            DataType::Float64 => {
+                Self::retrieve_and_convert::<f64, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            DataType::Int8 => {
+                Self::retrieve_and_convert::<i8, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            DataType::Int16 => {
+                Self::retrieve_and_convert::<i16, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            DataType::Int32 => {
+                Self::retrieve_and_convert::<i32, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            DataType::Int64 => {
+                Self::retrieve_and_convert::<i64, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            DataType::UInt8 => {
+                Self::retrieve_and_convert::<u8, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            DataType::UInt16 => {
+                Self::retrieve_and_convert::<u16, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            DataType::UInt32 => {
+                Self::retrieve_and_convert::<u32, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            DataType::UInt64 => {
+                Self::retrieve_and_convert::<u64, TStorage, _>(variable, subset, varname, |v| {
+                    v as f32
+                })
+            }
+            other => Err(Error::Undefined(format!(
+                "Unsupported data type {:?} for layer '{varname}'",
+                other
+            ))),
+        }
+    }
+
+    fn retrieve_and_convert<T, TStorage, F>(
+        variable: &Array<TStorage>,
+        subset: &ArraySubset,
+        varname: &str,
+        converter: F,
+    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>>
+    where
+        T: ElementOwned + Clone,
+        TStorage: ?Sized + ReadableListableStorageTraits + 'static,
+        F: Fn(T) -> f32 + Copy,
+    {
+        let raw = variable
+            .retrieve_array_subset_ndarray::<T>(subset)
+            .map_err(|err| {
+                Error::IO(std::io::Error::other(format!(
+                    "Failed to retrieve array subset for layer '{varname}': {err}"
+                )))
+            })?;
+        Ok(raw.mapv(converter))
     }
 }
 
