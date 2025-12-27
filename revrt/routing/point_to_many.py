@@ -17,6 +17,7 @@ from shapely.geometry import Point
 from shapely.geometry.linestring import LineString
 
 from revrt import RouteFinder
+from revrt.utilities.handlers import IncrementalWriter
 from revrt.exceptions import (
     revrtKeyError,
     revrtLeastCostPathNotFoundError,
@@ -545,7 +546,7 @@ class RouteMetrics:
         )
 
 
-class IncrementalRouteWriter:
+class IncrementalRouteWriter(IncrementalWriter):
     """Stream results to disk by appending each new result to a file
 
     A new file is created if one does not exist.
@@ -562,43 +563,28 @@ class IncrementalRouteWriter:
             Coordinate reference system for geometries when saving to
             GeoPackage. By default, ``None``.
         """
-        self.out_fp = Path(out_fp)
+        super().__init__(out_fp)
         self.crs = crs
-        self._columns = None
 
-    def save(self, result):
-        """Write a single route result to file
+    def preprocess_chunk(self, result):
+        """Turn result into a dataframe chunk
 
         Parameters
         ----------
         result : dict
             Route result dictionary as built by
             ``RouteMetrics.compute()``.
+
+        Returns
+        -------
+        pandas.DataFrame or geopandas.GeoDataFrame
+            A dataframe holding the route result.
         """
         if "geometry" in result:
-            self._save_gpkg(result)
-            return
-        self._save_csv(result)
-
-    def _save_gpkg(self, result):
-        """Save route result to GeoPackage file"""
-        data = gpd.GeoDataFrame([result], geometry="geometry", crs=self.crs)
-        if self.out_fp.exists():
-            if self._columns is None:
-                self._columns = gpd.read_file(self.out_fp, rows=1).columns
-            data = data.reindex(columns=self._columns)
-        data.to_file(self.out_fp, driver="GPKG", mode="a")
-
-    def _save_csv(self, result):
-        """Save route result to CSV file"""
-        data = pd.DataFrame([result])
-        if self.out_fp.exists():
-            if self._columns is None:
-                self._columns = pd.read_csv(self.out_fp, nrows=0).columns
-            data = data.reindex(columns=self._columns)
-        data.to_csv(
-            self.out_fp, mode="a", index=False, header=not self.out_fp.exists()
-        )
+            return gpd.GeoDataFrame(
+                [result], geometry="geometry", crs=self.crs
+            )
+        return pd.DataFrame([result])
 
 
 class BatchRouteProcessor:

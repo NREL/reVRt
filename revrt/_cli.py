@@ -7,7 +7,11 @@ from gaps.cli import make_cli
 from revrt import __version__
 from revrt.spatial_characterization.cli import route_characterizations_command
 from revrt.costs.cli import build_masks_command, build_routing_layers_command
-from revrt.routing.cli import route_points_command, build_route_costs_command
+from revrt.routing.cli import (
+    route_points_command,
+    collect_routes_command,
+    build_route_costs_command,
+)
 from revrt.utilities.cli import (
     layers_to_file_command,
     layers_from_file_command,
@@ -28,6 +32,7 @@ commands = [
     build_masks_command,
     build_routing_layers_command,
     route_points_command,
+    collect_routes_command,
     build_route_costs_command,
     map_ss_to_rr_command,
     ss_from_conn_command,
