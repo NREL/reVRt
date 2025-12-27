@@ -91,7 +91,7 @@ impl<T: ElementOwned> LazySubset<T> {
                 let variable =
                     Array::open(self.source.clone(), &format!("/{varname}")).map_err(|err| {
                         Error::IO(std::io::Error::other(format!(
-                            "Failed to open variable {varname}: {err}"
+                            "Failed to open layer '{varname}': {err}"
                         )))
                     })?;
 
@@ -99,7 +99,7 @@ impl<T: ElementOwned> LazySubset<T> {
                     .retrieve_array_subset_ndarray(&self.subset)
                     .map_err(|err| {
                         Error::IO(std::io::Error::other(format!(
-                            "Failed to retrieve array subset for {varname}: {err}"
+                            "Failed to retrieve array subset for the '{varname}' layer: {err}"
                         )))
                     })?;
 
