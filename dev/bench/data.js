@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766539764457,
+  "lastUpdate": 1766865705862,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3611,6 +3611,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 400447518,
             "range": "± 6529650",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10491375e9cc56fee17c5e8dd55d2815d9c6c6c1",
+          "message": "Add collect command (#191)\n\n* Fix log calls\n\n* Add utility function\n\n* Add `IncrementalWriter` as a utility class\n\n* Use `IncrementalWriter` utility as base class\n\n* Add collect routes command\n\n* Fix imports\n\n* Fix a few bugs\n\n* Remove spurious command\n\n* Add tests\n\n* Add tests for empty files\n\n* Handle empty GPKG\n\n* Minor updates\n\n* More tests\n\n* Parametrized test\n\n* PR review\n\n* Swap fixture order\n\n* Implement `chunked_read_gpkg`\n\n* Use `chunked_read_gpkg`",
+          "timestamp": "2025-12-27T12:50:34-07:00",
+          "tree_id": "2f815278298ccb66b96af4fbbf8394b47af1730c",
+          "url": "https://github.com/NREL/reVRt/commit/10491375e9cc56fee17c5e8dd55d2815d9c6c6c1"
+        },
+        "date": 1766865704562,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 151739956,
+            "range": "± 1816684",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 187398736,
+            "range": "± 1698873",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 254683478,
+            "range": "± 12558379",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 347923433,
+            "range": "± 16547279",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 676342994,
+            "range": "± 22560546",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 150802309,
+            "range": "± 935200",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155853347,
+            "range": "± 902206",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170339848,
+            "range": "± 1123857",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 221702475,
+            "range": "± 2358422",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 402064454,
+            "range": "± 5334790",
             "unit": "ns/iter"
           }
         ]
