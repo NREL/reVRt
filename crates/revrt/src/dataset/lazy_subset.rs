@@ -28,7 +28,7 @@ use zarrs::array::{Array, ElementOwned};
 use zarrs::array_subset::ArraySubset;
 use zarrs::storage::ReadableListableStorage;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 /// Lazy loaded subset of a Zarr Dataset.
 ///
@@ -88,8 +88,10 @@ impl<T: ElementOwned> LazySubset<T> {
                     self.subset, varname
                 );
 
-                let variable = Array::open(self.source.clone(), &format!("/{varname}"))
-                    .expect("Failed to open variable");
+                let variable =
+                    Array::open(self.source.clone(), &format!("/{varname}")).map_err(|err| {
+                        Error::Undefined(format!("Failed to open variable {varname}: {err}"))
+                    })?;
 
                 let values = variable
                     .retrieve_array_subset_ndarray(&self.subset)
