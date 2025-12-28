@@ -592,11 +592,13 @@ def _convert_to_route_definitions(routes):
     ):
         start_points = []
         for __, info in sub_routes.iterrows():
-            start_idx = tuple(info[start_point_cols])
+            start_idx = tuple(info[start_point_cols].astype("int32"))
             route_attrs[(route_id, start_idx)] = info.to_dict()
             start_points.append(start_idx)
 
-        route_definitions.append((route_id, start_points, [end_idx]))
+        route_definitions.append(
+            (route_id, start_points, [tuple(map(int, end_idx))])
+        )
 
     return route_definitions, route_attrs
 

@@ -60,10 +60,10 @@ def _get_start_end_point_cost_indices(route_points, cost_crs, transform):
 
     logger.debug("Mapping done!")
 
-    route_points["start_row"] = start_row
-    route_points["start_col"] = start_col
-    route_points["end_row"] = end_row
-    route_points["end_col"] = end_col
+    route_points["start_row"] = start_row.astype("int32")
+    route_points["start_col"] = start_col.astype("int32")
+    route_points["end_row"] = end_row.astype("int32")
+    route_points["end_col"] = end_col.astype("int32")
 
     return route_points
 
