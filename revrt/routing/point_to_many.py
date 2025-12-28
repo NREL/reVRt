@@ -222,7 +222,8 @@ class RoutingLayerManager:
             self.cost *= self._layer_fh[mll].isel(band=0).astype(np.float32)
 
         self.cost *= self.routing_scenario.cost_multiplier_scalar
-        self.li_cost += self.cost * 0
+        self.li_cost += self.cost * 0  # make sure arrays are all the same type
+        self.cost += self.li_cost * 0  # make sure arrays are all the same type
 
     def _build_final_routing_layer(self):
         """Build out the routing array"""
@@ -656,7 +657,7 @@ class BatchRouteProcessor:
 
         ts = time.monotonic()
         try:
-            self._compute_routes(Path(out_fp), save_paths=save_paths)
+            self._compute_routes(out_fp, save_paths=save_paths)
         finally:
             self._reset_routing_layers()
 
@@ -670,6 +671,7 @@ class BatchRouteProcessor:
     def _compute_routes(self, out_fp, save_paths):
         """Evaluate route definitions and build result records"""
 
+        out_fp = _validate_out_fp(out_fp, save_paths)
         writer = IncrementalRouteWriter(
             out_fp, crs=self.routing_layers.cost_crs
         )
@@ -693,7 +695,8 @@ class BatchRouteProcessor:
                 (rid, sp, ep)
                 for rid, (sp, ep) in self.route_definitions.items()
             ],
-            cache_size=250_000_000,
+            cache_size=2_000_000_000,
+            log_level=logging.getLogger("revrt").level or None,
         )
         yield from self._skip_failed_routes(route_results)
 
@@ -831,6 +834,31 @@ class BatchRouteProcessor:
         """Close handler and remove built routing layers from memory"""
         self.routing_layers.close()
         del self.routing_layers
+
+
+def _validate_out_fp(out_fp, save_paths):
+    """Validate output filepath extension"""
+    out_fp = Path(out_fp)
+
+    if save_paths and out_fp.suffix.lower() != ".gpkg":
+        msg = (
+            "When saving paths, the output file should have a '.gpkg' "
+            f"extension to ensure proper format! Got input file: '{out_fp}'. "
+            "Adding one... "
+        )
+        warn(msg, revrtWarning)
+        out_fp = out_fp.with_suffix(".gpkg")
+    elif not save_paths and out_fp.suffix.lower() != ".csv":
+        msg = (
+            "When not saving paths, the output file should have a '.csv' "
+            f"extension to ensure proper format! Got input file: '{out_fp}'. "
+            "Adding one... "
+        )
+        warn(msg, revrtWarning)
+        out_fp = out_fp.with_suffix(".csv")
+
+    logger.debug("Validated output filepath: %s", out_fp)
+    return out_fp
 
 
 def _get_valid_points(points, arr_shape, point_type):

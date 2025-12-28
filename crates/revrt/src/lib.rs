@@ -65,6 +65,7 @@ where
     I::Iter: Send,
 {
     let cost_function = crate::cost::CostFunction::from_json(cost_function)?;
+    tracing::trace!("Cost function: {:?}", cost_function);
     let simulation = ParRouting::new(store_path, cost_function, cache_size)?;
     simulation.lazy_scout(route_definitions, tx);
     Ok(())

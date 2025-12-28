@@ -4,7 +4,7 @@ mod scenario;
 use std::sync::{Arc, mpsc};
 
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::{ArrayIndex, RevrtRoutingSolutions, Solution, error::Result};
 use features::Features;
@@ -128,7 +128,7 @@ impl ParRouting {
                         .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
                         .collect();
                     let num_routes = routes.len();
-                    trace!("Finished computing {num_routes} to {end_inds:?}");
+                    debug!("Finished computing {num_routes} to {end_inds:?}");
                     sender.send((route_id, routes))
                 },
             );

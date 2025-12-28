@@ -24,11 +24,11 @@ use std::collections::HashMap;
 use std::fmt;
 
 use tracing::trace;
-use zarrs::array::{Array, ElementOwned};
+use zarrs::array::{Array, DataType, ElementOwned};
 use zarrs::array_subset::ArraySubset;
-use zarrs::storage::ReadableListableStorage;
+use zarrs::storage::{ReadableListableStorage, ReadableListableStorageTraits};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 /// Lazy loaded subset of a Zarr Dataset.
 ///
@@ -69,12 +69,14 @@ impl<T: ElementOwned> LazySubset<T> {
     pub(crate) fn subset(&self) -> &ArraySubset {
         &self.subset
     }
+}
 
+impl LazySubset<f32> {
     /// Get a data for a specific variable.
     pub(crate) fn get(
         &mut self,
         varname: &str,
-    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<T>, ndarray::Dim<ndarray::IxDynImpl>>> {
+    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>> {
         trace!("Getting data subset for variable: {}", varname);
 
         let data = match self.data.get(varname) {
@@ -88,12 +90,14 @@ impl<T: ElementOwned> LazySubset<T> {
                     self.subset, varname
                 );
 
-                let variable = Array::open(self.source.clone(), &format!("/{varname}"))
-                    .expect("Failed to open variable");
+                let variable =
+                    Array::open(self.source.clone(), &format!("/{varname}")).map_err(|err| {
+                        Error::IO(std::io::Error::other(format!(
+                            "Failed to open layer '{varname}': {err}"
+                        )))
+                    })?;
 
-                let values = variable
-                    .retrieve_array_subset_ndarray(&self.subset)
-                    .expect("Failed to retrieve array subset");
+                let values = self.load_as_f32(&variable, varname)?;
 
                 self.data.insert(varname.to_string(), values.clone());
 
@@ -102,6 +106,72 @@ impl<T: ElementOwned> LazySubset<T> {
         };
 
         Ok(data)
+    }
+
+    fn load_as_f32<TStorage: ?Sized + ReadableListableStorageTraits + 'static>(
+        &self,
+        variable: &Array<TStorage>,
+        varname: &str,
+    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>> {
+        let dtype = variable.data_type();
+
+        match dtype {
+            DataType::Float32 => {
+                self.retrieve_and_convert::<f32, TStorage, _>(variable, varname, |v| v)
+            }
+            DataType::Float64 => {
+                self.retrieve_and_convert::<f64, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            DataType::Int8 => {
+                self.retrieve_and_convert::<i8, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            DataType::Int16 => {
+                self.retrieve_and_convert::<i16, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            DataType::Int32 => {
+                self.retrieve_and_convert::<i32, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            DataType::Int64 => {
+                self.retrieve_and_convert::<i64, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            DataType::UInt8 => {
+                self.retrieve_and_convert::<u8, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            DataType::UInt16 => {
+                self.retrieve_and_convert::<u16, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            DataType::UInt32 => {
+                self.retrieve_and_convert::<u32, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            DataType::UInt64 => {
+                self.retrieve_and_convert::<u64, TStorage, _>(variable, varname, |v| v as f32)
+            }
+            other => Err(Error::IO(std::io::Error::other(format!(
+                "Unsupported data type {:?} for layer '{varname}'",
+                other
+            )))),
+        }
+    }
+
+    fn retrieve_and_convert<T, TStorage, F>(
+        &self,
+        variable: &Array<TStorage>,
+        varname: &str,
+        converter: F,
+    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>>
+    where
+        T: ElementOwned + Clone,
+        TStorage: ?Sized + ReadableListableStorageTraits + 'static,
+        F: Fn(T) -> f32 + Copy,
+    {
+        let raw = variable
+            .retrieve_array_subset_ndarray::<T>(&self.subset)
+            .map_err(|err| {
+                Error::IO(std::io::Error::other(format!(
+                    "Failed to retrieve array subset for layer '{varname}': {err}"
+                )))
+            })?;
+        Ok(raw.mapv(converter))
     }
 }
 

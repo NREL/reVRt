@@ -5,11 +5,68 @@ from pathlib import Path
 import pytest
 import numpy as np
 import xarray as xr
+import pandas as pd
 import geopandas as gpd
 from rasterio.transform import from_origin
 
-from revrt.utilities import LayeredFile
+from revrt.utilities import LayeredFile, features_to_route_table
+from revrt.costs.config import TransmissionConfig, parse_cap_class
 from revrt.routing.point_to_many import BatchRouteProcessor, RoutingScenario
+from revrt.routing.cli import _convert_to_route_definitions
+from revrt.routing.utilities import map_to_costs
+
+DEFAULT_CONFIG = TransmissionConfig()
+DEFAULT_BARRIER_CONFIG = {
+    "multiplier_layer": "transmission_barrier",
+    "multiplier_scalar": 100,
+}
+CHECK_COLS = ("start_index", "length_km", "cost", "index")
+
+
+def _cap_class_to_cap(capacity):
+    """Get capacity for a capacity class"""
+    capacity_class = parse_cap_class(capacity)
+    return DEFAULT_CONFIG["power_classes"][capacity_class]
+
+
+def check(truth, test, check_cols=CHECK_COLS):
+    """Compare values in truth and test for given columns"""
+    if check_cols is None:
+        check_cols = truth.columns
+
+    truth = truth.sort_values(["start_index", "index"])
+    test = test.sort_values(["start_index", "index"])
+
+    for c in check_cols:
+        msg = f"values for {c} do not match!"
+        c_truth = truth[c]
+        c_test = test[c]
+        assert np.allclose(c_truth, c_test, equal_nan=True), msg
+
+
+@pytest.fixture(scope="module")
+def routing_data_dir(test_data_dir):
+    """Generate test BA regions and network nodes from ISO shapes"""
+    return test_data_dir / "routing"
+
+
+@pytest.fixture(scope="module")
+def route_table(revx_transmission_layers, routing_data_dir):
+    """Generate test BA regions and network nodes from ISO shapes"""
+
+    with xr.open_dataset(
+        revx_transmission_layers, consolidated=False, engine="zarr"
+    ) as f:
+        cost_crs = f.rio.crs
+        features = routing_data_dir / "ri_county_centroids.gpkg"
+        route_feats = gpd.read_file(features).to_crs(cost_crs)
+        route_points = features_to_route_table(route_feats)
+        return map_to_costs(
+            route_points,
+            crs=f.rio.crs,
+            transform=f.rio.transform(),
+            shape=f.rio.shape,
+        )
 
 
 @pytest.fixture(scope="module")
@@ -87,6 +144,33 @@ def test_soft_barrier_with_large_dataset(
         x, y = route["geometry"].xy
         assert np.allclose(x, np.linspace(0.5, 900.5, num=901))
         assert np.allclose(y, 994.5)
+
+
+@pytest.mark.parametrize("capacity", [100, 200, 400, 1000, 3000])
+def test_revx_capacity_class(
+    revx_transmission_layers, capacity, route_table, tmp_path, routing_data_dir
+):
+    """Test reVX capacity class routing against known outputs"""
+    cap = _cap_class_to_cap(capacity)
+    routing_scenario = RoutingScenario(
+        cost_fpath=revx_transmission_layers,
+        cost_layers=[{"layer_name": f"tie_line_costs_{cap}MW"}],
+        friction_layers=[DEFAULT_BARRIER_CONFIG],
+    )
+
+    out_fp = tmp_path / f"least_cost_paths_{capacity}MW.csv"
+    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
+    route_computer = BatchRouteProcessor(
+        routing_scenario=routing_scenario,
+        route_definitions=route_definitions,
+        route_attrs=route_attrs,
+    )
+    route_computer.process(out_fp=out_fp, save_paths=False)
+
+    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    test = pd.read_csv(out_fp)
+    truth = pd.read_csv(truth)
+    check(truth, test)
 
 
 if __name__ == "__main__":
