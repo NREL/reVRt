@@ -15,6 +15,7 @@ from revrt.routing.point_to_many import (
     RouteMetrics,
     RoutingLayerManager,
     RoutingScenario,
+    _validate_out_fp,
 )
 from revrt.exceptions import revrtKeyError
 from revrt.warn import revrtWarning, revrtDeprecationWarning
@@ -1875,6 +1876,48 @@ def test_route_many_attrs(sample_layered_data, tmp_path, single_rd):
     assert np.isnan(fourth_route["route_type"])
     assert fourth_route["my_attr"] == "B"
     assert np.isnan(fourth_route["final"])
+
+
+def test_validate_out_fp_ok(caplog):
+    """Valid output file paths pass through unchanged without warnings"""
+    assert _validate_out_fp("test/out.csv", save_paths=False) == Path(
+        "test/out.csv"
+    )
+    assert _validate_out_fp("test/out.gpkg", save_paths=True) == Path(
+        "test/out.gpkg"
+    )
+
+    for record in caplog.records:
+        assert "the output file should have a" not in record.message
+
+
+def test_validate_out_fp_bad_gpkg(assert_message_was_logged):
+    """Invalid output file paths are corrected with warnings"""
+    with pytest.warns(
+        revrtWarning,
+        match="When saving paths, the output file should have a '.gpkg'",
+    ):
+        out_fp = _validate_out_fp("test/out.csv", save_paths=True)
+
+    assert out_fp == Path("test/out.gpkg")
+    assert_message_was_logged(
+        "When saving paths, the output file should have a '.gpkg'", "WARNING"
+    )
+
+
+def test_validate_out_fp_bad_csv(assert_message_was_logged):
+    """Invalid output file paths are corrected with warnings"""
+    with pytest.warns(
+        revrtWarning,
+        match="When not saving paths, the output file should have a '.csv'",
+    ):
+        out_fp = _validate_out_fp("test/out.gpkg", save_paths=False)
+
+    assert out_fp == Path("test/out.csv")
+    assert_message_was_logged(
+        "When not saving paths, the output file should have a '.csv'",
+        "WARNING",
+    )
 
 
 if __name__ == "__main__":

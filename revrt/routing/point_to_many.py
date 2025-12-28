@@ -833,6 +833,31 @@ class BatchRouteProcessor:
         del self.routing_layers
 
 
+def _validate_out_fp(out_fp, save_paths):
+    """Validate output filepath extension"""
+    out_fp = Path(out_fp)
+
+    if save_paths and out_fp.suffix.lower() != ".gpkg":
+        msg = (
+            "When saving paths, the output file should have a '.gpkg' "
+            f"extension to ensure proper format! Got input file: '{out_fp}'. "
+            "Adding one... "
+        )
+        warn(msg, revrtWarning)
+        out_fp = out_fp.with_suffix(".gpkg")
+    elif not save_paths and out_fp.suffix.lower() != ".csv":
+        msg = (
+            "When not saving paths, the output file should have a '.csv' "
+            f"extension to ensure proper format! Got input file: '{out_fp}'. "
+            "Adding one... "
+        )
+        warn(msg, revrtWarning)
+        out_fp = out_fp.with_suffix(".csv")
+
+    logger.debug("Validated output filepath: %s", out_fp)
+    return out_fp
+
+
 def _get_valid_points(points, arr_shape, point_type):
     """Get only points that are within array bounds"""
     valid_points = []
