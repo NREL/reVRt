@@ -259,8 +259,6 @@ impl Dataset {
             }
         }
 
-        trace!("Input index: (i={}, j={})", i, j);
-
         let neighbors = self.get_neighbor_costs(i_range.clone(), j_range.clone(), &subset, false);
         let invariant_neighbors = self.get_neighbor_costs(i_range, j_range, &subset, true);
 
