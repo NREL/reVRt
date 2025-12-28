@@ -656,7 +656,7 @@ class BatchRouteProcessor:
 
         ts = time.monotonic()
         try:
-            self._compute_routes(Path(out_fp), save_paths=save_paths)
+            self._compute_routes(out_fp, save_paths=save_paths)
         finally:
             self._reset_routing_layers()
 
@@ -670,6 +670,7 @@ class BatchRouteProcessor:
     def _compute_routes(self, out_fp, save_paths):
         """Evaluate route definitions and build result records"""
 
+        out_fp = _validate_out_fp(out_fp, save_paths)
         writer = IncrementalRouteWriter(
             out_fp, crs=self.routing_layers.cost_crs
         )
