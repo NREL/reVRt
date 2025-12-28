@@ -44,8 +44,6 @@ impl Scenario {
     }
 
     pub(super) fn get_3x3(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, f32)> {
-        trace!("Getting 3x3 around position {:?}", position);
-
         self.dataset.get_3x3(position)
     }
 
@@ -60,8 +58,6 @@ impl Scenario {
     ///   passing it down to the get_3x3 function so that it can add
     ///   the center pixel to all successor cost values
     pub(super) fn successors(&self, position: &ArrayIndex) -> Vec<(ArrayIndex, u64)> {
-        trace!("Getting successors for position {:?}", position);
-
         let neighbors = self.get_3x3(position);
         let neighbors = neighbors
             .into_iter()

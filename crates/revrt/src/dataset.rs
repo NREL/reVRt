@@ -120,7 +120,7 @@ impl Dataset {
         if cache_size < 1_000_000 {
             warn!("Cache size smaller than 1MB");
         }
-        trace!("Creating cache with size {}MB", cache_size / 1_000_000);
+        debug!("Creating cache with size {}MB", cache_size / 1_000_000);
         // let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
 
         trace!("Dataset opened successfully");
