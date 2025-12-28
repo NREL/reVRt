@@ -9,8 +9,13 @@ from .base import (
     file_full_path,
     load_data_using_layer_file_profile,
     log_mem,
-    num_feats_in_gpkg,
+    features_to_route_table,
     save_data_using_layer_file_profile,
     save_data_using_custom_props,
 )
-from .handlers import LayeredFile, IncrementalWriter, chunked_read_gpkg
+from .handlers import (
+    LayeredFile,
+    IncrementalWriter,
+    chunked_read_gpkg,
+    num_feats_in_gpkg,
+)
