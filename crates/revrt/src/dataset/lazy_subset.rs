@@ -97,7 +97,7 @@ impl LazySubset<f32> {
                         )))
                     })?;
 
-                let values = Self::load_as_f32(&variable, &self.subset, varname)?;
+                let values = self.load_as_f32(&variable, varname)?;
 
                 self.data.insert(varname.to_string(), values.clone());
 
@@ -109,71 +109,53 @@ impl LazySubset<f32> {
     }
 
     fn load_as_f32<TStorage: ?Sized + ReadableListableStorageTraits + 'static>(
+        &self,
         variable: &Array<TStorage>,
-        subset: &ArraySubset,
         varname: &str,
     ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>> {
         let dtype = variable.data_type();
 
         match dtype {
             DataType::Float32 => {
-                Self::retrieve_and_convert::<f32, TStorage, _>(variable, subset, varname, |v| v)
+                self.retrieve_and_convert::<f32, TStorage, _>(variable, varname, |v| v)
             }
             DataType::Float64 => {
-                Self::retrieve_and_convert::<f64, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<f64, TStorage, _>(variable, varname, |v| v as f32)
             }
             DataType::Int8 => {
-                Self::retrieve_and_convert::<i8, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<i8, TStorage, _>(variable, varname, |v| v as f32)
             }
             DataType::Int16 => {
-                Self::retrieve_and_convert::<i16, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<i16, TStorage, _>(variable, varname, |v| v as f32)
             }
             DataType::Int32 => {
-                Self::retrieve_and_convert::<i32, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<i32, TStorage, _>(variable, varname, |v| v as f32)
             }
             DataType::Int64 => {
-                Self::retrieve_and_convert::<i64, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<i64, TStorage, _>(variable, varname, |v| v as f32)
             }
             DataType::UInt8 => {
-                Self::retrieve_and_convert::<u8, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<u8, TStorage, _>(variable, varname, |v| v as f32)
             }
             DataType::UInt16 => {
-                Self::retrieve_and_convert::<u16, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<u16, TStorage, _>(variable, varname, |v| v as f32)
             }
             DataType::UInt32 => {
-                Self::retrieve_and_convert::<u32, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<u32, TStorage, _>(variable, varname, |v| v as f32)
             }
             DataType::UInt64 => {
-                Self::retrieve_and_convert::<u64, TStorage, _>(variable, subset, varname, |v| {
-                    v as f32
-                })
+                self.retrieve_and_convert::<u64, TStorage, _>(variable, varname, |v| v as f32)
             }
-            other => Err(Error::Undefined(format!(
+            other => Err(Error::IO(std::io::Error::other(format!(
                 "Unsupported data type {:?} for layer '{varname}'",
                 other
-            ))),
+            )))),
         }
     }
 
     fn retrieve_and_convert<T, TStorage, F>(
+        &self,
         variable: &Array<TStorage>,
-        subset: &ArraySubset,
         varname: &str,
         converter: F,
     ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<ndarray::IxDynImpl>>>
@@ -183,7 +165,7 @@ impl LazySubset<f32> {
         F: Fn(T) -> f32 + Copy,
     {
         let raw = variable
-            .retrieve_array_subset_ndarray::<T>(subset)
+            .retrieve_array_subset_ndarray::<T>(&self.subset)
             .map_err(|err| {
                 Error::IO(std::io::Error::other(format!(
                     "Failed to retrieve array subset for layer '{varname}': {err}"
