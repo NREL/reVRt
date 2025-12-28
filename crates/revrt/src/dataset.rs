@@ -3,11 +3,11 @@ mod lazy_subset;
 pub(crate) mod samples;
 
 use std::iter;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use tracing::{debug, trace, warn};
-// use zarrs::array::ArrayChunkCacheExt;
-use zarrs::array::ChunkGrid;
+use zarrs::array::codec::CodecOptions;
+use zarrs::array::{ChunkCache, ChunkCacheDecodedLruSizeLimit, ChunkGrid};
 use zarrs::storage::{
     ListableStorageTraits, ReadableListableStorage, ReadableWritableListableStorage,
 };
@@ -37,8 +37,10 @@ pub(super) struct Dataset {
     cost_chunk_idx: RwLock<ndarray::Array2<bool>>,
     /// Custom cost function definition
     cost_function: CostFunction,
-    // Cache for the cost
-    // cache: zarrs::array::ChunkCacheLruSizeLimit<zarrs::array::ChunkCacheTypeDecoded>,
+    /// Cache for decoded cost chunks shared across calls
+    cost_cache: ChunkCacheDecodedLruSizeLimit,
+    /// Cache for decoded invariant cost chunks shared across calls
+    cost_invariant_cache: ChunkCacheDecodedLruSizeLimit,
 }
 
 impl Dataset {
@@ -121,7 +123,18 @@ impl Dataset {
             warn!("Cache size smaller than 1MB");
         }
         debug!("Creating cache with size {}MB", cache_size / 1_000_000);
-        // let cache = zarrs::array::ChunkCacheLruSizeLimit::new(cache_size);
+        // TODO: tune cache_size against typical chunk sizes
+        // (e.g. chunk_bytes * hot_chunks * safety_factor)
+        let cost_array_readable =
+            Arc::new(zarrs::array::Array::open(swap.clone(), "/cost")?.readable());
+        let cost_invariant_array_readable =
+            Arc::new(zarrs::array::Array::open(swap.clone(), "/cost_invariant")?.readable());
+        let cost_cache =
+            ChunkCacheDecodedLruSizeLimit::new(cost_array_readable.clone(), cache_size / 2);
+        let cost_invariant_cache = ChunkCacheDecodedLruSizeLimit::new(
+            cost_invariant_array_readable.clone(),
+            cache_size / 2,
+        );
 
         trace!("Dataset opened successfully");
         Ok(Self {
@@ -130,7 +143,8 @@ impl Dataset {
             swap,
             cost_chunk_idx,
             cost_function,
-            // cache,
+            cost_cache,
+            cost_invariant_cache,
         })
     }
 
@@ -189,12 +203,12 @@ impl Dataset {
         trace!("Cost dataset contents: {:?}", self.swap.list().unwrap());
         trace!("Cost dataset size: {:?}", self.swap.size().unwrap());
 
-        trace!("Opening cost dataset");
-        let cost = zarrs::array::Array::open(self.swap.clone(), "/cost").unwrap();
-        trace!("Cost dataset with shape: {:?}", cost.shape());
+        trace!("Opening cost dataset via cache");
+        let cost_array = self.cost_cache.array();
+        trace!("Cost dataset with shape: {:?}", cost_array.shape());
 
         // Cutting off the edges for now.
-        let shape = cost.shape();
+        let shape = cost_array.shape();
         debug_assert!(!shape.contains(&0));
 
         let max_i = shape[1] - 1;
@@ -222,7 +236,7 @@ impl Dataset {
         trace!("Cost subset: {:?}", subset);
 
         // Find the chunks that intersect the subset
-        let chunks = &cost.chunks_in_array_subset(&subset).unwrap().unwrap();
+        let chunks = &cost_array.chunks_in_array_subset(&subset).unwrap().unwrap();
         trace!("Cost chunks: {:?}", chunks);
         trace!(
             "Cost subset extends to {:?} chunks",
@@ -335,12 +349,12 @@ impl Dataset {
     ) -> Vec<((u64, u64), f32)> {
         trace!("Opening cost dataset (is_invariant={})", is_invariant);
 
-        let layer_name = if is_invariant {
-            "/cost_invariant"
+        let cache = if is_invariant {
+            &self.cost_invariant_cache
         } else {
-            "/cost"
+            &self.cost_cache
         };
-        let cost_array = zarrs::array::Array::open(self.swap.clone(), layer_name).unwrap();
+        let cost_array = cache.array();
         trace!(
             "Cost dataset (is_invariant={}) with shape: {:?}",
             is_invariant,
@@ -348,11 +362,8 @@ impl Dataset {
         );
 
         // Retrieve the 3x3 neighborhood values
-        let cost_values: Vec<f32> = cost_array
-            .retrieve_array_subset_elements_opt::<f32>(
-                subset,
-                &zarrs::array::codec::CodecOptions::default(),
-            )
+        let cost_values: Vec<f32> = cache
+            .retrieve_array_subset_elements::<f32>(subset, &CodecOptions::default())
             .unwrap();
 
         trace!("Read values {:?}", cost_values);
