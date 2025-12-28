@@ -1,6 +1,7 @@
 """Handler for file containing GeoTIFF layers"""
 
 import time
+import sqlite3
 import logging
 import operator
 import functools
@@ -757,6 +758,40 @@ class LayeredFile:
             layers, ds_chunks=ds_chunks, lock=lock, **profile_kwargs
         )
         return layers
+
+
+def num_feats_in_gpkg(filename):
+    """Lightweight func to get number of features in GeoPackage file
+
+    This function does not load the entire GeoPackage into memory.
+    Instead, it queries the internal SQLite database to get the number
+    of features.
+
+    Parameters
+    ----------
+    filename : path-like
+        Path to GeoPackage file.
+
+    Returns
+    -------
+    int
+        Number of features in the GeoPackage file.
+    """
+    with sqlite3.connect(filename) as con:
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT table_name, column_name FROM gpkg_geometry_columns;"
+        )
+        try:
+            geom_table_suffix = "_".join(cursor.fetchall()[0])
+        except IndexError:
+            return 0  # No geometry columns found
+
+        geom_table = f"rtree_{geom_table_suffix}"
+
+        q = f"SELECT COUNT(distinct id) FROM {geom_table};"  # noqa
+        cursor.execute(q)
+        return cursor.fetchall()[0][0]
 
 
 def chunked_read_gpkg(data_fp, chunk_size):
