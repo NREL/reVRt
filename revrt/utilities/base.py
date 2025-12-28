@@ -2,13 +2,13 @@
 
 import shutil
 import psutil
-import sqlite3
 import logging
 from pathlib import Path
 from warnings import warn
 
 import rioxarray
 import odc.geo.xr
+import pandas as pd
 import numpy as np
 import xarray as xr
 from rasterio.warp import Resampling
@@ -589,35 +589,45 @@ def elapsed_time_as_str(seconds_elapsed):
     return time_str
 
 
-def num_feats_in_gpkg(filename):
-    """Lightweight func to get number of features in GeoPackage file
+def features_to_route_table(features):
+    """Convert features GDF into route start/end point table
 
-    This function does not load the entire GeoPackage into memory.
-    Instead, it queries the internal SQLite database to get the number
-    of features.
+    This function builds a routing table to define start/end points for
+    routes between all permutations of the given features. This is
+    mostly for easy backward-compatibility, since the old routing code
+    computed paths between all feature permutations by default.
 
     Parameters
     ----------
-    filename : path-like
-        Path to GeoPackage file.
+    features : gpd.GeoDataFrame
+        Geopandas DataFrame containing features to route between.
 
     Returns
     -------
-    int
-        Number of features in the GeoPackage file.
+    pd.DataFrame
+        Pandas DataFrame with the expected routing columns: `start_lat`,
+        `start_lon`, `end_lat`, and `end_lon`. Also includes
+        `start_index` and `index` columns for convenience. DataFrame
+        index name is set to "rid".
     """
-    with sqlite3.connect(filename) as con:
-        cursor = con.cursor()
-        cursor.execute(
-            "SELECT table_name, column_name FROM gpkg_geometry_columns;"
+    coords = features["geometry"].centroid.to_crs("EPSG:4326")
+    all_routes = []
+    for start_ind, start_coord in enumerate(coords[:-1]):
+        start_lat, start_lon = start_coord.y, start_coord.x
+        end_coords = coords[start_ind + 1 :]
+        end_idx = range(start_ind + 1, len(coords))
+        new_routes = pd.DataFrame(
+            {
+                "end_lat": end_coords.y,
+                "end_lon": end_coords.x,
+                "index": end_idx,
+            }
         )
-        try:
-            geom_table_suffix = "_".join(cursor.fetchall()[0])
-        except IndexError:
-            return 0  # No geometry columns found
+        new_routes["start_lat"] = start_lat
+        new_routes["start_lon"] = start_lon
+        new_routes["start_index"] = start_ind
+        all_routes.append(new_routes)
 
-        geom_table = f"rtree_{geom_table_suffix}"
-
-        q = f"SELECT COUNT(distinct id) FROM {geom_table};"  # noqa
-        cursor.execute(q)
-        return cursor.fetchall()[0][0]
+    all_routes = pd.concat(all_routes, axis=0).reset_index(drop=True)
+    all_routes.index.name = "rid"
+    return all_routes.reset_index(drop=False)
