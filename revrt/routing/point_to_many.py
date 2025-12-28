@@ -222,7 +222,8 @@ class RoutingLayerManager:
             self.cost *= self._layer_fh[mll].isel(band=0).astype(np.float32)
 
         self.cost *= self.routing_scenario.cost_multiplier_scalar
-        self.li_cost += self.cost * 0
+        self.li_cost += self.cost * 0  # make sure arrays are all the same type
+        self.cost += self.li_cost * 0  # make sure arrays are all the same type
 
     def _build_final_routing_layer(self):
         """Build out the routing array"""
