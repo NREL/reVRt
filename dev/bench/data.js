@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766865705862,
+  "lastUpdate": 1766900428083,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3695,6 +3695,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 402064454,
             "range": "± 5334790",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f5e638cb98d268494c99d4e72b8438829d0d1e52",
+          "message": "First reVX test port (#192)\n\n* Update docstrings\n\n* Propagate error instead of panicking\n\n* Propagate error instead of panicking\n\n* Raise I/O errors\n\n* Update error messages\n\n* Add a converter to f32 when loading layers\n\n* Add another integration test\n\n* Add `_validate_out_fp` and tests\n\n* Use `_validate_out_fp`\n\n* Clean up some logging\n\n* MInor refactor\n\n* Remove spurious logging statement\n\n* Move ffi module into sub folder\n\n* Add py tracing module\n\n* Add tracing subscriber to toml\n\n* Add logger input\n\n* increase hardcoded cache size\n\n* Make function available in namespace\n\n* Add `test_revx_capacity_class`\n\n* Add testing data\n\n* Add cache use\n\n* Replace function with a new one\n\n* Add new function\n\n* Cast to int\n\n* Import to namespace\n\n* Minor change\n\n* Fix docstring",
+          "timestamp": "2025-12-27T22:29:38-07:00",
+          "tree_id": "56b3662485dc3fd0f077147e9e4af9be37ffccfe",
+          "url": "https://github.com/NREL/reVRt/commit/f5e638cb98d268494c99d4e72b8438829d0d1e52"
+        },
+        "date": 1766900427410,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 87250951,
+            "range": "± 1133928",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 55017228,
+            "range": "± 809976",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 102914425,
+            "range": "± 2401686",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 156322484,
+            "range": "± 2976165",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 649501861,
+            "range": "± 11201176",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 151294953,
+            "range": "± 2016421",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 156070450,
+            "range": "± 869660",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170304188,
+            "range": "± 1373208",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 215893141,
+            "range": "± 2457575",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 381309490,
+            "range": "± 5127859",
             "unit": "ns/iter"
           }
         ]
