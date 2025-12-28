@@ -1,3 +1,5 @@
+mod py_tracing;
+
 use std::path::PathBuf;
 use std::sync::mpsc;
 
@@ -148,6 +150,11 @@ fn find_paths(
 /// cache_size : int, default=250_000_000
 ///     Cache size to use for computation, in bytes.
 ///     By default, `250,000,000` (250MB).
+/// log_level : int, optional
+///     Logging level for Rust tracing emitted to stderr. Roughly follows the
+///     Python logging module levels, where 0 = TRACE, 10 = DEBUG, 20 = INFO,
+///     30 = WARN, and 40 = ERROR. If None is given, no logging is set up.
+///     By default, `None`.
 ///
 /// Yields
 /// ------
@@ -174,19 +181,22 @@ struct RouteFinder {
 #[pymethods]
 impl RouteFinder {
     #[new]
-    #[pyo3(signature = (zarr_fp, cost_function, route_definitions, cache_size=250_000_000))]
+    #[pyo3(signature = (zarr_fp, cost_function, route_definitions, cache_size=250_000_000, log_level=None))]
     fn new(
         zarr_fp: PathBuf,
         cost_function: String,
         route_definitions: Vec<PyRouteDefinition>,
         cache_size: u64,
-    ) -> Self {
-        Self {
+        log_level: Option<u8>,
+    ) -> PyResult<Self> {
+        py_tracing::configure(log_level).map_err(PyErr::from)?;
+
+        Ok(Self {
             zarr_fp,
             cost_function,
             route_definitions,
             cache_size,
-        }
+        })
     }
 
     fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<RouteOutputIter>> {
