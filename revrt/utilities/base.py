@@ -599,12 +599,12 @@ def features_to_route_table(features):
 
     Parameters
     ----------
-    features : gpd.GeoDataFrame
+    features : geopandas.GeoDataFrame
         Geopandas DataFrame containing features to route between.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         Pandas DataFrame with the expected routing columns: `start_lat`,
         `start_lon`, `end_lat`, and `end_lon`. Also includes
         `start_index` and `index` columns for convenience. DataFrame
