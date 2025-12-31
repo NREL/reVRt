@@ -260,5 +260,41 @@ def test_revx_cost_multiplier_layer(
     assert np.allclose(test["cost"].to_numpy(), truth["cost"].to_numpy() * 7)
 
 
+def test_revx_cost_multiplier_scalar(
+    revx_transmission_layers, route_table, tmp_path, routing_data_dir
+):
+    """Test routing with a cost_multiplier_scalar"""
+
+    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
+    cap = _cap_class_to_cap(capacity)
+    cost_layer = {"layer_name": f"tie_line_costs_{cap}MW"}
+
+    routing_scenario = RoutingScenario(
+        cost_fpath=revx_transmission_layers,
+        cost_layers=[cost_layer],
+        friction_layers=[DEFAULT_BARRIER_CONFIG],
+        cost_multiplier_scalar=5,
+    )
+    out_fp = tmp_path / f"least_cost_paths_{capacity}MW.csv"
+    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
+    route_computer = BatchRouteProcessor(
+        routing_scenario=routing_scenario,
+        route_definitions=route_definitions,
+        route_attrs=route_attrs,
+    )
+    route_computer.process(out_fp=out_fp, save_paths=False)
+
+    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+
+    test = pd.read_csv(out_fp)
+    truth = pd.read_csv(truth)
+
+    truth = truth.sort_values(["start_index", "index"])
+    test = test.sort_values(["start_index", "index"])
+
+    assert np.allclose(test["length_km"], truth["length_km"])
+    assert np.allclose(test["cost"].to_numpy(), truth["cost"].to_numpy() * 5)
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
