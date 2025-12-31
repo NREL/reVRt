@@ -688,5 +688,85 @@ def test_apply_row_and_polarity_with_existing_mult(
     check(truth, test)
 
 
+def test_apply_multipliers_by_route(
+    revx_transmission_layers,
+    route_table,
+    tmp_path,
+    routing_data_dir,
+    cli_runner,
+):
+    """Test applying unique multipliers per route"""
+    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
+    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
+    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    truth = pd.read_csv(truth)
+
+    row_config_path = tmp_path / "config_row.json"
+    row_config = {"138": 2, "69": 2.5, "345": 3, "500": 3.5}
+    row_config_path.write_text(json.dumps(row_config))
+
+    polarity_config_path = tmp_path / "config_polarity.json"
+    polarity_config = {
+        "138": {"ac": 4, "dc": 4.5},
+        "69": {"ac": 5, "dc": 5.5},
+        "345": {"ac": 6, "dc": 6.5},
+        "500": {"ac": 7, "dc": 7.5},
+    }
+    polarity_config_path.write_text(json.dumps(polarity_config))
+
+    idx_to_volt = {0: 138, 1: 69, 2: 345, 3: 500}
+    idx_to_polarity = {0: "ac", 1: "dc", 2: "ac", 3: "dc", 4: "dc"}
+    for idx, volt in idx_to_volt.items():
+        mask = route_table["start_index"] == idx
+        route_table.loc[mask, "voltage"] = volt
+    for idx, polarity in idx_to_polarity.items():
+        mask = route_table["start_index"] == idx
+        route_table.loc[mask, "polarity"] = polarity
+    routes_fp = tmp_path / "routes.csv"
+    route_table.to_csv(routes_fp, index=False)
+
+    config = {
+        "log_directory": str(tmp_path),
+        "execution_control": {"option": "local"},
+        "transmission_config": {
+            "row_width": str(row_config_path),
+            "voltage_polarity_mult": str(polarity_config_path),
+        },
+        "cost_fpath": str(revx_transmission_layers),
+        "route_table": str(routes_fp),
+        "save_paths": False,
+        "cost_layers": [
+            {
+                "layer_name": cost_layer,
+                "multiplier_scalar": 1.2,
+                "apply_row_mult": True,
+                "apply_polarity_mult": True,
+            }
+        ],
+        "friction_layers": [DEFAULT_BARRIER_CONFIG],
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config))
+
+    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    divisors = []
+    for __, row in test.iterrows():
+        voltage = str(int(row["voltage"]))
+        polarity = row["polarity"]
+        divisors.append(
+            1.2
+            * row_config[voltage]
+            * polarity_config[voltage][polarity]
+            * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
+        )
+    test["cost"] /= divisors
+
+    check(truth, test)
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
