@@ -52,6 +52,20 @@ def check(truth, test, check_cols=CHECK_COLS):
         assert np.allclose(c_truth, c_test, equal_nan=True), msg
 
 
+def _run_lcp(tmp_path, routing_scenario, route_table):
+    """Run least cost path computation and return resulting dataframe"""
+    out_fp = tmp_path / "least_cost_paths_test.csv"
+    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
+    route_computer = BatchRouteProcessor(
+        routing_scenario=routing_scenario,
+        route_definitions=route_definitions,
+        route_attrs=route_attrs,
+    )
+    route_computer.process(out_fp=out_fp, save_paths=False)
+
+    return pd.read_csv(out_fp)
+
+
 def _run_cli(
     tmp_path,
     routing_data_dir,
@@ -144,18 +158,11 @@ def test_capacity_class(
         friction_layers=[DEFAULT_BARRIER_CONFIG],
     )
 
-    out_fp = tmp_path / f"least_cost_paths_{capacity}MW.csv"
-    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
-    route_computer = BatchRouteProcessor(
-        routing_scenario=routing_scenario,
-        route_definitions=route_definitions,
-        route_attrs=route_attrs,
-    )
-    route_computer.process(out_fp=out_fp, save_paths=False)
+    test = _run_lcp(tmp_path, routing_scenario, route_table)
 
     truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    test = pd.read_csv(out_fp)
     truth = pd.read_csv(truth)
+
     check(truth, test)
 
 
@@ -181,17 +188,9 @@ def test_invariant_costs(
         ignore_invalid_costs=False,
     )
 
-    out_fp = tmp_path / f"least_cost_paths_{capacity}MW.csv"
-    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
-    route_computer = BatchRouteProcessor(
-        routing_scenario=routing_scenario,
-        route_definitions=route_definitions,
-        route_attrs=route_attrs,
-    )
-    route_computer.process(out_fp=out_fp, save_paths=False)
+    test = _run_lcp(tmp_path, routing_scenario, route_table)
 
     truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    test = pd.read_csv(out_fp)
     truth = pd.read_csv(truth)
 
     truth = truth.sort_values(["start_index", "index"])
@@ -223,18 +222,9 @@ def test_cost_multiplier_layer(
         friction_layers=[DEFAULT_BARRIER_CONFIG],
         cost_multiplier_layer="test_layer",
     )
-    out_fp = tmp_path / f"least_cost_paths_{capacity}MW.csv"
-    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
-    route_computer = BatchRouteProcessor(
-        routing_scenario=routing_scenario,
-        route_definitions=route_definitions,
-        route_attrs=route_attrs,
-    )
-    route_computer.process(out_fp=out_fp, save_paths=False)
+    test = _run_lcp(tmp_path, routing_scenario, route_table)
 
     truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-
-    test = pd.read_csv(out_fp)
     truth = pd.read_csv(truth)
 
     truth = truth.sort_values(["start_index", "index"])
@@ -259,18 +249,9 @@ def test_cost_multiplier_scalar(
         friction_layers=[DEFAULT_BARRIER_CONFIG],
         cost_multiplier_scalar=5,
     )
-    out_fp = tmp_path / f"least_cost_paths_{capacity}MW.csv"
-    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
-    route_computer = BatchRouteProcessor(
-        routing_scenario=routing_scenario,
-        route_definitions=route_definitions,
-        route_attrs=route_attrs,
-    )
-    route_computer.process(out_fp=out_fp, save_paths=False)
+    test = _run_lcp(tmp_path, routing_scenario, route_table)
 
     truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-
-    test = pd.read_csv(out_fp)
     truth = pd.read_csv(truth)
 
     truth = truth.sort_values(["start_index", "index"])
