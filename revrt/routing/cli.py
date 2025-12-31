@@ -18,7 +18,7 @@ from gaps.config import load_config
 from gaps.utilities import resolve_path
 
 from revrt.costs.config import parse_config
-from revrt.routing.point_to_many import (
+from revrt.routing.point_to_point import (
     BatchRouteProcessor,
     RoutingScenario,
     RoutingLayerManager,

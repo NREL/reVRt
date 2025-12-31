@@ -42,7 +42,7 @@ from revrt.routing.cli import (
 
 @pytest.fixture(scope="module")
 def sample_layered_data(tmp_path_factory):
-    """Create layered routing data mimicking point_to_many tests"""
+    """Create layered routing data mimicking point_to_point tests"""
 
     data_dir = tmp_path_factory.mktemp("routing_cli_data")
 
