@@ -1,7 +1,9 @@
 """reVrt tests for routing utilities"""
 
+import json
 import random
 import shutil
+import traceback
 from pathlib import Path
 
 import pytest
@@ -16,6 +18,7 @@ from revrt.utilities import LayeredFile, features_to_route_table
 from revrt.costs.config import TransmissionConfig, parse_cap_class
 from revrt.routing.point_to_many import BatchRouteProcessor, RoutingScenario
 from revrt.routing.cli import _convert_to_route_definitions
+from revrt._cli import main
 from revrt.routing.utilities import map_to_costs
 
 DEFAULT_CONFIG = TransmissionConfig()
@@ -361,6 +364,50 @@ def test_revx_not_hard_barrier(revx_transmission_layers, tmp_path):
 
     test = pd.read_csv(out_fp)
     assert (test["length_km"] > 193).all()
+
+
+@pytest.mark.parametrize("save_paths", [False, True])
+def test_cli(
+    revx_transmission_layers,
+    route_table,
+    tmp_path,
+    routing_data_dir,
+    save_paths,
+    cli_runner,
+):
+    """Test reVX invariant cost layer routing against known outputs"""
+
+    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
+    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
+    routes_fp = tmp_path / "routes.csv"
+    route_table.to_csv(routes_fp, index=False)
+
+    config = {
+        "log_directory": str(tmp_path / "logs"),
+        "execution_control": {"option": "local"},
+        "cost_fpath": str(revx_transmission_layers),
+        "route_table": str(routes_fp),
+        "save_paths": save_paths,
+        "cost_layers": [{"layer_name": cost_layer}],
+        "friction_layers": [DEFAULT_BARRIER_CONFIG],
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config))
+
+    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    if save_paths:
+        test = gpd.read_file(tmp_path / f"{tmp_path.stem}_route_points.gpkg")
+        assert test.geometry is not None
+    else:
+        test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+
+    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    truth = pd.read_csv(truth)
+
+    check(truth, test)
 
 
 if __name__ == "__main__":
