@@ -52,6 +52,61 @@ def check(truth, test, check_cols=CHECK_COLS):
         assert np.allclose(c_truth, c_test, equal_nan=True), msg
 
 
+def _run_cli(
+    tmp_path,
+    routing_data_dir,
+    revx_transmission_layers,
+    row_config,
+    polarity_config,
+    route_table,
+    cost_layer_config,
+    cli_runner,
+    save_paths=False,
+):
+    """Run reVRt CLI with given configs and return test and truth dataframes"""
+    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
+    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
+    cost_layer_config["layer_name"] = cost_layer
+    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    truth = pd.read_csv(truth)
+
+    row_config_path = tmp_path / "config_row.json"
+    row_config_path.write_text(json.dumps(row_config))
+
+    polarity_config_path = tmp_path / "config_polarity.json"
+    polarity_config_path.write_text(json.dumps(polarity_config))
+
+    routes_fp = tmp_path / "routes.csv"
+    route_table.to_csv(routes_fp, index=False)
+
+    config = {
+        "log_directory": str(tmp_path),
+        "execution_control": {"option": "local"},
+        "transmission_config": {
+            "row_width": str(row_config_path),
+            "voltage_polarity_mult": str(polarity_config_path),
+        },
+        "cost_fpath": str(revx_transmission_layers),
+        "route_table": str(routes_fp),
+        "save_paths": save_paths,
+        "cost_layers": [cost_layer_config],
+        "friction_layers": [DEFAULT_BARRIER_CONFIG],
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config))
+
+    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    if save_paths:
+        test = gpd.read_file(tmp_path / f"{tmp_path.stem}_route_points.gpkg")
+        assert test.geometry is not None
+    else:
+        test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    return test, truth
+
+
 @pytest.fixture(scope="module")
 def routing_data_dir(test_data_dir):
     """Generate test BA regions and network nodes from ISO shapes"""
@@ -302,35 +357,18 @@ def test_cli(
 ):
     """Test reVX invariant cost layer routing against known outputs"""
 
-    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
-    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
-    routes_fp = tmp_path / "routes.csv"
-    route_table.to_csv(routes_fp, index=False)
-
-    config = {
-        "log_directory": str(tmp_path / "logs"),
-        "execution_control": {"option": "local"},
-        "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
-        "save_paths": save_paths,
-        "cost_layers": [{"layer_name": cost_layer}],
-        "friction_layers": [DEFAULT_BARRIER_CONFIG],
-    }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-
-    if save_paths:
-        test = gpd.read_file(tmp_path / f"{tmp_path.stem}_route_points.gpkg")
-        assert test.geometry is not None
-    else:
-        test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
-
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    truth = pd.read_csv(truth)
+    row_config = polarity_config = cost_layer_config = {}
+    test, truth = _run_cli(
+        tmp_path,
+        routing_data_dir,
+        revx_transmission_layers,
+        row_config,
+        polarity_config,
+        route_table,
+        cost_layer_config,
+        cli_runner,
+        save_paths=save_paths,
+    )
 
     check(truth, test)
 
@@ -343,46 +381,20 @@ def test_config_given_but_no_mult_in_layers(
     cli_runner,
 ):
     """Test Least cost path with transmission config but no volt in points"""
-    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
-    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    truth = pd.read_csv(truth)
 
-    row_config_path = tmp_path / "config_row.json"
     row_config = {"138": 2}
-    route_table["polarity"] = "dc"
-    row_config_path.write_text(json.dumps(row_config))
-
-    polarity_config_path = tmp_path / "config_polarity.json"
     polarity_config = {"138": {"ac": 2, "dc": 3}}
-    polarity_config_path.write_text(json.dumps(polarity_config))
-
-    routes_fp = tmp_path / "routes.csv"
-    route_table["voltage"] = 138
-    route_table["polarity"] = "dc"
-    route_table.to_csv(routes_fp, index=False)
-
-    config = {
-        "log_directory": str(tmp_path),
-        "execution_control": {"option": "local"},
-        "transmission_config": {
-            "row_width": str(row_config_path),
-            "voltage_polarity_mult": str(polarity_config_path),
-        },
-        "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
-        "save_paths": False,
-        "cost_layers": [{"layer_name": cost_layer}],
-        "friction_layers": [DEFAULT_BARRIER_CONFIG],
-    }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-
-    test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    cost_layer_config = {}
+    test, truth = _run_cli(
+        tmp_path,
+        routing_data_dir,
+        revx_transmission_layers,
+        row_config,
+        polarity_config,
+        route_table,
+        cost_layer_config,
+        cli_runner,
+    )
 
     check(truth, test)
 
@@ -395,45 +407,23 @@ def test_apply_row_mult(
     cli_runner,
 ):
     """Test applying row multiplier"""
-    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
-    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    truth = pd.read_csv(truth)
 
-    row_config_path = tmp_path / "config_row.json"
-    row_config = {"138": 2}
-    row_config_path.write_text(json.dumps(row_config))
-
-    polarity_config_path = tmp_path / "config_polarity.json"
-    polarity_config = {"138": {"ac": 2, "dc": 3}}
-    polarity_config_path.write_text(json.dumps(polarity_config))
-
-    routes_fp = tmp_path / "routes.csv"
     route_table["voltage"] = 138
     route_table["polarity"] = "dc"
-    route_table.to_csv(routes_fp, index=False)
 
-    config = {
-        "log_directory": str(tmp_path),
-        "execution_control": {"option": "local"},
-        "transmission_config": {
-            "row_width": str(row_config_path),
-            "voltage_polarity_mult": str(polarity_config_path),
-        },
-        "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
-        "save_paths": False,
-        "cost_layers": [{"layer_name": cost_layer, "apply_row_mult": True}],
-        "friction_layers": [DEFAULT_BARRIER_CONFIG],
-    }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-
-    test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    row_config = {"138": 2}
+    polarity_config = {"138": {"ac": 2, "dc": 3}}
+    cost_layer_config = {"apply_row_mult": True}
+    test, truth = _run_cli(
+        tmp_path,
+        routing_data_dir,
+        revx_transmission_layers,
+        row_config,
+        polarity_config,
+        route_table,
+        cost_layer_config,
+        cli_runner,
+    )
     test["cost"] /= 2
 
     check(truth, test)
@@ -447,47 +437,23 @@ def test_apply_polarity_mult(
     cli_runner,
 ):
     """Test applying polarity multiplier"""
-    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
-    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    truth = pd.read_csv(truth)
 
-    row_config_path = tmp_path / "config_row.json"
-    row_config = {"138": 2}
-    row_config_path.write_text(json.dumps(row_config))
-
-    polarity_config_path = tmp_path / "config_polarity.json"
-    polarity_config = {"138": {"ac": 2, "dc": 3}}
-    polarity_config_path.write_text(json.dumps(polarity_config))
-
-    routes_fp = tmp_path / "routes.csv"
     route_table["voltage"] = 138
     route_table["polarity"] = "dc"
-    route_table.to_csv(routes_fp, index=False)
 
-    config = {
-        "log_directory": str(tmp_path),
-        "execution_control": {"option": "local"},
-        "transmission_config": {
-            "row_width": str(row_config_path),
-            "voltage_polarity_mult": str(polarity_config_path),
-        },
-        "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
-        "save_paths": False,
-        "cost_layers": [
-            {"layer_name": cost_layer, "apply_polarity_mult": True}
-        ],
-        "friction_layers": [DEFAULT_BARRIER_CONFIG],
-    }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-
-    test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    row_config = {"138": 2}
+    polarity_config = {"138": {"ac": 2, "dc": 3}}
+    cost_layer_config = {"apply_polarity_mult": True}
+    test, truth = _run_cli(
+        tmp_path,
+        routing_data_dir,
+        revx_transmission_layers,
+        row_config,
+        polarity_config,
+        route_table,
+        cost_layer_config,
+        cli_runner,
+    )
     test["cost"] /= 3 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
     check(truth, test)
@@ -501,51 +467,23 @@ def test_apply_row_and_polarity_mult(
     cli_runner,
 ):
     """Test applying row multiplier"""
-    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
-    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    truth = pd.read_csv(truth)
 
-    row_config_path = tmp_path / "config_row.json"
-    row_config = {"138": 2}
-    row_config_path.write_text(json.dumps(row_config))
-
-    polarity_config_path = tmp_path / "config_polarity.json"
-    polarity_config = {"138": {"ac": 2, "dc": 3}}
-    polarity_config_path.write_text(json.dumps(polarity_config))
-
-    routes_fp = tmp_path / "routes.csv"
     route_table["voltage"] = 138
     route_table["polarity"] = "dc"
-    route_table.to_csv(routes_fp, index=False)
 
-    config = {
-        "log_directory": str(tmp_path),
-        "execution_control": {"option": "local"},
-        "transmission_config": {
-            "row_width": str(row_config_path),
-            "voltage_polarity_mult": str(polarity_config_path),
-        },
-        "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
-        "save_paths": False,
-        "cost_layers": [
-            {
-                "layer_name": cost_layer,
-                "apply_row_mult": True,
-                "apply_polarity_mult": True,
-            }
-        ],
-        "friction_layers": [DEFAULT_BARRIER_CONFIG],
-    }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-
-    test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    row_config = {"138": 2}
+    polarity_config = {"138": {"ac": 2, "dc": 3}}
+    cost_layer_config = {"apply_row_mult": True, "apply_polarity_mult": True}
+    test, truth = _run_cli(
+        tmp_path,
+        routing_data_dir,
+        revx_transmission_layers,
+        row_config,
+        polarity_config,
+        route_table,
+        cost_layer_config,
+        cli_runner,
+    )
     test["cost"] /= 6 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
     check(truth, test)
@@ -559,52 +497,27 @@ def test_apply_row_and_polarity_with_existing_mult(
     cli_runner,
 ):
     """Test applying both row and polarity multiplier when mult exists"""
-    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
-    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    truth = pd.read_csv(truth)
 
-    row_config_path = tmp_path / "config_row.json"
-    row_config = {"138": 2}
-    row_config_path.write_text(json.dumps(row_config))
-
-    polarity_config_path = tmp_path / "config_polarity.json"
-    polarity_config = {"138": {"ac": 2, "dc": 3}}
-    polarity_config_path.write_text(json.dumps(polarity_config))
-
-    routes_fp = tmp_path / "routes.csv"
     route_table["voltage"] = 138
     route_table["polarity"] = "dc"
-    route_table.to_csv(routes_fp, index=False)
 
-    config = {
-        "log_directory": str(tmp_path),
-        "execution_control": {"option": "local"},
-        "transmission_config": {
-            "row_width": str(row_config_path),
-            "voltage_polarity_mult": str(polarity_config_path),
-        },
-        "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
-        "save_paths": False,
-        "cost_layers": [
-            {
-                "layer_name": cost_layer,
-                "multiplier_scalar": 5,
-                "apply_row_mult": True,
-                "apply_polarity_mult": True,
-            }
-        ],
-        "friction_layers": [DEFAULT_BARRIER_CONFIG],
+    row_config = {"138": 2}
+    polarity_config = {"138": {"ac": 2, "dc": 3}}
+    cost_layer_config = {
+        "multiplier_scalar": 5,
+        "apply_row_mult": True,
+        "apply_polarity_mult": True,
     }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-
-    test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    test, truth = _run_cli(
+        tmp_path,
+        routing_data_dir,
+        revx_transmission_layers,
+        row_config,
+        polarity_config,
+        route_table,
+        cost_layer_config,
+        cli_runner,
+    )
     test["cost"] /= 30 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
     check(truth, test)
@@ -618,23 +531,6 @@ def test_apply_multipliers_by_route(
     cli_runner,
 ):
     """Test applying unique multipliers per route"""
-    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
-    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
-    truth = pd.read_csv(truth)
-
-    row_config_path = tmp_path / "config_row.json"
-    row_config = {"138": 2, "69": 2.5, "345": 3, "500": 3.5}
-    row_config_path.write_text(json.dumps(row_config))
-
-    polarity_config_path = tmp_path / "config_polarity.json"
-    polarity_config = {
-        "138": {"ac": 4, "dc": 4.5},
-        "69": {"ac": 5, "dc": 5.5},
-        "345": {"ac": 6, "dc": 6.5},
-        "500": {"ac": 7, "dc": 7.5},
-    }
-    polarity_config_path.write_text(json.dumps(polarity_config))
 
     idx_to_volt = {0: 138, 1: 69, 2: 345, 3: 500}
     idx_to_polarity = {0: "ac", 1: "dc", 2: "ac", 3: "dc", 4: "dc"}
@@ -644,37 +540,29 @@ def test_apply_multipliers_by_route(
     for idx, polarity in idx_to_polarity.items():
         mask = route_table["start_index"] == idx
         route_table.loc[mask, "polarity"] = polarity
-    routes_fp = tmp_path / "routes.csv"
-    route_table.to_csv(routes_fp, index=False)
 
-    config = {
-        "log_directory": str(tmp_path),
-        "execution_control": {"option": "local"},
-        "transmission_config": {
-            "row_width": str(row_config_path),
-            "voltage_polarity_mult": str(polarity_config_path),
-        },
-        "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
-        "save_paths": False,
-        "cost_layers": [
-            {
-                "layer_name": cost_layer,
-                "multiplier_scalar": 1.2,
-                "apply_row_mult": True,
-                "apply_polarity_mult": True,
-            }
-        ],
-        "friction_layers": [DEFAULT_BARRIER_CONFIG],
+    row_config = {"138": 2, "69": 2.5, "345": 3, "500": 3.5}
+    polarity_config = {
+        "138": {"ac": 4, "dc": 4.5},
+        "69": {"ac": 5, "dc": 5.5},
+        "345": {"ac": 6, "dc": 6.5},
+        "500": {"ac": 7, "dc": 7.5},
     }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-
-    test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    cost_layer_config = {
+        "multiplier_scalar": 1.2,
+        "apply_row_mult": True,
+        "apply_polarity_mult": True,
+    }
+    test, truth = _run_cli(
+        tmp_path,
+        routing_data_dir,
+        revx_transmission_layers,
+        row_config,
+        polarity_config,
+        route_table,
+        cost_layer_config,
+        cli_runner,
+    )
     divisors = []
     for __, row in test.iterrows():
         voltage = str(int(row["voltage"]))
