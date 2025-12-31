@@ -1,5 +1,6 @@
 """reVrt tests for routing utilities"""
 
+import random
 from pathlib import Path
 
 import pytest
@@ -171,6 +172,47 @@ def test_revx_capacity_class(
     test = pd.read_csv(out_fp)
     truth = pd.read_csv(truth)
     check(truth, test)
+
+
+def test_revx_invariant_costs(
+    revx_transmission_layers, route_table, tmp_path, routing_data_dir
+):
+    """Test reVX invariant cost layer routing against known outputs"""
+
+    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
+    cap = _cap_class_to_cap(capacity)
+    base_costs = {
+        "layer_name": f"tie_line_costs_{cap}MW",
+        "multiplier_scalar": 1e-9,
+    }
+    cost_layer = {
+        "layer_name": f"tie_line_costs_{cap}MW",
+        "is_invariant": True,
+    }
+    routing_scenario = RoutingScenario(
+        cost_fpath=revx_transmission_layers,
+        cost_layers=[base_costs, cost_layer],
+        friction_layers=[DEFAULT_BARRIER_CONFIG],
+        ignore_invalid_costs=False,
+    )
+
+    out_fp = tmp_path / f"least_cost_paths_{capacity}MW.csv"
+    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
+    route_computer = BatchRouteProcessor(
+        routing_scenario=routing_scenario,
+        route_definitions=route_definitions,
+        route_attrs=route_attrs,
+    )
+    route_computer.process(out_fp=out_fp, save_paths=False)
+
+    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    test = pd.read_csv(out_fp)
+    truth = pd.read_csv(truth)
+
+    truth = truth.sort_values(["start_index", "index"])
+    test = test.sort_values(["start_index", "index"])
+
+    assert (test["cost"].to_numpy() < truth["cost"].to_numpy()).all()
 
 
 if __name__ == "__main__":
