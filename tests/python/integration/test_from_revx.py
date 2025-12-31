@@ -1,8 +1,10 @@
 """reVrt tests ported from reVX"""
 
+import os
 import json
 import random
 import shutil
+import platform
 import traceback
 from pathlib import Path
 
@@ -328,6 +330,11 @@ def test_not_hard_barrier(revx_transmission_layers, tmp_path):
 
 
 @pytest.mark.parametrize("save_paths", [False, True])
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli(
     revx_transmission_layers,
     route_table,
@@ -354,6 +361,11 @@ def test_cli(
     check(truth, test)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_config_given_but_no_mult_in_layers(
     revx_transmission_layers,
     route_table,
@@ -380,6 +392,11 @@ def test_config_given_but_no_mult_in_layers(
     check(truth, test)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_apply_row_mult(
     revx_transmission_layers,
     route_table,
@@ -410,6 +427,11 @@ def test_apply_row_mult(
     check(truth, test)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_apply_polarity_mult(
     revx_transmission_layers,
     route_table,
@@ -440,6 +462,11 @@ def test_apply_polarity_mult(
     check(truth, test)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_apply_row_and_polarity_mult(
     revx_transmission_layers,
     route_table,
@@ -470,6 +497,11 @@ def test_apply_row_and_polarity_mult(
     check(truth, test)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_apply_row_and_polarity_with_existing_mult(
     revx_transmission_layers,
     route_table,
@@ -504,6 +536,11 @@ def test_apply_row_and_polarity_with_existing_mult(
     check(truth, test)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_apply_multipliers_by_route(
     revx_transmission_layers,
     route_table,
