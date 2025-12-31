@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 import geopandas as gpd
+from shapely.geometry import Point
 from rasterio.transform import from_origin
 
 from revrt.utilities import LayeredFile, features_to_route_table
@@ -294,6 +295,72 @@ def test_revx_cost_multiplier_scalar(
 
     assert np.allclose(test["length_km"], truth["length_km"])
     assert np.allclose(test["cost"].to_numpy(), truth["cost"].to_numpy() * 5)
+
+
+def test_revx_not_hard_barrier(revx_transmission_layers, tmp_path):
+    """Test routing to cut off points using `ignore_invalid_costs=False`"""
+
+    temp_layer_file = tmp_path / "temp_multiplier_layer.zarr"
+    shutil.copytree(revx_transmission_layers, temp_layer_file)
+
+    lf = LayeredFile(temp_layer_file)
+    costs = np.ones(shape=lf.shape)
+    costs[0, 3] = costs[1, 3] = costs[2, 3] = costs[3, 3] = -1
+    costs[3, 0] = costs[3, 1] = costs[3, 2] = -1
+    lf.write_layer(costs, "test_layer", overwrite=True)
+
+    route_feats = gpd.GeoDataFrame(
+        data={"index": [0, 1]},
+        geometry=[Point(-70.868065, 40.85588), Point(-71.9096, 42.016506)],
+        crs="EPSG:4326",
+    ).to_crs(lf.profile["crs"])
+    route_points = features_to_route_table(route_feats)
+    route_table = map_to_costs(
+        route_points,
+        crs=lf.profile["crs"],
+        transform=lf.profile["transform"],
+        shape=lf.shape,
+    )
+    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
+
+    routing_scenario = RoutingScenario(
+        cost_fpath=temp_layer_file,
+        cost_layers=[{"layer_name": "test_layer"}],
+        friction_layers=[DEFAULT_BARRIER_CONFIG],
+        cost_multiplier_layer="test_layer",
+        ignore_invalid_costs=True,
+    )
+
+    out_fp = tmp_path / "least_cost_paths_barrier.csv"
+    assert not out_fp.exists()
+    route_computer = BatchRouteProcessor(
+        routing_scenario=routing_scenario,
+        route_definitions=route_definitions,
+        route_attrs=route_attrs,
+    )
+    route_computer.process(out_fp=out_fp, save_paths=False)
+    assert not out_fp.exists()
+
+    routing_scenario = RoutingScenario(
+        cost_fpath=temp_layer_file,
+        cost_layers=[{"layer_name": "test_layer"}],
+        friction_layers=[DEFAULT_BARRIER_CONFIG],
+        cost_multiplier_layer="test_layer",
+        ignore_invalid_costs=False,
+    )
+
+    out_fp = tmp_path / "least_cost_paths_barrier.csv"
+    assert not out_fp.exists()
+    route_computer = BatchRouteProcessor(
+        routing_scenario=routing_scenario,
+        route_definitions=route_definitions,
+        route_attrs=route_attrs,
+    )
+    route_computer.process(out_fp=out_fp, save_paths=False)
+    assert out_fp.exists()
+
+    test = pd.read_csv(out_fp)
+    assert (test["length_km"] > 193).all()
 
 
 if __name__ == "__main__":
