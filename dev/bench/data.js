@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1766900428083,
+  "lastUpdate": 1767210277415,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3779,6 +3779,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 381309490,
             "range": "± 5127859",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a965d4685222742ec9f0a0f2ebc25c80c862831",
+          "message": "Add more tests from reVX (#193)\n\n* Add `test_revx_invariant_costs`\n\n* Add `test_revx_cost_multiplier_layer`\n\n* Add `test_revx_cost_multiplier_scalar`\n\n* Add `test_revx_not_hard_barrier`\n\n* Add `test_cli`\n\n* Add `test_config_given_but_no_mult_in_layers`\n\n* Add `test_apply_row_mult`\n\n* Add `test_apply_polarity_mult`\n\n* Add `test_apply_row_and_polarity_mult`\n\n* Add `test_apply_row_and_polarity_with_existing_mult`\n\n* Add `test_apply_multipliers_by_route`\n\n* Separate tests\n\n* Refactor for clarity\n\n* Another minor refactor\n\n* No CLI tests on tox + Windows",
+          "timestamp": "2025-12-31T12:33:47-07:00",
+          "tree_id": "14076817d53feb0b4b392985b3d9aab9b8d921f1",
+          "url": "https://github.com/NREL/reVRt/commit/0a965d4685222742ec9f0a0f2ebc25c80c862831"
+        },
+        "date": 1767210276749,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 87733519,
+            "range": "± 805486",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 162575325,
+            "range": "± 1649427",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 101814803,
+            "range": "± 1939820",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 154860965,
+            "range": "± 2660658",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 643690848,
+            "range": "± 18363630",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 150733808,
+            "range": "± 1617053",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155934770,
+            "range": "± 910131",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170893588,
+            "range": "± 837974",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 215090561,
+            "range": "± 1411142",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 378263792,
+            "range": "± 4600844",
             "unit": "ns/iter"
           }
         ]
