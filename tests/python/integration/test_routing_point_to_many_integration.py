@@ -524,7 +524,7 @@ def test_apply_polarity_mult(
     routing_data_dir,
     cli_runner,
 ):
-    """Test applying row multiplier"""
+    """Test applying polarity multiplier"""
     capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
     cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
     truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
@@ -567,6 +567,64 @@ def test_apply_polarity_mult(
 
     test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
     test["cost"] /= 3 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
+
+    check(truth, test)
+
+
+def test_apply_row_and_polarity_mult(
+    revx_transmission_layers,
+    route_table,
+    tmp_path,
+    routing_data_dir,
+    cli_runner,
+):
+    """Test applying row multiplier"""
+    capacity = random.choice([100, 200, 400, 1000, 3000])  # noqa: S311
+    cost_layer = f"tie_line_costs_{_cap_class_to_cap(capacity)}MW"
+    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    truth = pd.read_csv(truth)
+
+    row_config_path = tmp_path / "config_row.json"
+    row_config = {"138": 2}
+    row_config_path.write_text(json.dumps(row_config))
+
+    polarity_config_path = tmp_path / "config_polarity.json"
+    polarity_config = {"138": {"ac": 2, "dc": 3}}
+    polarity_config_path.write_text(json.dumps(polarity_config))
+
+    routes_fp = tmp_path / "routes.csv"
+    route_table["voltage"] = 138
+    route_table["polarity"] = "dc"
+    route_table.to_csv(routes_fp, index=False)
+
+    config = {
+        "log_directory": str(tmp_path),
+        "execution_control": {"option": "local"},
+        "transmission_config": {
+            "row_width": str(row_config_path),
+            "voltage_polarity_mult": str(polarity_config_path),
+        },
+        "cost_fpath": str(revx_transmission_layers),
+        "route_table": str(routes_fp),
+        "save_paths": False,
+        "cost_layers": [
+            {
+                "layer_name": cost_layer,
+                "apply_row_mult": True,
+                "apply_polarity_mult": True,
+            }
+        ],
+        "friction_layers": [DEFAULT_BARRIER_CONFIG],
+    }
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(config))
+
+    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
+    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
+    assert result.exit_code == 0, msg
+
+    test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+    test["cost"] /= 6 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
     check(truth, test)
 
