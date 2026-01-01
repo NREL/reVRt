@@ -96,8 +96,9 @@ class PointToFeatureMapper:
             be added automatically. This file will contain all features
             clipped to each point (with a feature ID column added to
             link back to the points).
-        radius : float, optional
+        radius : float | str, optional
             Radius (in CRS units) around each point to clip features to.
+            If `str`, the column in `points` to use for radius values.
             If ``None``, only regions are used for clipping.
             By default, ``None``.
         expand_radius : bool, optional
@@ -192,6 +193,9 @@ class PointToFeatureMapper:
 
         if input_features is not None and len(input_features) == 0:
             return input_features
+
+        if isinstance(radius, str):
+            radius = point[radius]
 
         clipped_features = self._clipped_features(
             point.geometry.buffer(radius), features=input_features
