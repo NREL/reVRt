@@ -93,7 +93,9 @@ class PointToFeatureMapper:
         feature_out_fp : path-like
             File path to save clipped features to. This should end in
             '.gpkg' to ensure proper format. If not, the extension will
-            be added automatically.
+            be added automatically. This file will contain all features
+            clipped to each point (with a feature ID column added to
+            link back to the points).
         radius : float, optional
             Radius (in CRS units) around each point to clip features to.
             If ``None``, only regions are used for clipping.
@@ -107,8 +109,8 @@ class PointToFeatureMapper:
 
         Returns
         -------
-        geopandas.GeoDataFrame
-            Features clipped to the point regions.
+        pandas.DataFrame
+            Input points with added column giving mapped feature IDs.
         """
         if self._regions is None and radius is None:
             msg = (
