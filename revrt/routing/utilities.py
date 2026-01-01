@@ -1,15 +1,18 @@
 """reVRt routing module utilities"""
 
 import logging
+from pathlib import Path
 from warnings import warn
 
 import rasterio
 import numpy as np
+import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 
 from revrt.warn import revrtWarning
 from revrt.utilities.base import region_mapper
+from revrt.utilities.handlers import IncrementalWriter
 from revrt.exceptions import revrtValueError
 
 
@@ -47,13 +50,24 @@ class PointToFeatureMapper:
         if self._rid_column not in self._regions.columns:
             self._regions[self._rid_column] = range(len(self._regions))
 
-    def map_points(self, points, radius=None, expand_radius=True):
+    def map_points(
+        self,
+        points,
+        feature_out_fp,
+        radius=None,
+        expand_radius=True,
+        batch_size=500,
+    ):
         """Map points to features within the point region
 
         Parameters
         ----------
         points : geopandas.GeoDataFrame
             Points to map to features.
+        feature_out_fp : path-like
+            File path to save clipped features to. This should end in
+            '.gpkg' to ensure proper format. If not, the extension will
+            be added automatically.
         radius : float, optional
             Radius (in CRS units) around each point to clip features to.
             If ``None``, only regions are used for clipping.
@@ -61,6 +75,9 @@ class PointToFeatureMapper:
         expand_radius : bool, optional
             If ``True``, the radius is expanded until at least one
             feature is found. By default, ``True``.
+        batch_size : int, default=500
+            Number of points to process in each batch when writing
+            clipped features to file. By default, ``500``.
 
         Returns
         -------
@@ -80,14 +97,26 @@ class PointToFeatureMapper:
             map_func = region_mapper(self._regions, self._rid_column)
             points[self._rid_column] = points.centroid.apply(map_func)
 
-        all_clipped_features = []
-        for __, point in points.iterrows():
+        writer = _init_streaming_writer(feature_out_fp)
+        batches = []
+        for ind, (row_ind, point) in enumerate(points.iterrows()):
             clipped_features = self._clip_to_point(
                 point, radius, expand_radius
             )
-            all_clipped_features.append(clipped_features)
+            clipped_features[self._feature_id_column] = ind
+            points.loc[row_ind, self._feature_id_column] = ind
+            batches.append(clipped_features)
 
-        return all_clipped_features
+            if len(batches) >= batch_size:
+                logger.debug("Dumping batch of features to file...")
+                writer.save(pd.concat(batches))
+                batches = []
+
+        if batches:
+            logger.debug("Dumping batch of features to file...")
+            writer.save(pd.concat(batches))
+
+        return points
 
     def _clip_to_point(self, point, radius=None, expand_radius=True):
         """Clip features to be within the point region"""
@@ -257,6 +286,21 @@ def _transform_lat_lon_to_row_col(transform, cost_crs, lat, lon):
     row = np.array(row)
     col = np.array(col)
     return row, col
+
+
+def _init_streaming_writer(feature_out_fp):
+    """Initialize an incremental writer for clipped features"""
+    feature_out_fp = Path(feature_out_fp)
+    if feature_out_fp.suffix.lower() != ".gpkg":
+        msg = (
+            "Output feature file should have a '.gpkg' extension to "
+            f"ensure proper format! Got input file: '{feature_out_fp}'. "
+            "Adding '.gpkg' extension... "
+        )
+        warn(msg, revrtWarning)
+        feature_out_fp = feature_out_fp.with_suffix(".gpkg")
+
+    return IncrementalWriter(feature_out_fp)
 
 
 def _filter_transmission_features(features):
