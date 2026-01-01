@@ -9,9 +9,160 @@ import geopandas as gpd
 from shapely.geometry import Point
 
 from revrt.warn import revrtWarning
+from revrt.utilities.base import region_mapper
+from revrt.exceptions import revrtValueError
 
 
 logger = logging.getLogger(__name__)
+
+
+class PointToFeatureMapper:
+    """Map points to features within specified regions and/or radii"""
+
+    def __init__(
+        self,
+        crs,
+        features_fp,
+        regions=None,
+        region_identifier_column="rid",
+        feature_identifier_column="end_feat_id",
+    ):
+        self._crs = crs
+        self._features_fp = features_fp
+        self._regions = None
+        self._rid_column = region_identifier_column
+        self._feature_id_column = feature_identifier_column
+        self._set_regions(regions)
+
+    def _set_regions(self, regions):
+        """Set the regions GeoDataFrame."""
+        if regions is None:
+            return
+
+        try:
+            self._regions = regions.to_crs(self._crs)
+        except AttributeError:
+            self._regions = gpd.read_file(regions).to_crs(self._crs)
+
+        if self._rid_column not in self._regions.columns:
+            self._regions[self._rid_column] = range(len(self._regions))
+
+    def map_points(self, points, radius=None, expand_radius=True):
+        """Map points to features within the point region
+
+        Parameters
+        ----------
+        points : geopandas.GeoDataFrame
+            Points to map to features.
+        radius : float, optional
+            Radius (in CRS units) around each point to clip features to.
+            If ``None``, only regions are used for clipping.
+            By default, ``None``.
+        expand_radius : bool, optional
+            If ``True``, the radius is expanded until at least one
+            feature is found. By default, ``True``.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            Features clipped to the point regions.
+        """
+        if self._regions is None and radius is None:
+            msg = (
+                "Must provide either `regions` or a radius to map points "
+                "to features!"
+            )
+            raise revrtValueError(msg)
+
+        points = points.to_crs(self._crs)
+
+        if self._regions is not None:
+            map_func = region_mapper(self._regions, self._rid_column)
+            points[self._rid_column] = points.centroid.apply(map_func)
+
+        all_clipped_features = []
+        for __, point in points.iterrows():
+            clipped_features = self._clip_to_point(
+                point, radius, expand_radius
+            )
+            all_clipped_features.append(clipped_features)
+
+        return all_clipped_features
+
+    def _clip_to_point(self, point, radius=None, expand_radius=True):
+        """Clip features to be within the point region"""
+        logger.debug("Clipping features to point:\n%s", point)
+
+        features = None
+        if self._regions is not None:
+            features = self._clip_to_region(point)
+
+        if radius is not None:
+            features = self._clip_to_radius(
+                point, radius, features, expand_radius
+            )
+
+        return _filter_transmission_features(features)
+
+    def _clip_to_region(self, point):
+        """Clip features to region and record the region ID"""
+        rid = point[self._rid_column]
+        mask = self._regions[self._rid_column] == rid
+        region = self._regions[mask]
+
+        logger.debug("  - Clipping features to region: %s", rid)
+        features = self._clipped_features(region.geometry, features=None)
+        features[self._rid_column] = rid
+
+        logger.debug(
+            "%d transmission features found in region with id %s ",
+            len(features),
+            rid,
+        )
+        return features
+
+    def _clip_to_radius(
+        self, point, radius, input_features=None, expand_radius=True
+    ):
+        """Clip features to radius
+
+        If no features are found within the initial radius, it is
+        expanded (linearly by incrementally increasing the clipping
+        buffer) until at least one connection feature is found.
+        """
+        if radius is None:
+            return input_features
+
+        if input_features is not None and len(input_features) == 0:
+            return input_features
+
+        clipped_features = self._clipped_features(
+            point.geometry.buffer(radius), features=input_features
+        )
+
+        clipping_buffer = 1
+        while expand_radius and len(clipped_features) <= 0:
+            clipping_buffer += 0.05
+            clipped_features = self._clipped_features(
+                point.geometry.buffer(radius * clipping_buffer),
+                input_features,
+            )
+
+        logger.info(
+            "%d transmission features found in clipped area with radius %.2f",
+            len(clipped_features),
+            radius * clipping_buffer,
+        )
+        return clipped_features.copy(deep=True)
+
+    def _clipped_features(self, region, features=None):
+        """Clip features to region"""
+        if features is None:
+            features = gpd.read_file(self._features_fp, mask=region).to_crs(
+                self._crs
+            )
+
+        return gpd.clip(features, region)
 
 
 def map_to_costs(route_points, crs, transform, shape):
@@ -106,3 +257,26 @@ def _transform_lat_lon_to_row_col(transform, cost_crs, lat, lon):
     row = np.array(row)
     col = np.array(col)
     return row, col
+
+
+def _filter_transmission_features(features):
+    """Filter loaded transmission features"""
+    features = features.drop(
+        columns=["bgid", "egid", "cap_left"], errors="ignore"
+    )
+    features = features.rename(columns={"gid": "trans_gid"})
+    if "category" in features.columns:
+        features = _drop_empty_categories(features)
+
+    return features.reset_index(drop=True)
+
+
+def _drop_empty_categories(features):
+    """Drop features with empty category field"""
+    mask = features["category"].isna()
+    if mask.any():
+        msg = f"Dropping {mask.sum():,} features with NaN category!"
+        warn(msg, revrtWarning)
+        features = features[~mask].reset_index(drop=True)
+
+    return features
