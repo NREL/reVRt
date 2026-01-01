@@ -64,7 +64,7 @@ class PointToFeatureMapper:
         self._set_regions(regions)
 
     def _set_regions(self, regions):
-        """Set the regions GeoDataFrame."""
+        """Set the regions GeoDataFrame"""
         if regions is None:
             return
 
