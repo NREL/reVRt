@@ -844,7 +844,7 @@ def _validate_out_fp(out_fp, save_paths):
         msg = (
             "When saving paths, the output file should have a '.gpkg' "
             f"extension to ensure proper format! Got input file: '{out_fp}'. "
-            "Adding one... "
+            "Adding '.gpkg' extension... "
         )
         warn(msg, revrtWarning)
         out_fp = out_fp.with_suffix(".gpkg")
@@ -852,7 +852,7 @@ def _validate_out_fp(out_fp, save_paths):
         msg = (
             "When not saving paths, the output file should have a '.csv' "
             f"extension to ensure proper format! Got input file: '{out_fp}'. "
-            "Adding one... "
+            "Adding '.csv' extension... "
         )
         warn(msg, revrtWarning)
         out_fp = out_fp.with_suffix(".csv")
