@@ -30,6 +30,32 @@ class PointToFeatureMapper:
         region_identifier_column="rid",
         feature_identifier_column="end_feat_id",
     ):
+        """
+
+        Parameters
+        ----------
+        crs : str or pyproj.crs.CRS
+            Coordinate reference system to use for all spatial data.
+        features_fp : path-like
+            File path to transmission features to map points to.
+        regions : geopandas.GeoDataFrame or path-like, optional
+            Regions to use for clipping features around points. Features
+            will not extend beyond these regions, and point will only
+            map to features within their own region. This input can be
+            paired with the `radius` parameter (e.g. to forbid any
+            connections to cross state boundaries, even if that
+            connection would be shorter than some desired length). At
+            least one of `regions` or `radius` must be provided;
+            otherwise, an error is raised. By default, ``None``.
+        region_identifier_column : str, default="rid"
+            Column in `regions` data to use as the identifier for that
+            region. If not given, a simple index will be put under the
+            `rid` column. By default, ``"rid"``.
+        feature_identifier_column : str, optional
+            Column in output data (both features and points) that will
+            be used to link the points to the features that should be
+            routed to. By default, ``"end_feat_id"``.
+        """
         self._crs = crs
         self._features_fp = features_fp
         self._regions = None
