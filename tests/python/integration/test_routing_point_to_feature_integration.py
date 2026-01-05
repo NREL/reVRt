@@ -759,11 +759,7 @@ def test_filter_transmission_features_drops_empty_categories(
 ):
     """_filter_transmission_features removes empty category records"""
 
-    features = (
-        routing_test_inputs["features"]
-        .to_crs(routing_test_inputs["features"].crs)
-        .head(2)
-    )
+    features = routing_test_inputs["features"].head(2)
     features = features.reset_index(drop=True).copy()
     features["bgid"] = [1, 2]
     features["egid"] = [3, 4]
@@ -775,6 +771,7 @@ def test_filter_transmission_features_drops_empty_categories(
     with pytest.warns(revrtWarning):
         cleaned = routing_utils._filter_transmission_features(features)
 
+    assert not any(c in cleaned.columns for c in ["bgid", "egid", "cap_left"])
     assert "trans_gid" in cleaned.columns
     assert cleaned["category"].tolist() == ["keep"]
 
@@ -784,11 +781,7 @@ def test_filter_transmission_features_without_category_column(
 ):
     """_filter_transmission_features tolerates missing category column"""
 
-    features = (
-        routing_test_inputs["features"]
-        .to_crs(routing_test_inputs["features"].crs)
-        .head(1)
-    )
+    features = routing_test_inputs["features"].head(1)
     features = features.drop(columns="category", errors="ignore")
 
     cleaned = routing_utils._filter_transmission_features(features)
