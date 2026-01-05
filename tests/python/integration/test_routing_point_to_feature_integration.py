@@ -452,6 +452,41 @@ def test_point_to_feature_mapper_clips_features_to_region_boundary(tmp_path):
     assert region_difference.is_empty
 
 
+def test_point_to_feature_mapper_clips_features_to_radius(tmp_path):
+    """Features are trimmed to circular radius when radius provided"""
+
+    crs = "EPSG:3857"
+    radius = 400.0
+    point_geom = Point(0, 0)
+    original = LineString([(-1_000, 0), (1_000, 0)])
+    features = gpd.GeoDataFrame({"gid": [5]}, geometry=[original], crs=crs)
+    features_fp = tmp_path / "radius_features.gpkg"
+    features.to_file(features_fp, driver="GPKG")
+
+    mapper = PointToFeatureMapper(crs, features_fp)
+    points = gpd.GeoDataFrame(
+        {"start_row": [0], "start_col": [0]}, geometry=[point_geom], crs=crs
+    )
+
+    out_fp = tmp_path / "radius_outputs.gpkg"
+    mapper.map_points(
+        points,
+        out_fp,
+        radius=radius,
+        expand_radius=False,
+        batch_size=1,
+    )
+
+    clipped = gpd.read_file(out_fp)
+    assert len(clipped) == 1
+    clipped_geom = clipped.geometry.iloc[0]
+    expected = original.intersection(point_geom.buffer(radius))
+    assert clipped_geom.equals_exact(expected, tolerance=1e-6)
+    difference = clipped_geom.difference(point_geom.buffer(radius))
+    assert difference.is_empty
+    assert clipped_geom.length < original.length
+
+
 def test_map_to_costs_filters_out_of_bounds(cost_metadata):
     """map_to_costs converts coordinates and drops routes out of domain"""
 
