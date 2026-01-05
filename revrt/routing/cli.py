@@ -18,7 +18,7 @@ from gaps.config import load_config
 from gaps.utilities import resolve_path
 
 from revrt.costs.config import parse_config
-from revrt.routing.point_to_many import (
+from revrt.routing.point_to_point import (
     BatchRouteProcessor,
     RoutingScenario,
     RoutingLayerManager,
@@ -567,8 +567,7 @@ def _paths_to_compute(route_points, out_fp):
         if routes.empty:
             continue
 
-        *__, polarity, voltage = group_info
-        yield polarity, voltage, routes
+        yield *group_info, routes
 
 
 def _convert_to_route_definitions(routes):

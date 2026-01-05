@@ -1,14 +1,27 @@
 """reVrt tests for routing utilities"""
 
+import math
 from pathlib import Path
 import warnings
 
+import pytest
 import numpy as np
 import pandas as pd
-import pytest
+import geopandas as gpd
 from rasterio.transform import from_origin, xy
+from shapely.geometry import LineString, Point, Polygon
 
-from revrt.routing import utilities as routing_utils
+from revrt.routing.utilities import (
+    PointToFeatureMapper,
+    _filter_transmission_features,
+    _init_streaming_writer,
+    _transform_lat_lon_to_row_col,
+    convert_lat_lon_to_row_col,
+    filter_points_outside_cost_domain,
+    make_rev_sc_points,
+    map_to_costs,
+)
+from revrt.exceptions import revrtValueError
 from revrt.warn import revrtWarning
 
 
@@ -22,6 +35,52 @@ def cost_grid():
     return "EPSG:4326", transform, (height, width)
 
 
+@pytest.fixture
+def transmission_features(tmp_path):
+    """Minimal transmission features written to GeoPackage"""
+    features = gpd.GeoDataFrame(
+        {
+            "gid": [101, 102],
+            "bgid": [11, 12],
+            "egid": [21, 22],
+            "cap_left": [1.0, 2.0],
+            "category": ["keep", "keep"],
+        },
+        geometry=[
+            LineString([(0.0, 0.0), (0.0, 0.8)]),
+            LineString([(10.08, 10.0), (10.08, 10.2)]),
+        ],
+        crs="EPSG:4326",
+    )
+    features_fp = tmp_path / "transmission_features.gpkg"
+    features.to_file(features_fp, driver="GPKG")
+    return features_fp, features
+
+
+@pytest.fixture
+def transmission_regions():
+    """Two regions spanning the synthetic transmission features"""
+    return gpd.GeoDataFrame(
+        geometry=[
+            Polygon([(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)]),
+            Polygon([(10.0, 10.0), (10.0, 10.5), (10.5, 10.5), (10.5, 10.0)]),
+        ],
+        crs="EPSG:4326",
+    )
+
+
+@pytest.fixture
+def candidate_points():
+    """Candidate points to map onto transmission features"""
+    return gpd.GeoDataFrame(
+        {
+            "search_radius": [0.3, 0.02],
+            "geometry": [Point(0.2, 0.2), Point(10.05, 10.05)],
+        },
+        crs="EPSG:4326",
+    )
+
+
 def test_transform_lat_lon_to_row_col_expected_indices(cost_grid):
     """Map lat/lon pairs to expected raster indices"""
 
@@ -29,7 +88,7 @@ def test_transform_lat_lon_to_row_col_expected_indices(cost_grid):
     lon_a, lat_a = xy(transform, 0, 0, offset="center")
     lon_b, lat_b = xy(transform, 3, 4, offset="center")
 
-    row, col = routing_utils._transform_lat_lon_to_row_col(
+    row, col = _transform_lat_lon_to_row_col(
         transform, crs, np.array([lat_a, lat_b]), np.array([lon_a, lon_b])
     )
 
@@ -39,10 +98,10 @@ def test_transform_lat_lon_to_row_col_expected_indices(cost_grid):
     np.testing.assert_array_equal(col, np.array([0, 4]))
 
 
-def test_get_start_end_point_cost_indices_adds_expected_columns(cost_grid):
+def test_map_to_costs_adds_expected_columns(cost_grid):
     """Populate start/end index columns from coordinates"""
 
-    crs, transform, _ = cost_grid
+    crs, transform, shape = cost_grid
     lon_start_a, lat_start_a = xy(transform, 0, 0, offset="center")
     lon_start_b, lat_start_b = xy(transform, 1, 2, offset="center")
     lon_end_a, lat_end_a = xy(transform, 2, 3, offset="center")
@@ -57,9 +116,7 @@ def test_get_start_end_point_cost_indices_adds_expected_columns(cost_grid):
         }
     )
 
-    updated = routing_utils._get_start_end_point_cost_indices(
-        route_points, crs, transform
-    )
+    updated = map_to_costs(route_points, crs, transform, shape)
 
     assert updated is route_points
     np.testing.assert_array_equal(
@@ -92,9 +149,7 @@ def test_filter_points_outside_cost_domain_no_warning(cost_grid):
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        filtered = routing_utils._filter_points_outside_cost_domain(
-            route_points, shape
-        )
+        filtered = filter_points_outside_cost_domain(route_points, shape)
 
     assert not caught
     pd.testing.assert_frame_equal(filtered, expected)
@@ -115,12 +170,13 @@ def test_filter_points_outside_cost_domain_warns_and_drops(cost_grid):
     )
 
     with pytest.warns(revrtWarning) as record:
-        filtered = routing_utils._filter_points_outside_cost_domain(
-            route_points, shape
-        )
+        filtered = filter_points_outside_cost_domain(route_points, shape)
 
     assert len(record) == 1
-    assert "outside of the cost exclusion domain" in str(record[0].message)
+    assert (
+        "The following features are outside of the cost exclusion "
+        "domain and will be dropped"
+    ) in str(record[0].message)
     assert filtered.index.tolist() == [0]
     assert filtered["label"].tolist() == ["valid"]
 
@@ -143,7 +199,7 @@ def test_map_to_costs_maps_and_preserves_valid_routes(cost_grid):
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        mapped = routing_utils.map_to_costs(
+        mapped = map_to_costs(
             route_points.copy(deep=True), crs, transform, shape
         )
 
@@ -188,9 +244,7 @@ def test_map_to_costs_filters_routes_outside_cost_domain(cost_grid):
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        mapped = routing_utils.map_to_costs(
-            route_points, crs, transform, shape
-        )
+        mapped = map_to_costs(route_points, crs, transform, shape)
 
     revrt_warnings = [w for w in caught if isinstance(w.message, revrtWarning)]
     assert len(revrt_warnings) == 1
@@ -209,6 +263,290 @@ def test_map_to_costs_filters_routes_outside_cost_domain(cost_grid):
         np.array([1]),
     )
     assert mapped.index.tolist() == [0]
+
+
+def test_filter_transmission_features_drops_empty_categories(
+    test_data_dir,
+):
+    """_filter_transmission_features removes empty category records"""
+
+    features_src = test_data_dir / "routing" / "ri_transmission_features.gpkg"
+    features = gpd.read_file(features_src, rows=2)
+    features["bgid"] = [1, 2]
+    features["egid"] = [3, 4]
+    features["cap_left"] = [0.0, 0.0]
+    features["gid"] = [11, 12]
+    features.loc[0, "category"] = math.nan
+    features.loc[1, "category"] = "keep"
+
+    with pytest.warns(revrtWarning, match="Dropping 1 feature"):
+        cleaned = _filter_transmission_features(features)
+
+    assert not any(c in cleaned.columns for c in ["bgid", "egid", "cap_left"])
+    assert "trans_gid" in cleaned.columns
+    assert cleaned["category"].tolist() == ["keep"]
+
+
+def test_filter_transmission_features_without_category_column(
+    test_data_dir,
+):
+    """_filter_transmission_features tolerates missing category column"""
+
+    features_src = test_data_dir / "routing" / "ri_transmission_features.gpkg"
+    features = gpd.read_file(features_src, rows=1)
+    features = features.drop(columns="category", errors="ignore")
+
+    cleaned = _filter_transmission_features(features)
+
+    assert "category" not in cleaned.columns
+
+
+def test_point_to_feature_mapper_requires_constraints(
+    transmission_features, candidate_points, tmp_path
+):
+    """PointToFeatureMapper raises if neither regions nor radius provided"""
+
+    features_fp, _ = transmission_features
+    mapper = PointToFeatureMapper("EPSG:4326", features_fp)
+
+    with pytest.raises(
+        revrtValueError,
+        match=(
+            "Must provide either `regions` or a radius to map points "
+            "to features!"
+        ),
+    ):
+        mapper.map_points(
+            candidate_points, tmp_path / "missing_constraints.gpkg"
+        )
+
+
+def test_point_to_feature_mapper_maps_points_and_writes_features(
+    transmission_features, transmission_regions, candidate_points, tmp_path
+):
+    """Map points onto features with region clipping and radius expansion"""
+
+    features_fp, _ = transmission_features
+    regions_fp = tmp_path / "regions.gpkg"
+    transmission_regions.to_file(regions_fp, driver="GPKG")
+    mapper = PointToFeatureMapper("EPSG:4326", features_fp, regions=regions_fp)
+    feature_out = tmp_path / "clipped_features"
+
+    with pytest.warns(
+        revrtWarning,
+        match="Output feature file should have a '.gpkg' extension",
+    ):
+        mapped = mapper.map_points(
+            candidate_points.copy(deep=True),
+            feature_out,
+            radius="search_radius",
+            batch_size=5,
+        )
+
+    clipped_fp = feature_out.with_suffix(".gpkg")
+    assert clipped_fp.exists()
+    assert mapped["end_feat_id"].tolist() == [0, 1]
+    assert mapped["rid"].tolist() == [0, 1]
+    clipped = gpd.read_file(clipped_fp)
+    assert set(clipped["end_feat_id"]) == {0, 1}
+
+
+def test_point_to_feature_mapper_region_only(
+    transmission_features, transmission_regions, tmp_path
+):
+    """Mapper clips solely by regions when no radius is provided"""
+
+    features_fp, _ = transmission_features
+    mapper = PointToFeatureMapper(
+        "EPSG:4326", features_fp, regions=transmission_regions
+    )
+    points = gpd.GeoDataFrame({"geometry": [Point(0.2, 0.2)]}, crs="EPSG:4326")
+    mapped = mapper.map_points(points, tmp_path / "region_only.gpkg")
+    region_feats = gpd.read_file(tmp_path / "region_only.gpkg")
+
+    assert mapped["end_feat_id"].tolist() == [0]
+    assert region_feats["end_feat_id"].tolist() == [0]
+
+
+def test_point_to_feature_mapper_radius_only(transmission_features, tmp_path):
+    """Mapper clips by radius when no regions supplied"""
+
+    features_fp, _ = transmission_features
+    mapper = PointToFeatureMapper("EPSG:4326", features_fp)
+    points = gpd.GeoDataFrame(
+        {"geometry": [Point(0.1, 0.1)]},
+        crs="EPSG:4326",
+    )
+
+    mapped = mapper.map_points(
+        points.copy(deep=True),
+        tmp_path / "radius_only.gpkg",
+        radius=0.25,
+        batch_size=1,
+        expand_radius=False,
+    )
+
+    assert mapped["end_feat_id"].tolist() == [0]
+
+
+def test_point_to_feature_mapper_preserves_existing_region_ids(
+    transmission_features, transmission_regions, candidate_points, tmp_path
+):
+    """Existing region identifiers remain untouched during setup"""
+
+    features_fp, _ = transmission_features
+    regions = transmission_regions.copy(deep=True)
+    regions["rid"] = [5, 6]
+    mapper = PointToFeatureMapper("EPSG:4326", features_fp, regions=regions)
+
+    mapped = mapper.map_points(
+        candidate_points.copy(deep=True),
+        tmp_path / "existing_rid.gpkg",
+        radius="search_radius",
+        batch_size=5,
+    )
+
+    assert mapped["rid"].tolist() == [5, 6]
+
+
+def test_clip_to_radius_expands_until_features_found(
+    transmission_features, transmission_regions, candidate_points
+):
+    """_clip_to_radius gradually expands buffers until features are found"""
+
+    features_fp, __ = transmission_features
+    mapper = PointToFeatureMapper(
+        "EPSG:4326", features_fp, regions=transmission_regions
+    )
+    point = candidate_points.iloc[1].copy(deep=True)
+    point[mapper._rid_column] = 1
+    region_features = mapper._clip_to_region(point)
+
+    empty = mapper._clip_to_radius(
+        point,
+        "search_radius",
+        input_features=region_features,
+        expand_radius=False,
+    )
+    expanded = mapper._clip_to_radius(
+        point,
+        "search_radius",
+        input_features=region_features,
+        expand_radius=True,
+    )
+
+    assert len(empty) == 0
+    assert len(expanded) >= 1
+
+
+def test_clip_to_radius_returns_input_on_null_radius(
+    transmission_features, transmission_regions, candidate_points
+):
+    """_clip_to_radius returns input features unchanged when radius is None"""
+
+    features_fp, features = transmission_features
+    mapper = PointToFeatureMapper(
+        "EPSG:4326", features_fp, regions=transmission_regions
+    )
+    point = candidate_points.iloc[0]
+
+    result = mapper._clip_to_radius(point, None, features)
+
+    assert result is features
+
+
+def test_clip_to_radius_returns_empty_features(
+    transmission_features, transmission_regions, candidate_points
+):
+    """Empty inputs are returned early by _clip_to_radius"""
+
+    features_fp, _ = transmission_features
+    mapper = PointToFeatureMapper(
+        "EPSG:4326", features_fp, regions=transmission_regions
+    )
+    point = candidate_points.iloc[0]
+    empty = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+
+    result = mapper._clip_to_radius(point, 0.1, input_features=empty)
+
+    assert result is empty
+
+
+def test_convert_lat_lon_to_row_col_custom_columns(cost_grid):
+    """Custom column mapping is honored when converting to row/col indices"""
+
+    crs, transform, _ = cost_grid
+    lon, lat = xy(transform, 1, 2, offset="center")
+    points = pd.DataFrame({"lat_val": [lat], "lon_val": [lon]})
+
+    converted = convert_lat_lon_to_row_col(
+        points,
+        crs,
+        transform,
+        lat_col="lat_val",
+        lon_col="lon_val",
+        out_row_name="row_idx",
+        out_col_name="col_idx",
+    )
+
+    np.testing.assert_array_equal(
+        converted["row_idx"].to_numpy(), np.array([1])
+    )
+    np.testing.assert_array_equal(
+        converted["col_idx"].to_numpy(), np.array([2])
+    )
+
+
+def test_make_rev_sc_points_returns_expected_grid(cost_grid):
+    """make_rev_sc_points builds a supply-curve grid with derived geometry"""
+
+    crs, transform, shape = cost_grid
+    sc_points = make_rev_sc_points(
+        shape[0], shape[1], crs, transform, resolution=2
+    )
+
+    assert len(sc_points) == 6
+    assert sc_points.index.name == "gid"
+    assert {"start_row", "start_col", "latitude", "longitude"}.issubset(
+        sc_points.columns
+    )
+    assert sc_points.geometry.iloc[0].geom_type == "Point"
+
+
+def test_init_streaming_writer_appends_suffix(tmp_path):
+    """_init_streaming_writer enforces GeoPackage output extension"""
+
+    raw_fp = tmp_path / "stream_output"
+    with pytest.warns(
+        revrtWarning,
+        match="Output feature file should have a '.gpkg' extension",
+    ):
+        writer = _init_streaming_writer(raw_fp)
+
+    assert writer.out_fp.suffix == ".gpkg"
+
+
+def test_filter_points_outside_cost_domain_only_start_indices(cost_grid):
+    """Bounds filtering works when end indices are absent"""
+
+    _, _, shape = cost_grid
+    route_points = pd.DataFrame(
+        {
+            "start_row": [0, -1],
+            "start_col": [0, shape[1]],
+        }
+    )
+
+    with pytest.warns(
+        revrtWarning,
+        match=(
+            "The following features are outside of the cost exclusion "
+            "domain and will be dropped"
+        ),
+    ):
+        filtered = filter_points_outside_cost_domain(route_points, shape)
+
+    assert filtered.index.tolist() == [0]
 
 
 if __name__ == "__main__":

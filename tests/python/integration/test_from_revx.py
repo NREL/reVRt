@@ -17,7 +17,7 @@ from shapely.geometry import Point
 
 from revrt.utilities import LayeredFile, features_to_route_table
 from revrt.costs.config import TransmissionConfig, parse_cap_class
-from revrt.routing.point_to_many import BatchRouteProcessor, RoutingScenario
+from revrt.routing.point_to_point import BatchRouteProcessor, RoutingScenario
 from revrt.routing.cli import (
     _convert_to_route_definitions,
     _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL,
