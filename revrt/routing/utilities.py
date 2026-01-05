@@ -211,7 +211,7 @@ class PointToFeatureMapper:
                 input_features,
             )
             ind += 1
-            if ind >= _WHILE_LOOP_ITER_MAX:
+            if ind >= _WHILE_LOOP_ITER_MAX:  # pragma: no cover
                 msg = "Maximum iterations reached when expanding radius!"
                 raise revrtRuntimeError(msg)
 
