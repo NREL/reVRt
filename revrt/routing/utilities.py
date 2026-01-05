@@ -13,10 +13,11 @@ from shapely.geometry import Point
 from revrt.warn import revrtWarning
 from revrt.utilities.base import region_mapper
 from revrt.utilities.handlers import IncrementalWriter
-from revrt.exceptions import revrtValueError
+from revrt.exceptions import revrtValueError, revrtRuntimeError
 
 
 logger = logging.getLogger(__name__)
+WHILE_LOOP_ITER_MAX = 10_000
 
 
 class PointToFeatureMapper:
@@ -202,12 +203,17 @@ class PointToFeatureMapper:
         )
 
         clipping_buffer = 1
+        ind = 0
         while expand_radius and len(clipped_features) <= 0:
             clipping_buffer += 0.05
             clipped_features = self._clipped_features(
                 point.geometry.buffer(radius * clipping_buffer),
                 input_features,
             )
+            ind += 1
+            if ind >= WHILE_LOOP_ITER_MAX:
+                msg = "Maximum iterations reached when expanding radius!"
+                raise revrtRuntimeError(msg)
 
         logger.info(
             "%d transmission features found in clipped area with radius %.2f",
