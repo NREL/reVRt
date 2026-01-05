@@ -10,7 +10,6 @@ from rasterio.transform import from_origin, xy
 
 from revrt.routing.utilities import (
     _transform_lat_lon_to_row_col,
-    _get_start_end_point_cost_indices,
     filter_points_outside_cost_domain,
     map_to_costs,
 )
@@ -44,10 +43,10 @@ def test_transform_lat_lon_to_row_col_expected_indices(cost_grid):
     np.testing.assert_array_equal(col, np.array([0, 4]))
 
 
-def test_get_start_end_point_cost_indices_adds_expected_columns(cost_grid):
+def test_map_to_costs_adds_expected_columns(cost_grid):
     """Populate start/end index columns from coordinates"""
 
-    crs, transform, _ = cost_grid
+    crs, transform, shape = cost_grid
     lon_start_a, lat_start_a = xy(transform, 0, 0, offset="center")
     lon_start_b, lat_start_b = xy(transform, 1, 2, offset="center")
     lon_end_a, lat_end_a = xy(transform, 2, 3, offset="center")
@@ -62,7 +61,7 @@ def test_get_start_end_point_cost_indices_adds_expected_columns(cost_grid):
         }
     )
 
-    updated = _get_start_end_point_cost_indices(route_points, crs, transform)
+    updated = map_to_costs(route_points, crs, transform, shape)
 
     assert updated is route_points
     np.testing.assert_array_equal(

@@ -246,64 +246,170 @@ def map_to_costs(route_points, crs, transform, shape):
     pandas.DataFrame
         Updated route table filtered to routes within the cost domain.
     """
-    route_points = _get_start_end_point_cost_indices(
-        route_points, crs, transform
-    )
-    return _filter_points_outside_cost_domain(route_points, shape)
-
-
-def _get_start_end_point_cost_indices(route_points, cost_crs, transform):
-    """Populate start/end row and column indices for each route"""
-
     logger.debug("Map %d routes to cost raster", len(route_points))
     logger.debug("First few routes:\n%s", route_points.head())
     logger.debug("Transform:\n%s", transform)
 
-    start_lat = route_points["start_lat"].astype("float32")
-    start_lon = route_points["start_lon"].astype("float32")
-    start_row, start_col = _transform_lat_lon_to_row_col(
-        transform, cost_crs, start_lat, start_lon
+    route_points = convert_lat_lon_to_row_col(
+        route_points,
+        crs,
+        transform,
+        lat_col="start_lat",
+        lon_col="start_lon",
+        out_row_name="start_row",
+        out_col_name="start_col",
     )
-    end_lat = route_points["end_lat"].astype("float32")
-    end_lon = route_points["end_lon"].astype("float32")
-    end_row, end_col = _transform_lat_lon_to_row_col(
-        transform, cost_crs, end_lat, end_lon
+
+    route_points = convert_lat_lon_to_row_col(
+        route_points,
+        crs,
+        transform,
+        lat_col="end_lat",
+        lon_col="end_lon",
+        out_row_name="end_row",
+        out_col_name="end_col",
     )
 
     logger.debug("Mapping done!")
 
-    route_points["start_row"] = start_row.astype("int32")
-    route_points["start_col"] = start_col.astype("int32")
-    route_points["end_row"] = end_row.astype("int32")
-    route_points["end_col"] = end_col.astype("int32")
-
-    return route_points
+    return filter_points_outside_cost_domain(route_points, shape)
 
 
-def _filter_points_outside_cost_domain(route_points, shape):
-    """Drop routes whose indices fall outside the cost domain"""
+def make_rev_sc_points(excl_rows, excl_cols, crs, transform, resolution=128):
+    """Generate reV supply curve points for a given exclusion grid size
+
+    Parameters
+    ----------
+    excl_rows, excl_cols : int
+        Dimensions of the exclusion grid.
+    crs : str or pyproj.crs.CRS
+        Coordinate reference system for the exclusion raster.
+    transform : affine.Affine
+        Affine transform object representing the exclusion raster
+        transformation.
+    resolution : int, default=128
+        Resolution of the supply curve grid w.r.t the exclusion grid
+        (i.e. reV aggregation factor). By default, ``128``.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Supply curve points with geometry and start row/column indices.
+    """
+    n_rows = int(np.ceil(excl_rows / resolution))
+    n_cols = int(np.ceil(excl_cols / resolution))
+
+    sc_col_ind, sc_row_ind = np.meshgrid(np.arange(n_cols), np.arange(n_rows))
+
+    sc_points = pd.DataFrame(
+        {
+            "sc_row_ind": sc_row_ind.flatten().copy(),
+            "sc_col_ind": sc_col_ind.flatten().copy(),
+        }
+    )
+
+    sc_points.index.name = "gid"
+    sc_points["sc_point_gid"] = sc_points.index.to_numpy()
+
+    row = np.round(sc_points["sc_row_ind"] * resolution + resolution / 2)
+    sc_points["start_row"] = row.astype(int)
+
+    col = np.round(sc_points["sc_col_ind"] * resolution + resolution / 2)
+    sc_points["start_col"] = col.astype(int)
+
+    x, y = rasterio.transform.xy(
+        transform, sc_points["start_row"].values, sc_points["start_col"].values
+    )
+    geo = [Point(xy) for xy in zip(x, y, strict=True)]
+    return gpd.GeoDataFrame(sc_points, crs=crs, geometry=geo)
+
+
+def convert_lat_lon_to_row_col(
+    points,
+    crs,
+    transform,
+    lat_col="latitude",
+    lon_col="longitude",
+    out_row_name="start_row",
+    out_col_name="start_col",
+):
+    """Convert latitude and longitude columns to row and column indices
+
+    Parameters
+    ----------
+    points : pandas.DataFrame or geopandas.GeoDataFrame
+        Data with latitude and longitude columns that need to be
+        converted to row and column indices.
+    crs : str or pyproj.crs.CRS
+        Coordinate reference system for the target grid.
+    transform : affine.Affine
+        Affine transform for the target grid.
+    lat_col : str, default="latitude"
+        Name of latitude column in input `point`.
+        By default, ``"latitude"``.
+    lon_col : str, default="longitude"
+        Name of longitude column in input `point`.
+        By default, ``"longitude"``.
+    out_row_name : str, default="start_row"
+        Name of output column for row indices.
+        By default, ``"start_row"``.
+    out_col_name : str, default="start_col"
+        Name of output column for column indices.
+        By default, ``"start_col"``.
+
+    Returns
+    -------
+    pandas.DataFrame or geopandas.GeoDataFrame
+        Input `points` with added row and column index columns.
+    """
+    start_lat = points[lat_col].astype("float32")
+    start_lon = points[lon_col].astype("float32")
+    start_row, start_col = _transform_lat_lon_to_row_col(
+        transform, crs, start_lat, start_lon
+    )
+    points[out_row_name] = start_row.astype("int32")
+    points[out_col_name] = start_col.astype("int32")
+    return points
+
+
+def filter_points_outside_cost_domain(route_table, shape):
+    """Drop routes whose indices fall outside the cost domain
+
+    Parameters
+    ----------
+    route_table : pandas.DataFrame or geopandas.GeoDataFrame
+        Route definitions table with at least `start_row`, `start_col`,
+        `end_row`, and `end_col` columns.
+    shape : tuple
+        Raster height and width for bounds checking.
+
+    Returns
+    -------
+    pandas.DataFrame or geopandas.GeoDataFrame
+        Input `points` filtered to only those within the cost domain.
+    """
 
     logger.debug("Filtering out points outside cost domain...")
-    mask = route_points["start_row"] >= 0
-    mask &= route_points["start_row"] < shape[0]
-    mask &= route_points["start_col"] >= 0
-    mask &= route_points["start_col"] < shape[1]
-    mask &= route_points["end_row"] >= 0
-    mask &= route_points["end_row"] < shape[0]
-    mask &= route_points["end_col"] >= 0
-    mask &= route_points["end_col"] < shape[1]
+    mask = route_table["start_row"] >= 0
+    mask &= route_table["start_row"] < shape[0]
+    mask &= route_table["start_col"] >= 0
+    mask &= route_table["start_col"] < shape[1]
+    mask &= route_table["end_row"] >= 0
+    mask &= route_table["end_row"] < shape[0]
+    mask &= route_table["end_col"] >= 0
+    mask &= route_table["end_col"] < shape[1]
 
     logger.debug("Mask computed!")
 
     if any(~mask):
         msg = (
             "The following features are outside of the cost exclusion "
-            f"domain and will be dropped:\n{route_points.loc[~mask]}"
+            f"domain and will be dropped:\n{route_table.loc[~mask]}"
         )
         warn(msg, revrtWarning)
-        route_points = route_points.loc[mask].reset_index(drop=True)
+        route_table = route_table.loc[mask].reset_index(drop=True)
 
-    return route_points
+    return route_table
 
 
 def _transform_lat_lon_to_row_col(transform, cost_crs, lat, lon):
