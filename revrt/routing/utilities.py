@@ -378,8 +378,8 @@ def filter_points_outside_cost_domain(route_table, shape):
     Parameters
     ----------
     route_table : pandas.DataFrame or geopandas.GeoDataFrame
-        Route definitions table with at least `start_row`, `start_col`,
-        `end_row`, and `end_col` columns.
+        Route definitions table with at least `start_row`, `start_col`.
+        Can also optionally have `end_row`, and `end_col` columns.
     shape : tuple
         Raster height and width for bounds checking.
 
@@ -394,10 +394,12 @@ def filter_points_outside_cost_domain(route_table, shape):
     mask &= route_table["start_row"] < shape[0]
     mask &= route_table["start_col"] >= 0
     mask &= route_table["start_col"] < shape[1]
-    mask &= route_table["end_row"] >= 0
-    mask &= route_table["end_row"] < shape[0]
-    mask &= route_table["end_col"] >= 0
-    mask &= route_table["end_col"] < shape[1]
+    if "end_row" in route_table.columns:
+        mask &= route_table["end_row"] >= 0
+        mask &= route_table["end_row"] < shape[0]
+    if "end_col" in route_table.columns:
+        mask &= route_table["end_col"] >= 0
+        mask &= route_table["end_col"] < shape[1]
 
     logger.debug("Mask computed!")
 
