@@ -2,6 +2,7 @@
 
 import json
 import math
+import warnings
 import traceback
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from revrt.exceptions import revrtValueError
 from revrt.routing.cli_point_to_features import (
     build_point_to_feature_route_table_command,
     point_to_feature_route_table,
+    _check_output_filepaths,
     _make_points,
 )
 from revrt.routing.utilities import (
@@ -22,6 +24,7 @@ from revrt.routing.utilities import (
     make_rev_sc_points,
     map_to_costs,
 )
+from revrt.routing import utilities as routing_utils
 from revrt.warn import revrtWarning
 
 
@@ -429,6 +432,315 @@ def test_map_to_costs_filters_out_of_bounds(cost_metadata):
         mapped.columns
     )
     assert len(mapped) == 1
+
+
+def test_point_to_feature_route_table_without_regions(
+    tmp_path, routing_test_inputs, cost_metadata, revx_transmission_layers
+):
+    """Route table helper runs without region file when radius set"""
+
+    resolution = _determine_sparse_resolution(cost_metadata["shape"])
+    out_dir = tmp_path / "no_regions"
+    out_dir.mkdir()
+
+    outputs = point_to_feature_route_table(
+        revx_transmission_layers,
+        routing_test_inputs["features_fp"],
+        out_dir,
+        resolution=resolution,
+        radius=40_000,
+        expand_radius=False,
+        feature_out_fp="no_regions_features.gpkg",
+        route_table_out_fp="no_regions_routes.csv",
+        batch_size=1,
+    )
+
+    assert Path(outputs[0]).exists()
+    assert Path(outputs[1]).exists()
+
+
+def test_check_output_filepaths_preserves_valid_extensions(tmp_path):
+    """Ensure helper respects valid output extensions without warnings"""
+
+    feature_path = tmp_path / "features.gpkg"
+    route_path = tmp_path / "routes.csv"
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        checked_feature, checked_route = _check_output_filepaths(
+            tmp_path, feature_path.name, route_path.name
+        )
+
+    assert checked_feature == feature_path
+    assert checked_route == route_path
+    assert not caught
+
+
+def test_point_to_feature_mapper_preserves_existing_region_id(
+    routing_test_inputs, cost_metadata
+):
+    """Existing region identifiers are preserved without reassignment"""
+
+    regions = (
+        routing_test_inputs["regions"].to_crs(cost_metadata["crs"]).copy()
+    )
+    regions["rid"] = range(len(regions))
+
+    mapper = PointToFeatureMapper(
+        cost_metadata["crs"],
+        routing_test_inputs["features_fp"],
+        regions=regions,
+        region_identifier_column="rid",
+    )
+
+    assert mapper._regions["rid"].tolist() == regions["rid"].tolist()
+
+
+def test_map_points_flushes_remaining_batch(
+    tmp_path, routing_test_inputs, cost_metadata, monkeypatch
+):
+    """map_points writes any trailing batch after iteration completes"""
+
+    mapper = PointToFeatureMapper(
+        cost_metadata["crs"], routing_test_inputs["features_fp"]
+    )
+    points = make_rev_sc_points(
+        cost_metadata["shape"][0],
+        cost_metadata["shape"][1],
+        cost_metadata["crs"],
+        cost_metadata["transform"],
+        resolution=_determine_sparse_resolution(cost_metadata["shape"]),
+    ).head(2)
+
+    class DummyWriter:
+        def __init__(self):
+            self.saved = []
+
+        def save(self, data):
+            self.saved.append(data.copy())
+
+    dummy_writer = DummyWriter()
+    monkeypatch.setattr(
+        "revrt.routing.utilities._init_streaming_writer",
+        lambda __: dummy_writer,
+    )
+
+    fake_features = (
+        routing_test_inputs["features"].to_crs(cost_metadata["crs"]).head(1)
+    ).reset_index(drop=True)
+
+    def _fake_clip_to_point(self, point, radius, expand_radius):
+        return fake_features.copy()
+
+    monkeypatch.setattr(
+        PointToFeatureMapper, "_clip_to_point", _fake_clip_to_point
+    )
+
+    mapped = mapper.map_points(
+        points,
+        tmp_path / "flush_batch",
+        radius=10_000,
+        batch_size=5,
+    )
+
+    assert len(dummy_writer.saved) == 1
+    assert len(mapped) == len(points)
+
+
+def test_clip_to_point_uses_radius_branch(
+    routing_test_inputs, cost_metadata, monkeypatch
+):
+    """_clip_to_point applies both region and radius clipping when needed"""
+
+    mapper = PointToFeatureMapper(
+        cost_metadata["crs"],
+        routing_test_inputs["features_fp"],
+        regions=routing_test_inputs["regions"],
+    )
+
+    region_features = (
+        routing_test_inputs["features"].to_crs(cost_metadata["crs"]).head(1)
+    )
+
+    def _fake_clip_region(self, point):
+        return region_features.copy()
+
+    def _fake_clip_radius(self, point, radius, features, expand_radius):
+        expanded = features.copy()
+        expanded["expanded_radius"] = radius
+        return expanded
+
+    monkeypatch.setattr(
+        PointToFeatureMapper, "_clip_to_region", _fake_clip_region
+    )
+    monkeypatch.setattr(
+        PointToFeatureMapper, "_clip_to_radius", _fake_clip_radius
+    )
+
+    points = make_rev_sc_points(
+        cost_metadata["shape"][0],
+        cost_metadata["shape"][1],
+        cost_metadata["crs"],
+        cost_metadata["transform"],
+        resolution=_determine_sparse_resolution(cost_metadata["shape"]),
+    )
+
+    result = mapper._clip_to_point(
+        points.iloc[0], radius=5_000, expand_radius=False
+    )
+
+    assert "expanded_radius" in result.columns
+
+
+def test_clip_to_radius_returns_input_when_radius_missing(
+    routing_test_inputs, cost_metadata
+):
+    """_clip_to_radius returns the input features when radius is missing"""
+
+    mapper = PointToFeatureMapper(
+        cost_metadata["crs"], routing_test_inputs["features_fp"]
+    )
+    points = make_rev_sc_points(
+        cost_metadata["shape"][0],
+        cost_metadata["shape"][1],
+        cost_metadata["crs"],
+        cost_metadata["transform"],
+        resolution=_determine_sparse_resolution(cost_metadata["shape"]),
+    )
+    features = (
+        routing_test_inputs["features"].to_crs(cost_metadata["crs"]).head(1)
+    )
+
+    result = mapper._clip_to_radius(points.iloc[0], None, features, True)
+
+    assert result is features
+
+
+def test_clip_to_point_without_radius_uses_region_only(
+    routing_test_inputs, cost_metadata, monkeypatch
+):
+    """_clip_to_point should bypass radius clipping when radius missing"""
+
+    mapper = PointToFeatureMapper(
+        cost_metadata["crs"],
+        routing_test_inputs["features_fp"],
+        regions=routing_test_inputs["regions"],
+    )
+
+    region_features = (
+        routing_test_inputs["features"].to_crs(cost_metadata["crs"]).head(1)
+    )
+
+    def _fake_clip_region(self, point):
+        return region_features.copy()
+
+    called = {"radius": False}
+
+    def _fake_clip_radius(self, point, radius, features, expand_radius):
+        called["radius"] = True
+        return features
+
+    monkeypatch.setattr(
+        PointToFeatureMapper, "_clip_to_region", _fake_clip_region
+    )
+    monkeypatch.setattr(
+        PointToFeatureMapper, "_clip_to_radius", _fake_clip_radius
+    )
+
+    points = make_rev_sc_points(
+        cost_metadata["shape"][0],
+        cost_metadata["shape"][1],
+        cost_metadata["crs"],
+        cost_metadata["transform"],
+        resolution=_determine_sparse_resolution(cost_metadata["shape"]),
+    )
+
+    result = mapper._clip_to_point(points.iloc[0], radius=None)
+
+    assert not called["radius"]
+    assert isinstance(result, gpd.GeoDataFrame)
+
+
+def test_filter_points_outside_cost_domain_warns_and_drops():
+    """filter_points_outside_cost_domain drops out-of-bounds routes"""
+
+    table = pd.DataFrame(
+        {
+            "start_row": [0, -1],
+            "start_col": [0, 15],
+            "end_row": [1, 4],
+            "end_col": [1, -3],
+        }
+    )
+
+    with pytest.warns(revrtWarning):
+        filtered = routing_utils.filter_points_outside_cost_domain(
+            table, (5, 5)
+        )
+
+    assert len(filtered) == 1
+
+
+def test_filter_points_outside_cost_domain_no_warning():
+    """filter_points_outside_cost_domain passes rows within bounds"""
+
+    table = pd.DataFrame(
+        {
+            "start_row": [0, 1],
+            "start_col": [0, 1],
+            "end_row": [2, 3],
+            "end_col": [2, 3],
+        }
+    )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", revrtWarning)
+        result = routing_utils.filter_points_outside_cost_domain(table, (5, 5))
+
+    assert len(result) == len(table)
+    assert not caught
+
+
+def test_filter_transmission_features_drops_empty_categories(
+    routing_test_inputs,
+):
+    """_filter_transmission_features removes empty category records"""
+
+    features = (
+        routing_test_inputs["features"]
+        .to_crs(routing_test_inputs["features"].crs)
+        .head(2)
+    )
+    features = features.reset_index(drop=True).copy()
+    features["bgid"] = [1, 2]
+    features["egid"] = [3, 4]
+    features["cap_left"] = [0.0, 0.0]
+    features["gid"] = [11, 12]
+    features.loc[0, "category"] = math.nan
+    features.loc[1, "category"] = "keep"
+
+    with pytest.warns(revrtWarning):
+        cleaned = routing_utils._filter_transmission_features(features)
+
+    assert "trans_gid" in cleaned.columns
+    assert cleaned["category"].tolist() == ["keep"]
+
+
+def test_filter_transmission_features_without_category_column(
+    routing_test_inputs,
+):
+    """_filter_transmission_features tolerates missing category column"""
+
+    features = (
+        routing_test_inputs["features"]
+        .to_crs(routing_test_inputs["features"].crs)
+        .head(1)
+    )
+    features = features.drop(columns="category", errors="ignore")
+
+    cleaned = routing_utils._filter_transmission_features(features)
+
+    assert "category" not in cleaned.columns
 
 
 if __name__ == "__main__":
