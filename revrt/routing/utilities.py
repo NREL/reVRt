@@ -17,7 +17,7 @@ from revrt.exceptions import revrtValueError, revrtRuntimeError
 
 
 logger = logging.getLogger(__name__)
-WHILE_LOOP_ITER_MAX = 10_000
+_WHILE_LOOP_ITER_MAX = 10_000
 
 
 class PointToFeatureMapper:
@@ -211,7 +211,7 @@ class PointToFeatureMapper:
                 input_features,
             )
             ind += 1
-            if ind >= WHILE_LOOP_ITER_MAX:
+            if ind >= _WHILE_LOOP_ITER_MAX:
                 msg = "Maximum iterations reached when expanding radius!"
                 raise revrtRuntimeError(msg)
 
