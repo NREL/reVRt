@@ -225,7 +225,7 @@ def _check_output_filepaths(out_dir, feature_out_fp, route_table_out_fp):
     return feature_out_fp, route_table_out_fp
 
 
-route_points_command = CLICommandFromFunction(
+build_point_to_feature_route_table_command = CLICommandFromFunction(
     point_to_feature_route_table,
     name="build-feature-route-table",
     add_collect=False,
