@@ -567,8 +567,7 @@ def _paths_to_compute(route_points, out_fp):
         if routes.empty:
             continue
 
-        *__, polarity, voltage = group_info
-        yield polarity, voltage, routes
+        yield *group_info, routes
 
 
 def _convert_to_route_definitions(routes):
