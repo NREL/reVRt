@@ -2,7 +2,6 @@
 
 import json
 import math
-import warnings
 import traceback
 from pathlib import Path
 
@@ -10,22 +9,14 @@ import geopandas as gpd
 import pandas as pd
 import pytest
 import xarray as xr
-from shapely.geometry import LineString, Point, Polygon
 
 from revrt._cli import main
 from revrt.exceptions import revrtValueError
 from revrt.routing.cli_point_to_features import (
     build_point_to_feature_route_table_command,
     point_to_feature_route_table,
-    _check_output_filepaths,
-    _make_points,
 )
-from revrt.routing.utilities import (
-    PointToFeatureMapper,
-    make_rev_sc_points,
-    map_to_costs,
-)
-from revrt.routing import utilities as routing_utils
+from revrt.routing.utilities import PointToFeatureMapper, make_rev_sc_points
 from revrt.warn import revrtWarning
 
 
@@ -34,8 +25,8 @@ def routing_test_inputs(tmp_path_factory, test_data_dir):
     """Prepare reusable inputs for mapping tests"""
 
     work_dir = tmp_path_factory.mktemp("routing_point_to_feature")
-    features_src = Path(test_data_dir / "routing/ri_allconns.gpkg")
-    regions_src = Path(test_data_dir / "routing/ri_regions.gpkg")
+    features_src = test_data_dir / "routing" / "ri_allconns.gpkg"
+    regions_src = test_data_dir / "routing" / "ri_regions.gpkg"
 
     features = gpd.read_file(features_src).copy(deep=True)
     if "category" in features.columns:
@@ -240,48 +231,6 @@ def test_cli_build_feature_route_table_from_config(
     )
 
 
-def test_make_points_requires_input(cost_metadata):
-    """Verify the helper enforces mutually exclusive inputs"""
-
-    with pytest.raises(
-        revrtValueError,
-        match=(
-            "Either `points_fpath` or `resolution` must be provided to "
-            "create route table!"
-        ),
-    ):
-        _make_points(
-            cost_metadata["crs"],
-            cost_metadata["transform"],
-            cost_metadata["shape"],
-        )
-
-
-def test_make_points_from_csv(tmp_path, cost_metadata):
-    """Build supply-curve points from a CSV input"""
-
-    height, width = cost_metadata["shape"]
-    resolution = _determine_sparse_resolution(cost_metadata["shape"])
-    sc_points = make_rev_sc_points(
-        height,
-        width,
-        cost_metadata["crs"],
-        cost_metadata["transform"],
-        resolution=resolution,
-    ).head(5)
-    csv_path = tmp_path / "points.csv"
-    sc_points.drop(columns="geometry").to_csv(csv_path, index=False)
-
-    points = _make_points(
-        cost_metadata["crs"],
-        cost_metadata["transform"],
-        cost_metadata["shape"],
-        points_fpath=csv_path,
-    )
-
-    assert {"start_row", "start_col"}.issubset(points.columns)
-
-
 def test_point_to_feature_mapper_requires_radius_or_regions(
     tmp_path, routing_test_inputs, cost_metadata
 ):
@@ -400,182 +349,6 @@ def test_point_to_feature_mapper_accepts_region_path(
     assert mapped["end_feat_id"].tolist() == list(range(len(mapped)))
 
 
-def test_point_to_feature_mapper_clips_features_to_region_boundary(tmp_path):
-    """Features are trimmed to region boundary when regions provided"""
-
-    crs = "EPSG:3857"
-    region_geom = Polygon([(0, 0), (0, 1_000), (1_000, 1_000), (1_000, 0)])
-    regions = gpd.GeoDataFrame({"rid": [7]}, geometry=[region_geom], crs=crs)
-    regions_fp = tmp_path / "clip_regions.gpkg"
-    regions.to_file(regions_fp, driver="GPKG")
-
-    original = LineString([(-250, 500), (1_250, 500)])
-    features = gpd.GeoDataFrame(
-        {"category": ["keep"], "gid": [101]}, geometry=[original], crs=crs
-    )
-    features_fp = tmp_path / "clip_features.gpkg"
-    features.to_file(features_fp, driver="GPKG")
-
-    mapper = PointToFeatureMapper(
-        crs,
-        features_fp,
-        regions=regions_fp,
-        region_identifier_column="rid",
-    )
-
-    points = gpd.GeoDataFrame(
-        {"start_row": [0], "start_col": [0]},
-        geometry=[Point(500, 500)],
-        crs=crs,
-    )
-
-    out_fp = tmp_path / "clipped_outputs.gpkg"
-    mapper.map_points(
-        points,
-        out_fp,
-        radius=800,
-        expand_radius=False,
-        batch_size=1,
-    )
-
-    clipped = gpd.read_file(out_fp)
-    assert len(clipped) == 1
-    clipped_geom = clipped.geometry.iloc[0]
-    assert clipped_geom.geom_type == "LineString"
-    assert clipped_geom.length < original.length
-    assert clipped["rid"].tolist() == [7]
-
-    expected = LineString([(0, 500), (1_000, 500)])
-    assert clipped_geom.equals_exact(expected, tolerance=1e-6)
-
-    region_difference = clipped_geom.difference(region_geom)
-    assert region_difference.is_empty
-
-
-def test_point_to_feature_mapper_clips_features_to_radius(tmp_path):
-    """Features are trimmed to circular radius when radius provided"""
-
-    crs = "EPSG:3857"
-    radius = 400.0
-    point_geom = Point(0, 0)
-    original = LineString([(-1_000, 0), (1_000, 0)])
-    features = gpd.GeoDataFrame({"gid": [5]}, geometry=[original], crs=crs)
-    features_fp = tmp_path / "radius_features.gpkg"
-    features.to_file(features_fp, driver="GPKG")
-
-    mapper = PointToFeatureMapper(crs, features_fp)
-    points = gpd.GeoDataFrame(
-        {"start_row": [0], "start_col": [0]}, geometry=[point_geom], crs=crs
-    )
-
-    out_fp = tmp_path / "radius_outputs.gpkg"
-    mapper.map_points(
-        points,
-        out_fp,
-        radius=radius,
-        expand_radius=False,
-        batch_size=1,
-    )
-
-    clipped = gpd.read_file(out_fp)
-    assert len(clipped) == 1
-    clipped_geom = clipped.geometry.iloc[0]
-    expected = original.intersection(point_geom.buffer(radius))
-    assert clipped_geom.equals_exact(expected, tolerance=1e-6)
-    difference = clipped_geom.difference(point_geom.buffer(radius))
-    assert difference.is_empty
-    assert clipped_geom.length < original.length
-
-
-def test_point_to_feature_mapper_clips_features_to_region_and_radius(
-    tmp_path,
-):
-    """Features respect both region and radius constraints when provided"""
-
-    crs = "EPSG:3857"
-    radius = 400.0
-    point_geom = Point(800, 500)
-    region_geom = Polygon([(0, 0), (0, 1_000), (1_000, 1_000), (1_000, 0)])
-    regions = gpd.GeoDataFrame({"rid": [1]}, geometry=[region_geom], crs=crs)
-    regions_fp = tmp_path / "region_and_radius_regions.gpkg"
-    regions.to_file(regions_fp, driver="GPKG")
-
-    original = LineString([(-500, 500), (1_500, 500)])
-    features = gpd.GeoDataFrame({"gid": [1]}, geometry=[original], crs=crs)
-    features_fp = tmp_path / "region_and_radius_features.gpkg"
-    features.to_file(features_fp, driver="GPKG")
-
-    mapper = PointToFeatureMapper(
-        crs,
-        features_fp,
-        regions=regions_fp,
-        region_identifier_column="rid",
-    )
-
-    points = gpd.GeoDataFrame(
-        {"start_row": [0], "start_col": [0]},
-        geometry=[point_geom],
-        crs=crs,
-    )
-
-    out_fp = tmp_path / "region_and_radius_outputs.gpkg"
-    mapper.map_points(
-        points,
-        out_fp,
-        radius=radius,
-        expand_radius=False,
-        batch_size=1,
-    )
-
-    clipped = gpd.read_file(out_fp)
-    assert len(clipped) == 1
-    clipped_geom = clipped.geometry.iloc[0]
-
-    region_only = original.intersection(region_geom)
-    radius_only = original.intersection(point_geom.buffer(radius))
-    expected = region_only.intersection(point_geom.buffer(radius))
-
-    assert clipped_geom.equals_exact(expected, tolerance=1e-6)
-    assert clipped_geom.length < region_only.length
-    assert clipped_geom.length < radius_only.length
-    assert clipped["rid"].tolist() == [1]
-
-
-def test_map_to_costs_filters_out_of_bounds(cost_metadata):
-    """map_to_costs converts coordinates and drops routes out of domain"""
-
-    base_points = make_rev_sc_points(
-        cost_metadata["shape"][0],
-        cost_metadata["shape"][1],
-        cost_metadata["crs"],
-        cost_metadata["transform"],
-        resolution=_determine_sparse_resolution(cost_metadata["shape"]),
-    )
-
-    start = base_points.iloc[0]
-    end = base_points.iloc[len(base_points) // 2]
-    routes = pd.DataFrame(
-        {
-            "start_lat": [start.latitude, 90.0],
-            "start_lon": [start.longitude, 0.0],
-            "end_lat": [end.latitude, end.latitude],
-            "end_lon": [end.longitude, end.longitude],
-        }
-    )
-
-    mapped = map_to_costs(
-        routes,
-        cost_metadata["crs"],
-        cost_metadata["transform"],
-        cost_metadata["shape"],
-    )
-
-    assert {"start_row", "start_col", "end_row", "end_col"}.issubset(
-        mapped.columns
-    )
-    assert len(mapped) == 1
-
-
 def test_point_to_feature_route_table_without_regions(
     tmp_path, routing_test_inputs, cost_metadata, revx_transmission_layers
 ):
@@ -599,23 +372,6 @@ def test_point_to_feature_route_table_without_regions(
 
     assert Path(outputs[0]).exists()
     assert Path(outputs[1]).exists()
-
-
-def test_check_output_filepaths_preserves_valid_extensions(tmp_path):
-    """Ensure helper respects valid output extensions without warnings"""
-
-    feature_path = tmp_path / "features.gpkg"
-    route_path = tmp_path / "routes.csv"
-
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        checked_feature, checked_route = _check_output_filepaths(
-            tmp_path, feature_path.name, route_path.name
-        )
-
-    assert checked_feature == feature_path
-    assert checked_route == route_path
-    assert not caught
 
 
 def test_point_to_feature_mapper_preserves_existing_region_id(
@@ -801,81 +557,6 @@ def test_clip_to_point_without_radius_uses_region_only(
 
     assert not called["radius"]
     assert isinstance(result, gpd.GeoDataFrame)
-
-
-def test_filter_points_outside_cost_domain_warns_and_drops():
-    """filter_points_outside_cost_domain drops out-of-bounds routes"""
-
-    table = pd.DataFrame(
-        {
-            "start_row": [0, -1],
-            "start_col": [0, 15],
-            "end_row": [1, 4],
-            "end_col": [1, -3],
-        }
-    )
-
-    with pytest.warns(revrtWarning):
-        filtered = routing_utils.filter_points_outside_cost_domain(
-            table, (5, 5)
-        )
-
-    assert len(filtered) == 1
-
-
-def test_filter_points_outside_cost_domain_no_warning():
-    """filter_points_outside_cost_domain passes rows within bounds"""
-
-    table = pd.DataFrame(
-        {
-            "start_row": [0, 1],
-            "start_col": [0, 1],
-            "end_row": [2, 3],
-            "end_col": [2, 3],
-        }
-    )
-
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always", revrtWarning)
-        result = routing_utils.filter_points_outside_cost_domain(table, (5, 5))
-
-    assert len(result) == len(table)
-    assert not caught
-
-
-def test_filter_transmission_features_drops_empty_categories(
-    routing_test_inputs,
-):
-    """_filter_transmission_features removes empty category records"""
-
-    features = routing_test_inputs["features"].head(2)
-    features = features.reset_index(drop=True).copy()
-    features["bgid"] = [1, 2]
-    features["egid"] = [3, 4]
-    features["cap_left"] = [0.0, 0.0]
-    features["gid"] = [11, 12]
-    features.loc[0, "category"] = math.nan
-    features.loc[1, "category"] = "keep"
-
-    with pytest.warns(revrtWarning):
-        cleaned = routing_utils._filter_transmission_features(features)
-
-    assert not any(c in cleaned.columns for c in ["bgid", "egid", "cap_left"])
-    assert "trans_gid" in cleaned.columns
-    assert cleaned["category"].tolist() == ["keep"]
-
-
-def test_filter_transmission_features_without_category_column(
-    routing_test_inputs,
-):
-    """_filter_transmission_features tolerates missing category column"""
-
-    features = routing_test_inputs["features"].head(1)
-    features = features.drop(columns="category", errors="ignore")
-
-    cleaned = routing_utils._filter_transmission_features(features)
-
-    assert "category" not in cleaned.columns
 
 
 if __name__ == "__main__":

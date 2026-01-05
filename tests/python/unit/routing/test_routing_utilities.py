@@ -1,15 +1,18 @@
 """reVrt tests for routing utilities"""
 
+import math
 from pathlib import Path
 import warnings
 
+import pytest
 import numpy as np
 import pandas as pd
-import pytest
+import geopandas as gpd
 from rasterio.transform import from_origin, xy
 
 from revrt.routing.utilities import (
     _transform_lat_lon_to_row_col,
+    _filter_transmission_features,
     filter_points_outside_cost_domain,
     map_to_costs,
 )
@@ -205,6 +208,42 @@ def test_map_to_costs_filters_routes_outside_cost_domain(cost_grid):
         np.array([1]),
     )
     assert mapped.index.tolist() == [0]
+
+
+def test_filter_transmission_features_drops_empty_categories(
+    test_data_dir,
+):
+    """_filter_transmission_features removes empty category records"""
+
+    features_src = test_data_dir / "routing" / "ri_allconns.gpkg"
+    features = gpd.read_file(features_src, rows=2)
+    features["bgid"] = [1, 2]
+    features["egid"] = [3, 4]
+    features["cap_left"] = [0.0, 0.0]
+    features["gid"] = [11, 12]
+    features.loc[0, "category"] = math.nan
+    features.loc[1, "category"] = "keep"
+
+    with pytest.warns(revrtWarning):
+        cleaned = _filter_transmission_features(features)
+
+    assert not any(c in cleaned.columns for c in ["bgid", "egid", "cap_left"])
+    assert "trans_gid" in cleaned.columns
+    assert cleaned["category"].tolist() == ["keep"]
+
+
+def test_filter_transmission_features_without_category_column(
+    test_data_dir,
+):
+    """_filter_transmission_features tolerates missing category column"""
+
+    features_src = test_data_dir / "routing" / "ri_allconns.gpkg"
+    features = gpd.read_file(features_src, rows=1)
+    features = features.drop(columns="category", errors="ignore")
+
+    cleaned = _filter_transmission_features(features)
+
+    assert "category" not in cleaned.columns
 
 
 if __name__ == "__main__":
