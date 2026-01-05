@@ -474,7 +474,7 @@ def _drop_empty_categories(features):
     """Drop features with empty category field"""
     mask = features["category"].isna()
     if mask.any():
-        msg = f"Dropping {mask.sum():,} features with NaN category!"
+        msg = f"Dropping {mask.sum():,} feature(s) with NaN category!"
         warn(msg, revrtWarning)
         features = features[~mask].reset_index(drop=True)
 
