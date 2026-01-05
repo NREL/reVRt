@@ -13,6 +13,7 @@ from revrt.exceptions import revrtValueError
 from revrt.routing.cli_point_to_features import (
     _check_output_filepaths,
     _make_points,
+    point_to_feature_route_table,
 )
 from revrt.routing.utilities import (
     PointToFeatureMapper,
@@ -268,6 +269,162 @@ def test_check_output_filepaths_preserves_valid_extensions(tmp_path):
     assert checked_feature == feature_path
     assert checked_route == route_path
     assert not caught
+
+
+def test_point_to_feature_route_table_builds_outputs(
+    tmp_path, revx_transmission_layers
+):
+    """Route table CLI creates outputs and normalizes extensions"""
+
+    cost_fp = tmp_path / "cost_surface.zarr"
+    with xr.open_dataset(
+        revx_transmission_layers, consolidated=False, engine="zarr"
+    ) as ds:
+        subset = ds.isel(y=slice(0, 6), x=slice(0, 6))
+        subset.to_zarr(cost_fp, mode="w")
+        crs = subset.rio.crs
+        transform = subset.rio.transform()
+        shape = (subset.rio.height, subset.rio.width)
+
+    resolution = shape[0] + 2
+    cell_size = max(abs(transform.a), abs(transform.e))
+
+    sc_points = make_rev_sc_points(
+        shape[0], shape[1], crs, transform, resolution=resolution
+    )
+    point_geom = sc_points.geometry.iloc[0]
+
+    line_geom = LineString(
+        [
+            (point_geom.x - cell_size, point_geom.y),
+            (point_geom.x + cell_size, point_geom.y),
+        ]
+    )
+    features = gpd.GeoDataFrame(
+        {"gid": [1], "category": ["test"]},
+        geometry=[line_geom],
+        crs=crs,
+    )
+    features_fp = tmp_path / "features_source.gpkg"
+    features.to_file(features_fp, driver="GPKG")
+
+    region_geom = Polygon(
+        [
+            (point_geom.x - 4 * cell_size, point_geom.y - 4 * cell_size),
+            (point_geom.x - 4 * cell_size, point_geom.y + 4 * cell_size),
+            (point_geom.x + 4 * cell_size, point_geom.y + 4 * cell_size),
+            (point_geom.x + 4 * cell_size, point_geom.y - 4 * cell_size),
+        ]
+    )
+    regions = gpd.GeoDataFrame({"rid": [3]}, geometry=[region_geom], crs=crs)
+    regions_fp = tmp_path / "regions.gpkg"
+    regions.to_file(regions_fp, driver="GPKG")
+
+    out_dir = tmp_path / "outputs"
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        outputs = point_to_feature_route_table(
+            cost_fpath=cost_fp,
+            features_fpath=features_fp,
+            out_dir=out_dir,
+            regions_fpath=regions_fp,
+            resolution=resolution,
+            radius=3 * cell_size,
+            feature_out_fp="clipped_features",
+            route_table_out_fp="route_listing",
+            expand_radius=False,
+            batch_size=1,
+        )
+
+    expected_feature = out_dir / "clipped_features.gpkg"
+    expected_route_table = out_dir / "route_listing.csv"
+
+    assert set(outputs) == {
+        str(expected_route_table),
+        str(expected_feature),
+    }
+    assert expected_feature.exists()
+    assert expected_route_table.exists()
+
+    route_table = pd.read_csv(expected_route_table)
+    assert len(route_table) == 1
+    assert route_table["end_feat_id"].tolist() == [0]
+    assert route_table["start_row"].notna().all()
+    assert route_table["start_col"].notna().all()
+
+    clipped = gpd.read_file(expected_feature)
+    assert len(clipped) == 1
+    assert clipped["rid"].tolist() == [3]
+
+    warning_messages = [str(w.message) for w in caught]
+    assert any(".gpkg" in msg for msg in warning_messages)
+    assert any(".csv" in msg for msg in warning_messages)
+
+
+def test_point_to_feature_route_table_radius_only(
+    tmp_path, revx_transmission_layers
+):
+    """Routing CLI executes when only a radius constraint is provided"""
+
+    cost_fp = tmp_path / "cost_surface.zarr"
+    with xr.open_dataset(
+        revx_transmission_layers, consolidated=False, engine="zarr"
+    ) as ds:
+        subset = ds.isel(y=slice(0, 6), x=slice(0, 6))
+        subset.to_zarr(cost_fp, mode="w")
+        crs = subset.rio.crs
+        transform = subset.rio.transform()
+        shape = (subset.rio.height, subset.rio.width)
+
+    resolution = shape[0] + 2
+    cell_size = max(abs(transform.a), abs(transform.e))
+
+    sc_points = make_rev_sc_points(
+        shape[0], shape[1], crs, transform, resolution=resolution
+    )
+    point_geom = sc_points.geometry.iloc[0]
+
+    line_geom = LineString(
+        [
+            (point_geom.x - cell_size, point_geom.y),
+            (point_geom.x + cell_size, point_geom.y),
+        ]
+    )
+    features = gpd.GeoDataFrame(
+        {"gid": [2]},
+        geometry=[line_geom],
+        crs=crs,
+    )
+    features_fp = tmp_path / "features_radius.gpkg"
+    features.to_file(features_fp, driver="GPKG")
+
+    out_dir = tmp_path / "outputs"
+    outputs = point_to_feature_route_table(
+        cost_fpath=cost_fp,
+        features_fpath=features_fp,
+        out_dir=out_dir,
+        resolution=resolution,
+        radius=3 * cell_size,
+        expand_radius=False,
+        feature_out_fp="clipped_radius.gpkg",
+        route_table_out_fp="routes_radius.csv",
+    )
+
+    expected_feature = out_dir / "clipped_radius.gpkg"
+    expected_route_table = out_dir / "routes_radius.csv"
+
+    assert outputs == [str(expected_route_table), str(expected_feature)]
+    assert expected_feature.exists()
+    assert expected_route_table.exists()
+
+    route_table = pd.read_csv(expected_route_table)
+    assert len(route_table) == 1
+    assert route_table["end_feat_id"].tolist() == [0]
+
+    clipped = gpd.read_file(expected_feature)
+    assert len(clipped) == 1
+    assert "end_feat_id" in clipped.columns
 
 
 if __name__ == "__main__":
