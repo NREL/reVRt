@@ -10,6 +10,7 @@ import geopandas as gpd
 import pandas as pd
 import pytest
 import xarray as xr
+from shapely.geometry import LineString, Point, Polygon
 
 from revrt._cli import main
 from revrt.exceptions import revrtValueError
@@ -397,6 +398,58 @@ def test_point_to_feature_mapper_accepts_region_path(
     )
 
     assert mapped["end_feat_id"].tolist() == list(range(len(mapped)))
+
+
+def test_point_to_feature_mapper_clips_features_to_region_boundary(tmp_path):
+    """Features are trimmed to region boundary when regions provided"""
+
+    crs = "EPSG:3857"
+    region_geom = Polygon([(0, 0), (0, 1_000), (1_000, 1_000), (1_000, 0)])
+    regions = gpd.GeoDataFrame({"rid": [7]}, geometry=[region_geom], crs=crs)
+    regions_fp = tmp_path / "clip_regions.gpkg"
+    regions.to_file(regions_fp, driver="GPKG")
+
+    original = LineString([(-250, 500), (1_250, 500)])
+    features = gpd.GeoDataFrame(
+        {"category": ["keep"], "gid": [101]}, geometry=[original], crs=crs
+    )
+    features_fp = tmp_path / "clip_features.gpkg"
+    features.to_file(features_fp, driver="GPKG")
+
+    mapper = PointToFeatureMapper(
+        crs,
+        features_fp,
+        regions=regions_fp,
+        region_identifier_column="rid",
+    )
+
+    points = gpd.GeoDataFrame(
+        {"start_row": [0], "start_col": [0]},
+        geometry=[Point(500, 500)],
+        crs=crs,
+    )
+
+    out_fp = tmp_path / "clipped_outputs.gpkg"
+    mapper.map_points(
+        points,
+        out_fp,
+        radius=800,
+        expand_radius=False,
+        batch_size=1,
+    )
+
+    clipped = gpd.read_file(out_fp)
+    assert len(clipped) == 1
+    clipped_geom = clipped.geometry.iloc[0]
+    assert clipped_geom.geom_type == "LineString"
+    assert clipped_geom.length < original.length
+    assert clipped["rid"].tolist() == [7]
+
+    expected = LineString([(0, 500), (1_000, 500)])
+    assert clipped_geom.equals_exact(expected, tolerance=1e-6)
+
+    region_difference = clipped_geom.difference(region_geom)
+    assert region_difference.is_empty
 
 
 def test_map_to_costs_filters_out_of_bounds(cost_metadata):
