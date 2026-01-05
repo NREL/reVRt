@@ -1,7 +1,9 @@
 """Integration tests for point to feature routing"""
 
+import os
 import json
 import math
+import platform
 import traceback
 from pathlib import Path
 
@@ -167,6 +169,11 @@ def test_cli_build_feature_route_table(
     )
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
 def test_cli_build_feature_route_table_from_config(
     tmp_path,
     routing_test_inputs,
