@@ -89,8 +89,8 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
         effect if `radius` is ``None``. By default, ``True``.
     feature_out_fp : str, default="mapped_features.gpkg"
         Name of output file for mapped (and potentially clipped)
-        features. This output fil will contain an identifier column that
-        can be linked back to the output route table. By default,
+        features. This output file will contain an identifier column
+        that can be linked back to the output route table. By default,
         ``"mapped_features.gpkg"``.
     route_table_out_fp : str, default="route_table.csv"
         Name of route table output file. This file will contain a start
