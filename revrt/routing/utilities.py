@@ -97,7 +97,7 @@ class PointToFeatureMapper:
             be added automatically. This file will contain all features
             clipped to each point (with a feature ID column added to
             link back to the points).
-        radius : float | str, optional
+        radius : float or str, optional
             Radius (in CRS units) around each point to clip features to.
             If `str`, the column in `points` to use for radius values.
             If ``None``, only regions are used for clipping.
