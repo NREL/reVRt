@@ -1,6 +1,8 @@
 """Integration tests for point to feature routing"""
 
+import json
 import math
+import traceback
 from pathlib import Path
 
 import geopandas as gpd
@@ -8,6 +10,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from revrt._cli import main
 from revrt.exceptions import revrtValueError
 from revrt.routing.cli_point_to_features import (
     build_point_to_feature_route_table_command,
@@ -166,6 +169,70 @@ def test_cli_build_feature_route_table(
     assert "cli_feat_id" in mapped_features.columns
     assert set(mapped_features["cli_feat_id"].unique()) == set(
         route_table["cli_feat_id"]
+    )
+
+
+def test_cli_build_feature_route_table_from_config(
+    tmp_path,
+    routing_test_inputs,
+    cost_metadata,
+    revx_transmission_layers,
+    cli_runner,
+):
+    """Run CLI main entry via config file to build feature route table"""
+
+    resolution = _determine_sparse_resolution(cost_metadata["shape"])
+    out_dir = tmp_path / "cli_config"
+    out_dir.mkdir()
+
+    config = {
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(routing_test_inputs["features_fp"]),
+        "out_dir": str(out_dir),
+        "regions_fpath": str(routing_test_inputs["regions_fp"]),
+        "resolution": resolution,
+        "radius": 75_000,
+        "feature_out_fp": "config_features.gpkg",
+        "route_table_out_fp": "config_routes.csv",
+        "region_identifier_column": "rid",
+        "feature_identifier_column": "cfg_feat_id",
+        "batch_size": 2,
+        "expand_radius": True,
+    }
+
+    config_path = out_dir / "build_feature_route_table.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    result = cli_runner.invoke(
+        main, ["build-feature-route-table", "-c", str(config_path)]
+    )
+    err_msg = None
+    if result.exc_info is not None:
+        err_msg = "".join(traceback.format_exception(*result.exc_info))
+    assert result.exit_code == 0, err_msg
+
+    route_table_path = out_dir / "config_routes.csv"
+    mapped_features_path = out_dir / "config_features.gpkg"
+    assert route_table_path.exists()
+    assert mapped_features_path.exists()
+
+    route_table = pd.read_csv(route_table_path)
+    mapped_features = gpd.read_file(mapped_features_path)
+
+    height, width = cost_metadata["shape"]
+    assert {"start_row", "start_col", "cfg_feat_id"}.issubset(
+        route_table.columns
+    )
+    assert route_table["start_row"].between(0, height - 1).all()
+    assert route_table["start_col"].between(0, width - 1).all()
+    assert route_table["cfg_feat_id"].notna().all()
+    assert "rid" in route_table.columns
+    assert route_table["rid"].notna().all()
+    assert "cfg_feat_id" in mapped_features.columns
+    assert "rid" in mapped_features.columns
+    assert set(mapped_features["cfg_feat_id"].unique()) == set(
+        route_table["cfg_feat_id"]
     )
 
 
