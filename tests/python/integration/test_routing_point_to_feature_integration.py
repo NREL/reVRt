@@ -487,6 +487,60 @@ def test_point_to_feature_mapper_clips_features_to_radius(tmp_path):
     assert clipped_geom.length < original.length
 
 
+def test_point_to_feature_mapper_clips_features_to_region_and_radius(
+    tmp_path,
+):
+    """Features respect both region and radius constraints when provided"""
+
+    crs = "EPSG:3857"
+    radius = 400.0
+    point_geom = Point(800, 500)
+    region_geom = Polygon([(0, 0), (0, 1_000), (1_000, 1_000), (1_000, 0)])
+    regions = gpd.GeoDataFrame({"rid": [1]}, geometry=[region_geom], crs=crs)
+    regions_fp = tmp_path / "region_and_radius_regions.gpkg"
+    regions.to_file(regions_fp, driver="GPKG")
+
+    original = LineString([(-500, 500), (1_500, 500)])
+    features = gpd.GeoDataFrame({"gid": [1]}, geometry=[original], crs=crs)
+    features_fp = tmp_path / "region_and_radius_features.gpkg"
+    features.to_file(features_fp, driver="GPKG")
+
+    mapper = PointToFeatureMapper(
+        crs,
+        features_fp,
+        regions=regions_fp,
+        region_identifier_column="rid",
+    )
+
+    points = gpd.GeoDataFrame(
+        {"start_row": [0], "start_col": [0]},
+        geometry=[point_geom],
+        crs=crs,
+    )
+
+    out_fp = tmp_path / "region_and_radius_outputs.gpkg"
+    mapper.map_points(
+        points,
+        out_fp,
+        radius=radius,
+        expand_radius=False,
+        batch_size=1,
+    )
+
+    clipped = gpd.read_file(out_fp)
+    assert len(clipped) == 1
+    clipped_geom = clipped.geometry.iloc[0]
+
+    region_only = original.intersection(region_geom)
+    radius_only = original.intersection(point_geom.buffer(radius))
+    expected = region_only.intersection(point_geom.buffer(radius))
+
+    assert clipped_geom.equals_exact(expected, tolerance=1e-6)
+    assert clipped_geom.length < region_only.length
+    assert clipped_geom.length < radius_only.length
+    assert clipped["rid"].tolist() == [1]
+
+
 def test_map_to_costs_filters_out_of_bounds(cost_metadata):
     """map_to_costs converts coordinates and drops routes out of domain"""
 
