@@ -110,7 +110,7 @@ class PointToFeatureMapper:
 
         Returns
         -------
-        pandas.DataFrame
+        geopandas.GeoDataFrame
             Input points with added column giving mapped feature IDs.
         """
         if self._regions is None and radius is None:
@@ -321,6 +321,15 @@ def make_rev_sc_points(excl_rows, excl_cols, crs, transform, resolution=128):
         transform, sc_points["start_row"].values, sc_points["start_col"].values
     )
     geo = [Point(xy) for xy in zip(x, y, strict=True)]
+    sc_points = gpd.GeoDataFrame(sc_points, crs=crs, geometry=geo)
+    lat, lon = list(
+        zip(
+            *((p.y, p.x) for p in sc_points.to_crs("EPSG:4326").geometry),
+            strict=True,
+        )
+    )
+    sc_points["latitude"] = lat
+    sc_points["longitude"] = lon
     return gpd.GeoDataFrame(sc_points, crs=crs, geometry=geo)
 
 
