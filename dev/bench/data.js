@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767210277415,
+  "lastUpdate": 1767655101474,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3863,6 +3863,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 378263792,
             "range": "± 4600844",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4a57548376dd23762e859a2e0c34dfcb74036ab4",
+          "message": "Add command to build route table to features (#194)\n\n* Rename module\n\n* Add MVP of `PointToFeatureMapper`\n\n* Flesh out `PointToFeatureMapper` functionality\n\n* Minor update\n\n* Add docstring\n\n* More docstring updates\n\n* Minor formatting\n\n* Allow string radius input\n\n* Update tests\n\n* Refactor utilities\n\n* More flexible `filter_points_outside_cost_domain`\n\n* Include lat/lon when generating SC points\n\n* Add MVP of `cli_point_to_features`\n\n* Add testing data\n\n* Build out cli\n\n* Add bound on while loop\n\n* Make var private\n\n* First pass of tests\n\n* Don't test loop guard\n\n* Add test for CLI\n\n* Add more tests\n\n* Add test\n\n* Minor update\n\n* Added a test\n\n* Add a test\n\n* Split out tests\n\n* Add unit tests\n\n* Add tests\n\n* Documentation fix\n\n* Fix typo\n\n* Fix windows on tox\n\n* Simplify logic\n\n* Rename dataset",
+          "timestamp": "2026-01-05T16:04:48-07:00",
+          "tree_id": "7cdc430cc1e6702f073673673f0e31694afe2107",
+          "url": "https://github.com/NREL/reVRt/commit/4a57548376dd23762e859a2e0c34dfcb74036ab4"
+        },
+        "date": 1767655100177,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 87540898,
+            "range": "± 1088757",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 142258829,
+            "range": "± 1402475",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 102965315,
+            "range": "± 1911543",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 156707887,
+            "range": "± 2299357",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 654468828,
+            "range": "± 12761309",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 152207175,
+            "range": "± 803431",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 156890307,
+            "range": "± 959667",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 171036993,
+            "range": "± 1176665",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 217131403,
+            "range": "± 2023463",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 385809109,
+            "range": "± 4566477",
             "unit": "ns/iter"
           }
         ]
