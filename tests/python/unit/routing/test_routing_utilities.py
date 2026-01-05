@@ -8,7 +8,12 @@ import pandas as pd
 import pytest
 from rasterio.transform import from_origin, xy
 
-from revrt.routing import utilities as routing_utils
+from revrt.routing.utilities import (
+    _transform_lat_lon_to_row_col,
+    _get_start_end_point_cost_indices,
+    filter_points_outside_cost_domain,
+    map_to_costs,
+)
 from revrt.warn import revrtWarning
 
 
@@ -29,7 +34,7 @@ def test_transform_lat_lon_to_row_col_expected_indices(cost_grid):
     lon_a, lat_a = xy(transform, 0, 0, offset="center")
     lon_b, lat_b = xy(transform, 3, 4, offset="center")
 
-    row, col = routing_utils._transform_lat_lon_to_row_col(
+    row, col = _transform_lat_lon_to_row_col(
         transform, crs, np.array([lat_a, lat_b]), np.array([lon_a, lon_b])
     )
 
@@ -57,9 +62,7 @@ def test_get_start_end_point_cost_indices_adds_expected_columns(cost_grid):
         }
     )
 
-    updated = routing_utils._get_start_end_point_cost_indices(
-        route_points, crs, transform
-    )
+    updated = _get_start_end_point_cost_indices(route_points, crs, transform)
 
     assert updated is route_points
     np.testing.assert_array_equal(
@@ -92,9 +95,7 @@ def test_filter_points_outside_cost_domain_no_warning(cost_grid):
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        filtered = routing_utils._filter_points_outside_cost_domain(
-            route_points, shape
-        )
+        filtered = filter_points_outside_cost_domain(route_points, shape)
 
     assert not caught
     pd.testing.assert_frame_equal(filtered, expected)
@@ -115,9 +116,7 @@ def test_filter_points_outside_cost_domain_warns_and_drops(cost_grid):
     )
 
     with pytest.warns(revrtWarning) as record:
-        filtered = routing_utils._filter_points_outside_cost_domain(
-            route_points, shape
-        )
+        filtered = filter_points_outside_cost_domain(route_points, shape)
 
     assert len(record) == 1
     assert "outside of the cost exclusion domain" in str(record[0].message)
@@ -143,7 +142,7 @@ def test_map_to_costs_maps_and_preserves_valid_routes(cost_grid):
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        mapped = routing_utils.map_to_costs(
+        mapped = map_to_costs(
             route_points.copy(deep=True), crs, transform, shape
         )
 
@@ -188,9 +187,7 @@ def test_map_to_costs_filters_routes_outside_cost_domain(cost_grid):
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        mapped = routing_utils.map_to_costs(
-            route_points, crs, transform, shape
-        )
+        mapped = map_to_costs(route_points, crs, transform, shape)
 
     revrt_warnings = [w for w in caught if isinstance(w.message, revrtWarning)]
     assert len(revrt_warnings) == 1
