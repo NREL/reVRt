@@ -7,7 +7,7 @@ from gaps.cli import CLICommandFromFunction
 from gaps.config import load_config
 
 from revrt.routing.cli.base import update_multipliers
-from revrt.routing.point_to_point import RoutingScenario, RoutingLayerManager
+from revrt.routing.base import RoutingScenario, RoutingLayerManager
 
 logger = logging.getLogger(__name__)
 

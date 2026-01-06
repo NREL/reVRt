@@ -11,7 +11,7 @@ import pandas as pd
 import geopandas as gpd
 import xarray as xr
 
-from revrt.routing.point_to_point import BatchRouteProcessor, RoutingScenario
+from revrt.routing.base import BatchRouteProcessor, RoutingScenario
 from revrt.exceptions import revrtKeyError
 
 
