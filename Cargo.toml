@@ -42,7 +42,7 @@ thiserror = "2.0.16"
 tokio = { version = "1.49.0", features = ["fs"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter", "fmt"], default-features = true }
-zarrs = { version = "0.22.2", features = ["async", "filesystem"] }
+zarrs = { version = "0.22.10", features = ["async", "filesystem"] }
 zarrs_object_store = { version = "0.5.0", features = ["fs"] }
 
 [workspace.lints.rust]
