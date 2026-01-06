@@ -206,8 +206,8 @@ def run_lcp(  # noqa: PLR0913, PLR0917
     )
 
     logger.info("Computing best routes for %d point pairs", len(route_points))
-    for route in routes_to_compute:
-        route_cl, route_fl, route_definitions, route_attrs = route
+    for route_batch in routes_to_compute:
+        route_cl, route_fl, route_definitions, route_attrs = route_batch
         scenario = RoutingScenario(
             cost_fpath=cost_fpath,
             cost_layers=route_cl,
