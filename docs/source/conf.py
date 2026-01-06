@@ -218,7 +218,7 @@ texinfo_documents = [
 ]
 
 
-def skip_external_methods(app, what, name, obj, skip, options):
+def skip_external_methods(name, obj):
     mapping_methods = {
         "clear",
         "pop",
@@ -275,8 +275,18 @@ def skip_external_methods(app, what, name, obj, skip, options):
     return None
 
 
+def _skip_internal_api(obj):
+    return (getattr(obj, "__doc__", None) or "").startswith("[NOT PUBLIC API]")
+
+
+def _skip_member(app, what, name, obj, skip, options):
+    if _skip_internal_api(obj) or skip_external_methods(name, obj):
+        return True
+    return None
+
+
 def setup(app):
-    app.connect("autodoc-skip-member", skip_external_methods)
+    app.connect("autodoc-skip-member", _skip_member)
 
 
 # -- Extension configuration -------------------------------------------------
