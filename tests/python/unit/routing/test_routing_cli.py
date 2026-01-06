@@ -26,8 +26,6 @@ from revrt.exceptions import (
 from revrt.routing.cli.base import (
     update_multipliers,
     _run_lcp,
-    _collect_existing_routes,
-    _paths_to_compute,
     _get_row_multiplier,
     _get_polarity_multiplier,
     _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL,
@@ -39,6 +37,7 @@ from revrt.routing.cli.build_costs import (
 from revrt.routing.cli.collect import merge_output
 from revrt.routing.cli.point_to_point import (
     compute_lcp_routes,
+    PointToPointRouteDefinitionConverter,
     _route_points_subset,
     _split_routes,
 )
@@ -303,8 +302,9 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
     )
 
     monkeypatch.setattr(
-        "revrt.routing.cli.base._collect_existing_routes",
-        lambda _: {existing_tuple},
+        "revrt.routing.cli.point_to_point."
+        "PointToPointRouteDefinitionConverter.existing_routes",
+        {existing_tuple},
     )
 
     saved_calls = []
@@ -321,6 +321,7 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
         route_points=routes,
         cost_layers=[{"layer_name": "layer_1"}],
         out_fp=out_fp,
+        route_definition_class=PointToPointRouteDefinitionConverter,
         transmission_config={
             "row_width": {"138": 1.0},
             "voltage_polarity_mult": {"138": {"ac": 1.0}},
@@ -366,11 +367,12 @@ def test_run_lcp_returns_immediately_when_no_routes(tmp_path):
         route_points=pd.DataFrame(),
         cost_layers=[],
         out_fp=tmp_path / "unused.csv",
+        route_definition_class=PointToPointRouteDefinitionConverter,
     )
 
 
-def test_collect_existing_routes_csv(tmp_path):
-    """_collect_existing_routes should read CSV outputs"""
+def test_route_generator_existing_routes_csv(tmp_path):
+    """route_generator.existing_routes should read CSV outputs"""
 
     data = pd.DataFrame(
         [
@@ -387,12 +389,15 @@ def test_collect_existing_routes_csv(tmp_path):
     csv_fp = tmp_path / "routes.csv"
     data.to_csv(csv_fp, index=False)
 
-    result = _collect_existing_routes(csv_fp)
+    route_generator = PointToPointRouteDefinitionConverter(
+        None, None, csv_fp, None, None, None
+    )
+    result = route_generator.existing_routes
     assert result == {(0, 1, 2, 3, "ac", "230")}
 
 
-def test_collect_existing_routes_gpkg(tmp_path):
-    """_collect_existing_routes should support GeoPackage outputs"""
+def test_route_generator_existing_routes_gpkg(tmp_path):
+    """route_generator.existing_routes should support GeoPackage outputs"""
 
     gpkg_fp = tmp_path / "routes.gpkg"
     gdf = gpd.GeoDataFrame(
@@ -408,15 +413,24 @@ def test_collect_existing_routes_gpkg(tmp_path):
     )
     gdf.to_file(gpkg_fp, driver="GPKG")
 
-    result = _collect_existing_routes(gpkg_fp)
+    route_generator = PointToPointRouteDefinitionConverter(
+        None, None, gpkg_fp, None, None, None
+    )
+    result = route_generator.existing_routes
     assert result == {(1, 2, 3, 4, "unknown", "unknown")}
 
 
-def test_collect_existing_routes_when_missing(tmp_path):
+def test_route_generator_existing_routes_when_missing(tmp_path):
     """Missing outputs should result in an empty existing route set"""
 
-    assert _collect_existing_routes(None) == set()
-    assert _collect_existing_routes(tmp_path / "missing.csv") == set()
+    route_generator = PointToPointRouteDefinitionConverter(
+        None, None, None, None, None, None
+    )
+    assert route_generator.existing_routes == set()
+    route_generator = PointToPointRouteDefinitionConverter(
+        None, None, tmp_path / "missing.csv", None, None, None
+    )
+    assert route_generator.existing_routes == set()
 
 
 def test_route_points_subset_with_chunking(tmp_path):
@@ -457,7 +471,16 @@ def test_paths_to_compute_inserts_missing_columns(tmp_path):
         }
     )
 
-    groups = list(_paths_to_compute(route_points, tmp_path / "not_there.csv"))
+    route_generator = PointToPointRouteDefinitionConverter(
+        cost_fpath=None,
+        route_points=route_points,
+        out_fp=tmp_path / "not_there.csv",
+        cost_layers=None,
+        friction_layers=None,
+        transmission_config=None,
+    )
+
+    groups = list(route_generator._paths_to_compute)
     assert groups
     polarity, voltage, grouped_routes = groups[0]
     assert polarity == "unknown"
