@@ -382,6 +382,12 @@ class CharacterizedLayer:
 
     def _compute_total_and_length(self, layer_values, route, cell_size):
         """Compute total cost and length metrics for the layer"""
+        if len(route) == 1:
+            return {
+                f"{self.name}_cost": 0,
+                f"{self.name}_dist_km": 0,
+            }
+
         lens, __ = _compute_lens(route, cell_size)
 
         layer_data = getattr(layer_values, "data", layer_values)
