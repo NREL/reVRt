@@ -25,7 +25,7 @@ from revrt.exceptions import (
 )
 from revrt.routing.cli.base import (
     update_multipliers,
-    _run_lcp,
+    run_lcp,
     _get_row_multiplier,
     _get_polarity_multiplier,
     _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL,
@@ -278,7 +278,7 @@ def test_compute_lcp_routes_returns_none_on_empty_indices(
 def test_run_lcp_with_save_paths_filters_existing_routes(
     sample_layered_data, tmp_path, monkeypatch
 ):
-    """_run_lcp should skip already processed routes and append geometries"""
+    """run_lcp should skip already processed routes and append geometries"""
 
     routes = _build_route_table(
         sample_layered_data,
@@ -316,7 +316,7 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
 
     out_fp = tmp_path / "routes.gpkg"
 
-    _run_lcp(
+    run_lcp(
         cost_fpath=sample_layered_data,
         route_points=routes,
         cost_layers=[{"layer_name": "layer_1"}],
@@ -360,9 +360,9 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
 
 
 def test_run_lcp_returns_immediately_when_no_routes(tmp_path):
-    """_run_lcp should exit early when route_points is empty"""
+    """run_lcp should exit early when route_points is empty"""
 
-    _run_lcp(
+    run_lcp(
         cost_fpath="unused",  # cost file is ignored in this branch
         route_points=pd.DataFrame(),
         cost_layers=[],

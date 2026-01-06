@@ -173,7 +173,7 @@ class RouteToDefinitionConverter(ABC):
         raise NotImplementedError
 
 
-def _run_lcp(
+def run_lcp(  # noqa: PLR0913, PLR0917
     cost_fpath,
     route_points,
     cost_layers,
@@ -186,7 +186,7 @@ def _run_lcp(
     tracked_layers=None,
     ignore_invalid_costs=True,
 ):
-    """Execute least-cost path routing for the prepared route subset"""
+    """[NOT PUBLIC API] Run LCP routing and save to output file"""
 
     ts = time.monotonic()
     out_fp = Path(out_fp)

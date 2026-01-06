@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 from gaps.cli import CLICommandFromFunction
 
-from revrt.routing.cli.base import _run_lcp, RouteToDefinitionConverter
+from revrt.routing.cli.base import run_lcp, RouteToDefinitionConverter
 from revrt.routing.utilities import map_to_costs
 from revrt.costs.config import parse_config
 
@@ -328,7 +328,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         else out_dir / f"{job_name}.csv"
     )
 
-    _run_lcp(
+    run_lcp(
         cost_fpath,
         route_points,
         cost_layers,
