@@ -505,6 +505,10 @@ def test_update_multipliers_applies_row_and_polarity():
 
     # original input remains unchanged
     assert layers[0]["apply_row_mult"] is True
+    assert layers[1]["apply_polarity_mult"] is True
+    assert layers[0]["multiplier_scalar"] == 2
+
+    # output is updated
     assert updated[0]["multiplier_scalar"] == pytest.approx(3)
     assert updated[1]["multiplier_scalar"] == pytest.approx(
         0.5 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
