@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767655101474,
+  "lastUpdate": 1767742492773,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -3947,6 +3947,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 385809109,
             "range": "± 4566477",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4478a3c1d466c3aebd50c4e5016bce68105950e0",
+          "message": "Regular dependencies update (#195)\n\n* cfg: Bump tokio to 1.49\n\n* cfg: Bump Zarrs to 0.22.10\n\n* cfg: Bump tracing to 0.1.44\n\n* cfg: Updating Cargo.lock\n\n* cfg: Bump criterion to 0.8.1",
+          "timestamp": "2026-01-06T16:20:55-07:00",
+          "tree_id": "945a984804b82054b31e97aa57853fe06743b2d9",
+          "url": "https://github.com/NREL/reVRt/commit/4478a3c1d466c3aebd50c4e5016bce68105950e0"
+        },
+        "date": 1767742491594,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 53872285,
+            "range": "± 1386891",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 74052797,
+            "range": "± 1044933",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 81297332,
+            "range": "± 1573341",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 122784077,
+            "range": "± 1428460",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 413652092,
+            "range": "± 11283059",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 91467817,
+            "range": "± 1122621",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 94582945,
+            "range": "± 414728",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 103147060,
+            "range": "± 4030465",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 131442501,
+            "range": "± 1201566",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 236772816,
+            "range": "± 1798577",
             "unit": "ns/iter"
           }
         ]
