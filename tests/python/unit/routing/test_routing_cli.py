@@ -26,6 +26,8 @@ from revrt.exceptions import (
 from revrt.routing.cli.base import (
     update_multipliers,
     run_lcp,
+    route_points_subset,
+    split_routes,
     _get_row_multiplier,
     _get_polarity_multiplier,
     _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL,
@@ -38,8 +40,6 @@ from revrt.routing.cli.collect import merge_output
 from revrt.routing.cli.point_to_point import (
     compute_lcp_routes,
     PointToPointRouteDefinitionConverter,
-    _route_points_subset,
-    _split_routes,
 )
 
 
@@ -316,18 +316,23 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
 
     out_fp = tmp_path / "routes.gpkg"
 
-    run_lcp(
+    routes_to_compute = PointToPointRouteDefinitionConverter(
         cost_fpath=sample_layered_data,
         route_points=routes,
-        cost_layers=[{"layer_name": "layer_1"}],
         out_fp=out_fp,
-        route_definition_class=PointToPointRouteDefinitionConverter,
+        cost_layers=[{"layer_name": "layer_1"}],
+        friction_layers=[{"mask": "layer_2", "apply_row_mult": True}],
         transmission_config={
             "row_width": {"138": 1.0},
             "voltage_polarity_mult": {"138": {"ac": 1.0}},
         },
+    )
+
+    run_lcp(
+        cost_fpath=sample_layered_data,
+        out_fp=out_fp,
+        routes_to_compute=routes_to_compute,
         cost_multiplier_scalar=1,
-        friction_layers=[{"mask": "layer_2", "apply_row_mult": True}],
         tracked_layers={"layer_3": "max"},
         ignore_invalid_costs=True,
     )
@@ -362,12 +367,17 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
 def test_run_lcp_returns_immediately_when_no_routes(tmp_path):
     """run_lcp should exit early when route_points is empty"""
 
+    routes_to_compute = PointToPointRouteDefinitionConverter(
+        cost_fpath="unused",
+        route_points=pd.DataFrame(),
+        out_fp=tmp_path / "unused.csv",
+        cost_layers=[],
+    )
+
     run_lcp(
         cost_fpath="unused",  # cost file is ignored in this branch
-        route_points=pd.DataFrame(),
-        cost_layers=[],
         out_fp=tmp_path / "unused.csv",
-        route_definition_class=PointToPointRouteDefinitionConverter,
+        routes_to_compute=routes_to_compute,
     )
 
 
@@ -424,7 +434,7 @@ def test_route_generator_existing_routes_when_missing(tmp_path):
     """Missing outputs should result in an empty existing route set"""
 
     route_generator = PointToPointRouteDefinitionConverter(
-        None, None, None, None, None, None
+        None, None, tmp_path / "missing.csv", None, None, None
     )
     assert route_generator.existing_routes == set()
     route_generator = PointToPointRouteDefinitionConverter(
@@ -434,7 +444,7 @@ def test_route_generator_existing_routes_when_missing(tmp_path):
 
 
 def test_route_points_subset_with_chunking(tmp_path):
-    """_route_points_subset should slice sorted features by chunk"""
+    """route_points_subset should slice sorted features by chunk"""
 
     test_fp = tmp_path / "features.csv"
     features = pd.DataFrame(
@@ -446,15 +456,11 @@ def test_route_points_subset_with_chunking(tmp_path):
 
     features.to_csv(test_fp, index=False)
 
-    first_chunk = _route_points_subset(
-        test_fp, ["start_lat", "start_lon"], (0, 2)
-    )
+    first_chunk = route_points_subset(test_fp, (0, 2))
     assert first_chunk["start_lat"].tolist() == [1.0, 3.0]
     assert first_chunk["start_lon"].tolist() == [1.0, 2.0]
 
-    second_chunk = _route_points_subset(
-        test_fp, ["start_lat", "start_lon"], (1, 2)
-    )
+    second_chunk = route_points_subset(test_fp, (1, 2))
     assert second_chunk["start_lat"].tolist() == [5.0, 7.0]
     assert second_chunk["start_lon"].tolist() == [0.0, 3.0]
 
@@ -489,15 +495,15 @@ def test_paths_to_compute_inserts_missing_columns(tmp_path):
 
 
 def test_split_routes_handles_local_and_cluster():
-    """_split_routes should configure chunking for local and cluster modes"""
+    """split_routes should configure chunking for local and cluster modes"""
 
     local_config = {"execution_control": {"option": "local", "nodes": 4}}
-    result_local = _split_routes(local_config)
+    result_local = split_routes(local_config)
     assert result_local["_split_params"] == [(0, 1)]
     assert result_local["execution_control"]["nodes"] == 4
 
     cluster_config = {"execution_control": {"nodes": 3}}
-    result_cluster = _split_routes(cluster_config)
+    result_cluster = split_routes(cluster_config)
     assert result_cluster["_split_params"] == [(0, 3), (1, 3), (2, 3)]
     assert "nodes" not in result_cluster["execution_control"]
 

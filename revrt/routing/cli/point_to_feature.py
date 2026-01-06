@@ -1,9 +1,13 @@
-"""reVRt point-to-point routing CLI command"""
+"""reVRt point-to-feature routing CLI command"""
 
 import time
 import logging
 from pathlib import Path
+from warnings import warn
 
+import rasterio
+import numpy as np
+import geopandas as gpd
 from gaps.cli import CLICommandFromFunction
 
 from revrt.routing.cli.base import (
@@ -14,13 +18,71 @@ from revrt.routing.cli.base import (
 )
 from revrt.routing.utilities import map_to_costs
 from revrt.costs.config import parse_config
+from revrt.warn import revrtWarning
 
 
 logger = logging.getLogger(__name__)
 
 
-class PointToPointRouteDefinitionConverter(RouteToDefinitionConverter):
+class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
     """Convert route points DataFrame to route definition for Rust"""
+
+    def __init__(
+        self,
+        cost_fpath,
+        route_points,
+        features_fpath,
+        out_fp,
+        cost_layers,
+        friction_layers=None,
+        transmission_config=None,
+        feature_identifier_column="end_feat_id",
+    ):
+        """
+
+        Parameters
+        ----------
+        cost_fpath : path-like
+            Path to layered Zarr file containing cost and other required
+            routing layers.
+        route_points : pandas.DataFrame
+            DataFrame defining the points to be routed. This DataFrame
+            should contain route definitions to be transformed and
+            passed down to the Rust routing algorithm.
+        out_fp : path-like
+            Path to output file where computed routes will be saved.
+            This file will be checked for existing routes to avoid
+            recomputation.
+        cost_layers : list
+            List of dictionaries defining the layers that are summed to
+            determine total costs raster used for routing. Each layer is
+            pre-processed before summation according to the user input.
+            See the description of
+            :func:`revrt.routing.cli.point_to_point.compute_lcp_routes`
+            for more details.
+        friction_layers : list
+            Layers to be multiplied onto the aggregated cost layer to
+            influence routing but NOT be reported in final cost
+            (i.e. friction, barriers, etc.). See the description of
+            :func:`revrt.routing.cli.point_to_point.compute_lcp_routes`
+            for more details.
+        transmission_config : path-like or dict, optional
+            Dictionary of transmission cost configuration values, or
+            path to JSON/JSON5 file containing this dictionary. See the
+            description of
+            :func:`revrt.routing.cli.point_to_point.compute_lcp_routes`
+            for more details.
+        """
+        super().__init__(
+            cost_fpath=cost_fpath,
+            route_points=route_points,
+            out_fp=out_fp,
+            cost_layers=cost_layers,
+            friction_layers=friction_layers,
+            transmission_config=transmission_config,
+        )
+        self.features_fpath = features_fpath
+        self.feature_identifier_column = feature_identifier_column
 
     def _validate_route_points(self):
         """Ensure route points has required columns"""
@@ -39,36 +101,40 @@ class PointToPointRouteDefinitionConverter(RouteToDefinitionConverter):
 
         super()._validate_route_points()
 
-    def _route_as_tuple(self, row):  # noqa:PLR6301
+    def _route_as_tuple(self, row):
         """Convert route row to a tuple for existing route checking"""
         return (
             int(row["start_row"]),
             int(row["start_col"]),
-            int(row["end_row"]),
-            int(row["end_col"]),
+            str(row[self.feature_identifier_column]),
             str(row.get("polarity", "unknown")),
             str(row.get("voltage", "unknown")),
         )
 
-    def _convert_to_route_definitions(self, routes):  # noqa:PLR6301
+    def _convert_to_route_definitions(self, routes):
         """Convert route DataFrame to route definitions format"""
         start_point_cols = ["start_row", "start_col"]
-        end_point_cols = ["end_row", "end_col"]
-        num_unique_start_points = len(routes.groupby(start_point_cols))
-        num_unique_end_points = len(routes.groupby(end_point_cols))
-        if num_unique_end_points > num_unique_start_points:
-            logger.info(
-                "Less unique starting points detected! Swapping start and "
-                "end point set for optimal routing performance"
-            )
-            start_point_cols = ["end_row", "end_col"]
-            end_point_cols = ["start_row", "start_col"]
 
         route_definitions = []
         route_attrs = {}
-        for route_id, (end_idx, sub_routes) in enumerate(
-            routes.groupby(end_point_cols)
+        cost_height, cost_width = self.cost_metadata["shape"]
+        for route_id, (feat_id, sub_routes) in enumerate(
+            routes.groupby(self.feature_identifier_column)
         ):
+            end_feats = gpd.read_file(
+                self.features_fpath,
+                where=f"{self.feature_identifier_column} == {feat_id}",
+            )
+            if end_feats.empty:
+                msg = (
+                    f"No features found with {self.feature_identifier_column} "
+                    f"== {feat_id}!"
+                )
+                warn(msg, revrtWarning)
+                continue
+
+            rows, cols = self._end_feats_to_row_col(end_feats)
+
             start_points = []
             for __, info in sub_routes.iterrows():
                 start_idx = tuple(info[start_point_cols].astype("int32"))
@@ -76,15 +142,58 @@ class PointToPointRouteDefinitionConverter(RouteToDefinitionConverter):
                 start_points.append(start_idx)
 
             route_definitions.append(
-                (route_id, start_points, [tuple(map(int, end_idx))])
+                (
+                    route_id,
+                    start_points,
+                    [
+                        (int(r), int(c))
+                        for r, c in zip(rows, cols, strict=True)
+                        if 0 <= r < cost_height and 0 <= c < cost_width
+                    ],
+                )
             )
 
         return route_definitions, route_attrs
+
+    def _end_feats_to_row_col(self, end_feats):
+        """Convert end features to row/col indices in cost grid"""
+        window = self._integer_dimension_window(end_feats)
+
+        window_transform = rasterio.windows.transform(
+            window=window, transform=self.cost_metadata["transform"]
+        )
+
+        mask = rasterio.features.geometry_mask(
+            [end_feats.union_all()],
+            out_shape=(window.height, window.width),
+            transform=window_transform,
+            invert=True,
+        )
+
+        rows, cols = np.where(mask)
+        rows += window.row_off
+        cols += window.col_off
+        return rows, cols
+
+    def _integer_dimension_window(self, end_feats):
+        """Make window with integer dimensions for end features
+
+        Note: We can't use ``.round_offsets().round_lengths()`` since
+        that can round down to a 0 dimension window in some cases.
+        Instead, we force the window to come from a slice, which
+        guarantees the dimensions to be >= 1.
+        """
+        window = rasterio.windows.from_bounds(
+            *end_feats.total_bounds,
+            transform=self.cost_metadata["transform"],
+        )
+        return rasterio.windows.Window.from_slices(*window.toslices())
 
 
 def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     cost_fpath,
     route_table,
+    features_fpath,
     cost_layers,
     out_dir,
     job_name,
@@ -95,14 +204,16 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     transmission_config=None,
     save_paths=False,
     ignore_invalid_costs=False,
+    feature_identifier_column="end_feat_id",
     _split_params=None,
 ):
-    r"""Run least-cost path routing for pairs of points
+    r"""Run least-cost path routing for points mapped to features
 
-    Given a table that defines start and end points (via latitude and
-    longitude inputs; see the `route_table` parameter), compute the
-    least-cost paths (LCPs) between each pair of points using the cost
-    layers defined in the `cost_layers` parameter.
+    Given a table that defines each route as a start point (via latitude
+    and longitude input or preferably a row/column index into the data)
+    and a feature ID representing the feature to connect to, compute the
+    least-cost paths (LCPs) for each route using the cost layers defined
+    in the `cost_layers` parameter.
 
     Parameters
     ----------
@@ -110,14 +221,25 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         Path to layered Zarr file containing cost and other required
         routing layers.
     route_table : path-like
-        Path to CSV file defining the start and
-        end points of all routes. Must have the following columns:
+        Path to CSV file defining the start points and end features of
+        all routes. Must have the following columns:
 
-            - "start_lat": Stating point latitude
-            - "start_lon": Stating point longitude
-            - "end_lat": Ending point latitude
-            - "end_lon": Ending point longitude
+            - "start_lat": Stating point latitude (can alternatively use
+              "start_col" to define the start point column index in the
+              cost raster).
+            - "start_lon": Stating point longitude (can alternatively
+              use "start_row" to define the start point row index in the
+              cost raster).
+            - `feature_identifier_column`: ID of the feature that should
+              be mapped to. This ID should match at least one of the
+              feature IDs in the `features_fpath` input; otherwise, no
+              route will be computed for that point.
 
+    features_fpath : path-like
+        Path to vector file containing features to map points to. This
+        file must have a column matching the `feature_identifier_column`
+        parameter that maps each feature back to the starting points
+        defined in the `route_table`.
     cost_layers : list
         List of dictionaries defining the layers that are summed to
         determine total costs raster used for routing. Each layer is
@@ -303,6 +425,12 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         (i.e. no paths can ever cross this). If ``False``, cost values
         of <= 0 are set to a large value to simulate a strong but
         permeable "quasi-barrier". By default, ``False``.
+    feature_identifier_column : str, default="end_feat_id"
+        Column in the `features_fpath` data used to uniquely identify
+        each feature. This column is also expected to be in the
+        `route_table` input to map points to features. If a column name
+        is given that does not exist in the data, an error will be
+        raised. By default, ``"end_feat_id"``.
 
     Returns
     -------
@@ -311,8 +439,11 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
 
     See Also
     --------
-    revrt.routing.cli.point_to_feature.compute_lcp_routes
-        Compute LCP routes between points and features.
+    revrt.routing.cli.point_to_point.compute_lcp_routes
+        Compute LCP routes between pairs of points.
+    revrt.routing.cli.build_route_table.point_to_feature_route_table
+        Helper function to build a routing table for points mapped to
+        features.
     """
 
     start_time = time.time()
@@ -336,13 +467,15 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         else out_dir / f"{job_name}.csv"
     )
 
-    routes_to_compute = PointToPointRouteDefinitionConverter(
+    routes_to_compute = PointToFeatureRouteDefinitionConverter(
         cost_fpath=cost_fpath,
         route_points=route_points,
+        features_fpath=features_fpath,
         out_fp=out_fp,
         cost_layers=cost_layers,
         friction_layers=friction_layers,
         transmission_config=transmission_config,
+        feature_identifier_column=feature_identifier_column,
     )
 
     run_lcp(

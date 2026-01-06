@@ -2,6 +2,8 @@
 
 import time
 import logging
+import contextlib
+from math import ceil
 from pathlib import Path
 from copy import deepcopy
 from abc import ABC, abstractmethod
@@ -77,10 +79,15 @@ class RouteToDefinitionConverter(ABC):
         """
         self.cost_fpath = cost_fpath
         self.route_points = route_points
-        self.out_fp = out_fp
+        self.out_fp = Path(out_fp)
         self.cost_layers = cost_layers
         self.friction_layers = friction_layers or []
         self.transmission_config = transmission_config
+
+    @property
+    def num_routes(self):
+        """int: Number of routes to be computed"""
+        return len(self.route_points)
 
     @cached_property
     def cost_metadata(self):
@@ -110,6 +117,9 @@ class RouteToDefinitionConverter(ABC):
         }
 
     def __iter__(self):
+        if self.num_routes == 0:
+            return
+
         for polarity, voltage, routes in self._paths_to_compute:
             logger.info(
                 "Computing routes for %d points with polarity: %r and "
@@ -173,16 +183,12 @@ class RouteToDefinitionConverter(ABC):
         raise NotImplementedError
 
 
-def run_lcp(  # noqa: PLR0913, PLR0917
+def run_lcp(
     cost_fpath,
-    route_points,
-    cost_layers,
     out_fp,
-    route_definition_class,
-    transmission_config=None,
+    routes_to_compute,
     cost_multiplier_layer=None,
     cost_multiplier_scalar=1,
-    friction_layers=None,
     tracked_layers=None,
     ignore_invalid_costs=True,
 ):
@@ -192,20 +198,10 @@ def run_lcp(  # noqa: PLR0913, PLR0917
     out_fp = Path(out_fp)
     save_paths = out_fp.suffix.lower() == ".gpkg"
 
-    if route_points.empty:
-        logger.info("Found no routes to compute!")
-        return
-
-    routes_to_compute = route_definition_class(
-        cost_fpath,
-        route_points,
-        out_fp,
-        cost_layers,
-        friction_layers,
-        transmission_config,
+    logger.info(
+        "Computing best routes for %d point pairs",
+        routes_to_compute.num_routes,
     )
-
-    logger.info("Computing best routes for %d point pairs", len(route_points))
     for route_batch in routes_to_compute:
         route_cl, route_fl, route_definitions, route_attrs = route_batch
         scenario = RoutingScenario(
@@ -228,13 +224,44 @@ def run_lcp(  # noqa: PLR0913, PLR0917
     time_elapsed = f"{(time.monotonic() - ts) / 3600:.4f} hour(s)"
     logger.info(
         "Routing for %d points completed in %s",
-        len(route_points),
+        routes_to_compute.num_routes,
         time_elapsed,
     )
 
 
+def route_points_subset(route_table, split_params):
+    """[NOT PUBLIC API] Get indices of points sorted by location"""
+
+    with contextlib.suppress(TypeError, UnicodeDecodeError):
+        route_points = pd.read_csv(route_table)
+
+    sort_cols = ["start_lat", "start_lon"]
+    if not set(sort_cols).issubset(route_points.columns):
+        sort_cols = ["start_row", "start_col"]
+
+    route_points = route_points.sort_values(sort_cols).reset_index(drop=True)
+
+    start_ind, n_chunks = split_params or (0, 1)
+    chunk_size = ceil(len(route_points) / n_chunks)
+    return route_points.iloc[
+        start_ind * chunk_size : (start_ind + 1) * chunk_size
+    ]
+
+
+def split_routes(config):
+    """[NOT PUBLIC API] Compute route split params inside of config"""
+    exec_control = config.get("execution_control", {})
+    if exec_control.get("option") == "local":
+        num_nodes = 1
+    else:
+        num_nodes = exec_control.pop("nodes", 1)
+
+    config["_split_params"] = [(i, num_nodes) for i in range(num_nodes)]
+    return config
+
+
 def update_multipliers(layers, polarity, voltage, transmission_config):
-    """Update layer multipliers based on user input"""
+    """[NOT PUBLIC API] Update layer multipliers based on user input"""
     output_layers = deepcopy(layers)
     polarity = "unknown" if polarity in {None, "unknown"} else str(polarity)
     voltage = "unknown" if voltage in {None, "unknown"} else str(int(voltage))
