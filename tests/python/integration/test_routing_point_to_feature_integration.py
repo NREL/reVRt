@@ -14,7 +14,7 @@ import xarray as xr
 
 from revrt._cli import main
 from revrt.exceptions import revrtValueError
-from revrt.routing.cli_point_to_features import (
+from revrt.routing.cli.build_route_table import (
     build_point_to_feature_route_table_command,
     point_to_feature_route_table,
 )

@@ -10,7 +10,7 @@ import xarray as xr
 from shapely.geometry import LineString, Point, Polygon
 
 from revrt.exceptions import revrtValueError
-from revrt.routing.cli_point_to_features import (
+from revrt.routing.cli.build_route_table import (
     _check_output_filepaths,
     _make_points,
     point_to_feature_route_table,

@@ -11,8 +11,6 @@ from revrt.routing.cli import (
     route_points_command,
     collect_routes_command,
     build_route_costs_command,
-)
-from revrt.routing.cli_point_to_features import (
     build_point_to_feature_route_table_command,
 )
 from revrt.utilities.cli import (
