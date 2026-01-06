@@ -9,11 +9,75 @@ from pathlib import Path
 import pandas as pd
 from gaps.cli import CLICommandFromFunction
 
-from revrt.routing.cli.base import _run_lcp
+from revrt.routing.cli.base import _run_lcp, RouteToDefinitionConverter
+from revrt.routing.utilities import map_to_costs
 from revrt.costs.config import parse_config
 
 
 logger = logging.getLogger(__name__)
+
+
+class PointToPointRouteDefinitionConverter(RouteToDefinitionConverter):
+    """Convert route points DataFrame to route definition for Rust"""
+
+    def _validate_route_points(self):
+        """Ensure route points has required columns"""
+
+        if (
+            "start_row" not in self.route_points.columns
+            or "start_col" not in self.route_points.columns
+        ):
+            logger.info("Mapping route start points to cost grid...")
+            self.route_points = map_to_costs(
+                self.route_points,
+                crs=self.cost_metadata["crs"],
+                transform=self.cost_metadata["transform"],
+                shape=self.cost_metadata["shape"],
+            )
+
+        super()._validate_route_points()
+
+    def _route_as_tuple(self, row):  # noqa:PLR6301
+        """Convert route row to a tuple for existing route checking"""
+        return (
+            int(row["start_row"]),
+            int(row["start_col"]),
+            int(row["end_row"]),
+            int(row["end_col"]),
+            str(row.get("polarity", "unknown")),
+            str(row.get("voltage", "unknown")),
+        )
+
+    def _convert_to_route_definitions(self, routes):  # noqa:PLR6301
+        """Convert route DataFrame to route definitions format"""
+        start_point_cols = ["start_row", "start_col"]
+        end_point_cols = ["end_row", "end_col"]
+        num_unique_start_points = len(routes.groupby(start_point_cols))
+        num_unique_end_points = len(routes.groupby(end_point_cols))
+        if num_unique_end_points > num_unique_start_points:
+            logger.info(
+                "Less unique starting points detected! Swapping start and "
+                "end point set for optimal routing performance"
+            )
+            start_point_cols = ["end_row", "end_col"]
+            end_point_cols = ["start_row", "start_col"]
+
+        route_definitions = []
+        route_attrs = {}
+        for route_id, (end_idx, sub_routes) in enumerate(
+            routes.groupby(end_point_cols)
+        ):
+            start_points = []
+            for __, info in sub_routes.iterrows():
+                start_idx = tuple(info[start_point_cols].astype("int32"))
+                route_attrs[(route_id, start_idx)] = info.to_dict()
+                start_points.append(start_idx)
+
+            route_definitions.append(
+                (route_id, start_points, [tuple(map(int, end_idx))])
+            )
+
+        return route_definitions, route_attrs
 
 
 def compute_lcp_routes(  # noqa: PLR0913, PLR0917
@@ -269,6 +333,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         route_points,
         cost_layers,
         out_fp=out_fp,
+        route_definition_class=PointToPointRouteDefinitionConverter,
         transmission_config=transmission_config,
         cost_multiplier_layer=cost_multiplier_layer,
         cost_multiplier_scalar=cost_multiplier_scalar,

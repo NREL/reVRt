@@ -4,13 +4,14 @@ import time
 import logging
 from pathlib import Path
 from copy import deepcopy
+from abc import ABC, abstractmethod
+from functools import cached_property
 
 import pandas as pd
 import geopandas as gpd
 import xarray as xr
 
 from revrt.routing.point_to_point import BatchRouteProcessor, RoutingScenario
-from revrt.routing.utilities import map_to_costs
 from revrt.exceptions import revrtKeyError
 
 
@@ -25,11 +26,159 @@ _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL = 55923.40730136006
 """
 
 
+class RouteToDefinitionConverter(ABC):
+    """Abstract base class for route definition converters"""
+
+    _GROUP_COLS = ["polarity", "voltage"]
+
+    def __init__(
+        self,
+        cost_fpath,
+        route_points,
+        out_fp,
+        cost_layers,
+        friction_layers=None,
+        transmission_config=None,
+    ):
+        """
+
+        Parameters
+        ----------
+        cost_fpath : path-like
+            Path to layered Zarr file containing cost and other required
+            routing layers.
+        route_points : pandas.DataFrame
+            DataFrame defining the points to be routed. This DataFrame
+            should contain route definitions to be transformed and
+            passed down to the Rust routing algorithm.
+        out_fp : path-like
+            Path to output file where computed routes will be saved.
+            This file will be checked for existing routes to avoid
+            recomputation.
+        cost_layers : list
+            List of dictionaries defining the layers that are summed to
+            determine total costs raster used for routing. Each layer is
+            pre-processed before summation according to the user input.
+            See the description of
+            :func:`revrt.routing.cli.point_to_point.compute_lcp_routes`
+            for more details.
+        friction_layers : list
+            Layers to be multiplied onto the aggregated cost layer to
+            influence routing but NOT be reported in final cost
+            (i.e. friction, barriers, etc.). See the description of
+            :func:`revrt.routing.cli.point_to_point.compute_lcp_routes`
+            for more details.
+        transmission_config : path-like or dict, optional
+            Dictionary of transmission cost configuration values, or
+            path to JSON/JSON5 file containing this dictionary. See the
+            description of
+            :func:`revrt.routing.cli.point_to_point.compute_lcp_routes`
+            for more details.
+        """
+        self.cost_fpath = cost_fpath
+        self.route_points = route_points
+        self.out_fp = out_fp
+        self.cost_layers = cost_layers
+        self.friction_layers = friction_layers or []
+        self.transmission_config = transmission_config
+
+    @cached_property
+    def cost_metadata(self):
+        """dict: Metadata from cost file (CRS, transform, shape)"""
+        with xr.open_dataset(
+            self.cost_fpath, consolidated=False, engine="zarr"
+        ) as ds:
+            return {
+                "crs": ds.rio.crs,
+                "transform": ds.rio.transform(),
+                "shape": ds.rio.shape,
+            }
+
+    @cached_property
+    def existing_routes(self):
+        """set: Already computed routes in the output file"""
+        if self.out_fp is None or not self.out_fp.exists():
+            return set()
+
+        if self.out_fp.suffix.lower() == ".gpkg":
+            existing_df = gpd.read_file(self.out_fp)
+        else:
+            existing_df = pd.read_csv(self.out_fp)
+
+        return {
+            self._route_as_tuple(row) for __, row in existing_df.iterrows()
+        }
+
+    def __iter__(self):
+        for polarity, voltage, routes in self._paths_to_compute:
+            logger.info(
+                "Computing routes for %d points with polarity: %r and "
+                "voltage: %r",
+                len(routes),
+                polarity,
+                voltage,
+            )
+            route_cl = self._update_cl(polarity, voltage)
+            route_fl = self._update_fl(polarity, voltage)
+            route_definitions, route_attrs = (
+                self._convert_to_route_definitions(routes)
+            )
+            yield route_cl, route_fl, route_definitions, route_attrs
+
+    @property
+    def _paths_to_compute(self):
+        """Generator that yields route groups to be computed"""
+        self._validate_route_points()
+
+        for group_info, routes in self.route_points.groupby(self._GROUP_COLS):
+            if self.existing_routes:
+                mask = routes.apply(
+                    lambda row: self._route_as_tuple(row)
+                    not in self.existing_routes,
+                    axis=1,
+                )
+                routes = routes[mask]  # noqa: PLW2901
+
+            if routes.empty:
+                continue
+
+            yield *group_info, routes
+
+    def _validate_route_points(self):
+        """Ensure route points has required columns"""
+        for check_col in self._GROUP_COLS:
+            if check_col not in self.route_points.columns:
+                self.route_points[check_col] = "unknown"
+
+    def _update_cl(self, polarity, voltage):
+        """Update multipliers for cost layers"""
+        return update_multipliers(
+            self.cost_layers, polarity, voltage, self.transmission_config
+        )
+
+    def _update_fl(self, polarity, voltage):
+        """Update multipliers for friction layers"""
+        return update_multipliers(
+            self.friction_layers, polarity, voltage, self.transmission_config
+        )
+
+    @abstractmethod
+    def _route_as_tuple(self, row):
+        """Convert route row to a tuple for existing route checking"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def _convert_to_route_definitions(self, routes):
+        """Convert route DataFrame to route definitions format"""
+        raise NotImplementedError
+
+
 def _run_lcp(
     cost_fpath,
     route_points,
     cost_layers,
     out_fp,
+    route_definition_class,
     transmission_config=None,
     cost_multiplier_layer=None,
     cost_multiplier_scalar=1,
@@ -47,30 +196,18 @@ def _run_lcp(
         logger.info("Found no routes to compute!")
         return
 
-    with xr.open_dataset(cost_fpath, consolidated=False, engine="zarr") as ds:
-        route_points = map_to_costs(
-            route_points,
-            crs=ds.rio.crs,
-            transform=ds.rio.transform(),
-            shape=ds.rio.shape,
-        )
+    routes_to_compute = route_definition_class(
+        cost_fpath,
+        route_points,
+        out_fp,
+        cost_layers,
+        friction_layers,
+        transmission_config,
+    )
 
     logger.info("Computing best routes for %d point pairs", len(route_points))
-    for polarity, voltage, routes in _paths_to_compute(route_points, out_fp):
-        logger.info(
-            "Computing routes for %d points with polarity: %r and voltage: %r",
-            len(routes),
-            polarity,
-            voltage,
-        )
-        route_cl = update_multipliers(
-            cost_layers, polarity, voltage, transmission_config
-        )
-        route_fl = update_multipliers(
-            friction_layers or [], polarity, voltage, transmission_config
-        )
-        route_definitions, route_attrs = _convert_to_route_definitions(routes)
-
+    for route in routes_to_compute:
+        route_cl, route_fl, route_definitions, route_attrs = route
         scenario = RoutingScenario(
             cost_fpath=cost_fpath,
             cost_layers=route_cl,
@@ -94,93 +231,6 @@ def _run_lcp(
         len(route_points),
         time_elapsed,
     )
-
-
-def _paths_to_compute(route_points, out_fp):
-    """Yield route groups that still require computation"""
-    existing_routes = _collect_existing_routes(out_fp)
-
-    group_cols = ["polarity", "voltage"]
-    for check_col in group_cols:
-        if check_col not in route_points.columns:
-            route_points[check_col] = "unknown"
-
-    for group_info, routes in route_points.groupby(group_cols):
-        if existing_routes:
-            mask = routes.apply(
-                lambda row: (
-                    int(row["start_row"]),
-                    int(row["start_col"]),
-                    int(row["end_row"]),
-                    int(row["end_col"]),
-                    str(row.get("polarity", "unknown")),
-                    str(row.get("voltage", "unknown")),
-                )
-                not in existing_routes,
-                axis=1,
-            )
-            routes = routes[mask]  # noqa: PLW2901
-
-        if routes.empty:
-            continue
-
-        yield *group_info, routes
-
-
-def _convert_to_route_definitions(routes):
-    """Convert route DataFrame to route definitions format"""
-    start_point_cols = ["start_row", "start_col"]
-    end_point_cols = ["end_row", "end_col"]
-    num_unique_start_points = len(routes.groupby(start_point_cols))
-    num_unique_end_points = len(routes.groupby(end_point_cols))
-    if num_unique_end_points > num_unique_start_points:
-        logger.info(
-            "Less unique starting points detected! Swapping start and "
-            "end point set for optimal routing performance"
-        )
-        start_point_cols = ["end_row", "end_col"]
-        end_point_cols = ["start_row", "start_col"]
-
-    route_definitions = []
-    route_attrs = {}
-    for route_id, (end_idx, sub_routes) in enumerate(
-        routes.groupby(end_point_cols)
-    ):
-        start_points = []
-        for __, info in sub_routes.iterrows():
-            start_idx = tuple(info[start_point_cols].astype("int32"))
-            route_attrs[(route_id, start_idx)] = info.to_dict()
-            start_points.append(start_idx)
-
-        route_definitions.append(
-            (route_id, start_points, [tuple(map(int, end_idx))])
-        )
-
-    return route_definitions, route_attrs
-
-
-def _collect_existing_routes(out_fp):
-    """Collect already computed routes from an existing output file"""
-
-    if out_fp is None or not out_fp.exists():
-        return set()
-
-    if out_fp.suffix.lower() == ".gpkg":
-        existing_df = gpd.read_file(out_fp)
-    else:
-        existing_df = pd.read_csv(out_fp)
-
-    return {
-        (
-            int(row["start_row"]),
-            int(row["start_col"]),
-            int(row["end_row"]),
-            int(row["end_col"]),
-            str(row.get("polarity", "unknown")),
-            str(row.get("voltage", "unknown")),
-        )
-        for __, row in existing_df.iterrows()
-    }
 
 
 def update_multipliers(layers, polarity, voltage, transmission_config):
