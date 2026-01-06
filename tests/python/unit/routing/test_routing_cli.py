@@ -23,20 +23,24 @@ from revrt.exceptions import (
     revrtValueError,
     revrtFileNotFoundError,
 )
-from revrt.routing.cli import (
-    compute_lcp_routes,
-    build_routing_layer,
-    build_route_costs_command,
-    merge_output,
+from revrt.routing.cli.base import (
+    update_multipliers,
     _run_lcp,
     _collect_existing_routes,
-    _update_multipliers,
-    _route_points_subset,
     _paths_to_compute,
-    _split_routes,
     _get_row_multiplier,
     _get_polarity_multiplier,
     _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL,
+)
+from revrt.routing.cli.build_costs import (
+    build_route_costs_command,
+    build_routing_layer,
+)
+from revrt.routing.cli.collect import merge_output
+from revrt.routing.cli.point_to_point import (
+    compute_lcp_routes,
+    _route_points_subset,
+    _split_routes,
 )
 
 
@@ -299,7 +303,7 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
     )
 
     monkeypatch.setattr(
-        "revrt.routing.cli._collect_existing_routes",
+        "revrt.routing.cli.base._collect_existing_routes",
         lambda _: {existing_tuple},
     )
 
@@ -308,9 +312,7 @@ def test_run_lcp_with_save_paths_filters_existing_routes(
     def fake_to_file(self, path, driver=None, mode=None, **_kwargs):
         saved_calls.append((path, driver, mode, self.copy(deep=True)))
 
-    monkeypatch.setattr(
-        "revrt.routing.cli.gpd.GeoDataFrame.to_file", fake_to_file
-    )
+    monkeypatch.setattr("geopandas.GeoDataFrame.to_file", fake_to_file)
 
     out_fp = tmp_path / "routes.gpkg"
 
@@ -478,7 +480,7 @@ def test_split_routes_handles_local_and_cluster():
 
 
 def test_update_multipliers_applies_row_and_polarity():
-    """_update_multipliers should apply configured scalar adjustments"""
+    """update_multipliers should apply configured scalar adjustments"""
 
     layers = [
         {
@@ -494,7 +496,7 @@ def test_update_multipliers_applies_row_and_polarity():
         "voltage_polarity_mult": {"138": {"ac": 0.5}},
     }
 
-    updated = _update_multipliers(
+    updated = update_multipliers(
         layers,
         polarity="ac",
         voltage=138,
@@ -509,7 +511,7 @@ def test_update_multipliers_applies_row_and_polarity():
     )
 
     # Voltage marked as unknown should skip multiplier lookups
-    unchanged = _update_multipliers(
+    unchanged = update_multipliers(
         [{"layer_name": "layer_3"}], "dc", "unknown", transmission_config
     )
     assert unchanged[0]["layer_name"] == "layer_3"
