@@ -494,9 +494,9 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     return str(out_fp)
 
 
-route_points_command = CLICommandFromFunction(
+route_features_command = CLICommandFromFunction(
     compute_lcp_routes,
-    name="route-points",
+    name="route-features",
     add_collect=False,
     split_keys={"_split_params"},
     config_preprocessor=split_routes,
