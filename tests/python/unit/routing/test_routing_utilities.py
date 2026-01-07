@@ -389,6 +389,38 @@ def test_point_to_feature_mapper_radius_only(transmission_features, tmp_path):
     assert mapped["end_feat_id"].tolist() == [0]
 
 
+def test_point_to_feature_mapper_drops_unpaired_points(
+    transmission_features, candidate_points, tmp_path
+):
+    """Mapper drops points that never find nearby features"""
+
+    features_fp, _ = transmission_features
+    mapper = PointToFeatureMapper("EPSG:4326", features_fp)
+    distant = candidate_points.iloc[[1]].copy(deep=True)
+    nearby = candidate_points.iloc[[0]].copy(deep=True)
+    nearby.loc[:, "geometry"] = Point(0.0, 0.2)
+    points = gpd.GeoDataFrame(
+        pd.concat([distant, nearby], ignore_index=False),
+        crs="EPSG:4326",
+    )
+
+    with pytest.warns(
+        revrtWarning,
+        match=r"No features found for 1 point\(s\)",
+    ):
+        mapped = mapper.map_points(
+            points,
+            tmp_path / "dropped_points.gpkg",
+            radius=0.01,
+            expand_radius=False,
+            batch_size=1,
+        )
+
+    assert len(mapped) == 1
+    assert mapped.index.tolist() == [0]
+    assert mapped["end_feat_id"].tolist() == [1]
+
+
 def test_point_to_feature_mapper_preserves_existing_region_ids(
     transmission_features, transmission_regions, candidate_points, tmp_path
 ):
