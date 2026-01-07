@@ -23,12 +23,12 @@ from revrt.warn import revrtWarning
 
 
 @pytest.fixture(scope="module")
-def routing_test_inputs(tmp_path_factory, test_data_dir):
+def routing_test_inputs(tmp_path_factory, test_routing_data_dir):
     """Prepare reusable inputs for mapping tests"""
 
     work_dir = tmp_path_factory.mktemp("routing_point_to_feature")
-    features_src = test_data_dir / "routing" / "ri_transmission_features.gpkg"
-    regions_src = test_data_dir / "routing" / "ri_regions.gpkg"
+    features_src = test_routing_data_dir / "ri_transmission_features.gpkg"
+    regions_src = test_routing_data_dir / "ri_regions.gpkg"
 
     features = gpd.read_file(features_src).copy(deep=True)
     if "category" in features.columns:
