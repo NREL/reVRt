@@ -6,13 +6,14 @@ import pytest
 import numpy as np
 import xarray as xr
 import geopandas as gpd
-from shapely.geometry import box, LineString
+from shapely.geometry import box, LineString, Point
 
 from revrt.utilities import (
     buffer_routes,
     check_geotiff,
     delete_data_file,
     elapsed_time_as_str,
+    features_to_route_table,
     LayeredFile,
 )
 from revrt.exceptions import revrtProfileCheckError, revrtValueError
@@ -302,6 +303,52 @@ def test_elapsed_time_as_str():
     assert elapsed_time_as_str(24 * 60 * 60) == "1 day, 0:00:00"
     assert elapsed_time_as_str(24 * 60 * 60 + 72) == "1 day, 0:01:12"
     assert elapsed_time_as_str(50 * 60 * 60 + 72) == "2 days, 2:01:12"
+
+
+def test_features_to_route_table_generates_pairs():
+    """features_to_route_table builds expected permutations"""
+
+    features = gpd.GeoDataFrame(
+        {"name": ["north", "central", "south"]},
+        geometry=[
+            Point(-105.0, 39.5),
+            Point(-104.5, 39.75),
+            Point(-104.0, 40.0),
+        ],
+        crs="EPSG:4326",
+    ).to_crs("EPSG:3857")
+
+    route_table = features_to_route_table(features)
+
+    assert route_table.columns.tolist() == [
+        "rid",
+        "end_lat",
+        "end_lon",
+        "index",
+        "start_lat",
+        "start_lon",
+        "start_index",
+    ]
+    assert route_table["rid"].tolist() == [0, 1, 2]
+
+    expected_pairs = {(0, 1), (0, 2), (1, 2)}
+    observed_pairs = set(
+        zip(route_table["start_index"], route_table["index"], strict=True)
+    )
+    assert observed_pairs == expected_pairs
+
+    original_coords = [
+        (39.5, -105.0),
+        (39.75, -104.5),
+        (40.0, -104.0),
+    ]
+    for row in route_table.itertuples(index=False):
+        start_lat, start_lon = original_coords[row.start_index]
+        end_lat, end_lon = original_coords[row.index]
+        assert row.start_lat == pytest.approx(start_lat)
+        assert row.start_lon == pytest.approx(start_lon)
+        assert row.end_lat == pytest.approx(end_lat)
+        assert row.end_lon == pytest.approx(end_lon)
 
 
 if __name__ == "__main__":

@@ -9,10 +9,9 @@ from revrt.spatial_characterization.cli import route_characterizations_command
 from revrt.costs.cli import build_masks_command, build_routing_layers_command
 from revrt.routing.cli import (
     route_points_command,
+    route_features_command,
     collect_routes_command,
     build_route_costs_command,
-)
-from revrt.routing.cli_point_to_features import (
     build_point_to_feature_route_table_command,
 )
 from revrt.utilities.cli import (
@@ -37,6 +36,7 @@ commands = [
     route_points_command,
     collect_routes_command,
     build_point_to_feature_route_table_command,
+    route_features_command,
     build_route_costs_command,
     map_ss_to_rr_command,
     ss_from_conn_command,

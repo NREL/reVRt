@@ -30,6 +30,7 @@ from revrt.utilities import (
     load_data_using_layer_file_profile,
     save_data_using_layer_file_profile,
 )
+from revrt.utilities.handlers import num_feats_in_gpkg
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
@@ -1005,6 +1006,23 @@ def test_convert_pois_to_lines_cli_creates_expected_outputs(
         pois.geometry.to_list(), expected_geometries, strict=True
     ):
         assert actual_geom.equals(expected_geom)
+
+
+def test_num_feats_in_gpkg_normal(test_data_dir):
+    """Test counting features in a GeoPackage file"""
+    test_fp = test_data_dir / "routing" / "ri_regions.gpkg"
+    assert num_feats_in_gpkg(test_fp) == len(gpd.read_file(test_fp))
+
+
+def test_num_feats_empty_gpkg(tmp_path):
+    """Test counting features in an empty GeoPackage file"""
+    test_fp = tmp_path / "ri_regions.gpkg"
+    gpd.GeoDataFrame(
+        columns=["id", "name", "geometry"],
+        geometry="geometry",
+        crs="EPSG:4326",
+    ).to_file(test_fp, driver="GPKG")
+    assert num_feats_in_gpkg(test_fp) == 0
 
 
 if __name__ == "__main__":

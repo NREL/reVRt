@@ -1,4 +1,4 @@
-"""reVRt routing CLI functions"""
+"""reVRt build route table to features CLI command"""
 
 import time
 import logging

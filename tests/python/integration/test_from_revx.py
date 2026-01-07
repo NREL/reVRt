@@ -17,11 +17,14 @@ from shapely.geometry import Point
 
 from revrt.utilities import LayeredFile, features_to_route_table
 from revrt.costs.config import TransmissionConfig, parse_cap_class
-from revrt.routing.point_to_point import BatchRouteProcessor, RoutingScenario
-from revrt.routing.cli import (
-    _convert_to_route_definitions,
+from revrt.routing.base import BatchRouteProcessor, RoutingScenario
+from revrt.routing.cli.base import (
     _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL,
 )
+from revrt.routing.cli.point_to_point import (
+    PointToPointRouteDefinitionConverter,
+)
+
 from revrt._cli import main
 from revrt.routing.utilities import map_to_costs
 
@@ -57,7 +60,17 @@ def check(truth, test, check_cols=CHECK_COLS):
 def _run_lcp(tmp_path, routing_scenario, route_table):
     """Run least cost path computation and return resulting dataframe"""
     out_fp = tmp_path / "least_cost_paths_test.csv"
-    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
+    routes_generator = PointToPointRouteDefinitionConverter(
+        cost_fpath=routing_scenario.cost_fpath,
+        route_points=route_table,
+        out_fp=out_fp,
+        cost_layers=routing_scenario.cost_layers,
+        friction_layers=routing_scenario.friction_layers,
+    )
+
+    route_definitions, route_attrs = (
+        routes_generator._convert_to_route_definitions(route_table)
+    )
     route_computer = BatchRouteProcessor(
         routing_scenario=routing_scenario,
         route_definitions=route_definitions,
@@ -103,7 +116,7 @@ def _run_cli(
             "voltage_polarity_mult": str(polarity_config_path),
         },
         "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
+        "route_table_fpath": str(routes_fp),
         "save_paths": save_paths,
         "cost_layers": [cost_layer_config],
         "friction_layers": [DEFAULT_BARRIER_CONFIG],
@@ -268,6 +281,7 @@ def test_not_hard_barrier(revx_transmission_layers, tmp_path):
 
     temp_layer_file = tmp_path / "temp_multiplier_layer.zarr"
     shutil.copytree(revx_transmission_layers, temp_layer_file)
+    out_fp = tmp_path / "least_cost_paths_barrier.csv"
 
     lf = LayeredFile(temp_layer_file)
     costs = np.ones(shape=lf.shape)
@@ -287,7 +301,17 @@ def test_not_hard_barrier(revx_transmission_layers, tmp_path):
         transform=lf.profile["transform"],
         shape=lf.shape,
     )
-    route_definitions, route_attrs = _convert_to_route_definitions(route_table)
+    routes_generator = PointToPointRouteDefinitionConverter(
+        cost_fpath=temp_layer_file,
+        route_points=route_table,
+        out_fp=out_fp,
+        cost_layers=[{"layer_name": "test_layer"}],
+        friction_layers=[DEFAULT_BARRIER_CONFIG],
+    )
+
+    route_definitions, route_attrs = (
+        routes_generator._convert_to_route_definitions(route_table)
+    )
 
     routing_scenario = RoutingScenario(
         cost_fpath=temp_layer_file,
@@ -297,7 +321,6 @@ def test_not_hard_barrier(revx_transmission_layers, tmp_path):
         ignore_invalid_costs=True,
     )
 
-    out_fp = tmp_path / "least_cost_paths_barrier.csv"
     assert not out_fp.exists()
     route_computer = BatchRouteProcessor(
         routing_scenario=routing_scenario,
