@@ -23,7 +23,21 @@ impl Routing {
         start: &[ArrayIndex],
         end: Vec<ArrayIndex>,
     ) -> impl Iterator<Item = Solution<ArrayIndex, f32>> {
-        self.scout(start, end).into_iter()
+        debug!("Starting compute with {} start points", start.len());
+
+        let solution: Vec<Solution<ArrayIndex, f32>> = start
+            .into_par_iter()
+            .filter_map(|s| {
+                self.algorithm.compute(
+                    s,
+                    |p| self.scenario.successors(p),
+                    None::<fn(&ArrayIndex) -> u64>,
+                    |p| end.contains(p),
+                )
+            })
+            .collect();
+
+        solution.into_iter()
     }
 
     pub(super) fn new<P: AsRef<std::path::Path>>(
@@ -39,26 +53,6 @@ impl Routing {
             scenario,
             algorithm,
         })
-    }
-
-    pub(super) fn scout(
-        &mut self,
-        start: &[ArrayIndex],
-        end: Vec<ArrayIndex>,
-    ) -> Vec<Solution<ArrayIndex, f32>> {
-        debug!("Starting scout with {} start points", start.len());
-
-        start
-            .into_par_iter()
-            .filter_map(|s| {
-                pathfinding::prelude::dijkstra(
-                    s,
-                    |p| self.scenario.successors(p),
-                    |p| end.contains(p),
-                )
-            })
-            .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
-            .collect()
     }
 }
 
