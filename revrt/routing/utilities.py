@@ -129,6 +129,7 @@ class PointToFeatureMapper:
             raise revrtValueError(msg)
 
         points = points.to_crs(self._crs)
+        points[self._feature_id_column] = np.nan
 
         if self._regions is not None:
             points = self._map_points_to_nearest_region(
@@ -141,6 +142,9 @@ class PointToFeatureMapper:
             clipped_features = self._clip_to_point(
                 point, radius, expand_radius
             )
+            if clipped_features.empty:
+                continue
+
             clipped_features[self._feature_id_column] = ind
             points.loc[row_ind, self._feature_id_column] = ind
             batches.append(clipped_features)
@@ -154,7 +158,7 @@ class PointToFeatureMapper:
             logger.debug("Dumping batch of features to file...")
             writer.save(pd.concat(batches))
 
-        return points
+        return self._drop_unpaired_points(points)
 
     def _map_points_to_nearest_region(self, points, clip_points_to_regions):
         """Map points to nearest region; optionally clip to regions"""
@@ -255,6 +259,22 @@ class PointToFeatureMapper:
             )
 
         return gpd.clip(features, region)
+
+    def _drop_unpaired_points(self, points):
+        """Drop points that did not map to any features"""
+        if not points[self._feature_id_column].any():
+            return points
+
+        empty_point_indices = points[
+            points[self._feature_id_column].isna()
+        ].index.tolist()
+        msg = (
+            f"No features found for {len(empty_point_indices)} point(s) "
+            f"at the following indices: {empty_point_indices}"
+        )
+        warn(msg, revrtWarning)
+        points = points[~points[self._feature_id_column].isna()]
+        return points.reset_index(drop=True)
 
 
 def map_to_costs(route_points, crs, transform, shape):
