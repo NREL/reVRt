@@ -1,6 +1,7 @@
 """reVRt routing module utilities"""
 
 import logging
+import contextlib
 from pathlib import Path
 from warnings import warn
 
@@ -381,6 +382,47 @@ def make_rev_sc_points(excl_rows, excl_cols, crs, transform, resolution=128):
     sc_points["latitude"] = lat
     sc_points["longitude"] = lon
     return gpd.GeoDataFrame(sc_points, crs=crs, geometry=geo)
+
+
+def points_csv_to_geo_dataframe(points, crs, transform):
+    """Convert points CSV or DataFrame to GeoDataFrame
+
+    Parameters
+    ----------
+    points : path-like or pandas.DataFrame
+        Points CSV file path or DataFrame. If a file path is given, the
+        file is read as a CSV. The CSV or DataFrame must have `latitude`
+        and `longitude` columns.
+    crs : str or pyproj.crs.CRS
+        Coordinate reference system for the exclusion raster.
+    transform : affine.Affine
+        Affine transform object representing the exclusion raster
+        transformation.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Points as a GeoDataFrame in the given CRS. Will contain
+        `start_row` and `start_col` columns giving the row and column
+        indices in the cost raster.
+    """
+    with contextlib.suppress(TypeError, UnicodeDecodeError):
+        points = pd.read_csv(points)
+
+    points = convert_lat_lon_to_row_col(
+        points,
+        crs,
+        transform,
+        lat_col="latitude",
+        lon_col="longitude",
+        out_row_name="start_row",
+        out_col_name="start_col",
+    )
+    return gpd.GeoDataFrame(
+        points,
+        geometry=gpd.points_from_xy(points.longitude, points.latitude),
+        crs="EPSG:4326",
+    ).to_crs(crs)
 
 
 def convert_lat_lon_to_row_col(
