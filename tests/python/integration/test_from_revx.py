@@ -137,20 +137,14 @@ def _run_cli(
 
 
 @pytest.fixture(scope="module")
-def routing_data_dir(test_data_dir):
-    """Generate test BA regions and network nodes from ISO shapes"""
-    return test_data_dir / "routing"
-
-
-@pytest.fixture(scope="module")
-def route_table(revx_transmission_layers, routing_data_dir):
+def route_table(revx_transmission_layers, test_routing_data_dir):
     """Generate test BA regions and network nodes from ISO shapes"""
 
     with xr.open_dataset(
         revx_transmission_layers, consolidated=False, engine="zarr"
     ) as f:
         cost_crs = f.rio.crs
-        features = routing_data_dir / "ri_county_centroids.gpkg"
+        features = test_routing_data_dir / "ri_county_centroids.gpkg"
         route_feats = gpd.read_file(features).to_crs(cost_crs)
         route_points = features_to_route_table(route_feats)
         return map_to_costs(
@@ -163,7 +157,11 @@ def route_table(revx_transmission_layers, routing_data_dir):
 
 @pytest.mark.parametrize("capacity", [100, 200, 400, 1000, 3000])
 def test_capacity_class(
-    revx_transmission_layers, capacity, route_table, tmp_path, routing_data_dir
+    revx_transmission_layers,
+    capacity,
+    route_table,
+    tmp_path,
+    test_routing_data_dir,
 ):
     """Test reVX capacity class routing against known outputs"""
     cap = _cap_class_to_cap(capacity)
@@ -175,14 +173,14 @@ def test_capacity_class(
 
     test = _run_lcp(tmp_path, routing_scenario, route_table)
 
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    truth = test_routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
     truth = pd.read_csv(truth)
 
     check(truth, test)
 
 
 def test_invariant_costs(
-    revx_transmission_layers, route_table, tmp_path, routing_data_dir
+    revx_transmission_layers, route_table, tmp_path, test_routing_data_dir
 ):
     """Test reVX invariant cost layer routing against known outputs"""
 
@@ -205,7 +203,7 @@ def test_invariant_costs(
 
     test = _run_lcp(tmp_path, routing_scenario, route_table)
 
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    truth = test_routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
     truth = pd.read_csv(truth)
 
     truth = truth.sort_values(["start_index", "index"])
@@ -215,7 +213,7 @@ def test_invariant_costs(
 
 
 def test_cost_multiplier_layer(
-    revx_transmission_layers, route_table, tmp_path, routing_data_dir
+    revx_transmission_layers, route_table, tmp_path, test_routing_data_dir
 ):
     """Test routing with a cost_multiplier_layer"""
 
@@ -239,7 +237,7 @@ def test_cost_multiplier_layer(
     )
     test = _run_lcp(tmp_path, routing_scenario, route_table)
 
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    truth = test_routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
     truth = pd.read_csv(truth)
 
     truth = truth.sort_values(["start_index", "index"])
@@ -250,7 +248,7 @@ def test_cost_multiplier_layer(
 
 
 def test_cost_multiplier_scalar(
-    revx_transmission_layers, route_table, tmp_path, routing_data_dir
+    revx_transmission_layers, route_table, tmp_path, test_routing_data_dir
 ):
     """Test routing with a cost_multiplier_scalar"""
 
@@ -266,7 +264,7 @@ def test_cost_multiplier_scalar(
     )
     test = _run_lcp(tmp_path, routing_scenario, route_table)
 
-    truth = routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
+    truth = test_routing_data_dir / f"least_cost_paths_{capacity}MW.csv"
     truth = pd.read_csv(truth)
 
     truth = truth.sort_values(["start_index", "index"])
@@ -362,7 +360,7 @@ def test_cli(
     revx_transmission_layers,
     route_table,
     tmp_path,
-    routing_data_dir,
+    test_routing_data_dir,
     save_paths,
     cli_runner,
 ):
@@ -371,7 +369,7 @@ def test_cli(
     row_config = polarity_config = cost_layer_config = {}
     test, truth = _run_cli(
         tmp_path,
-        routing_data_dir,
+        test_routing_data_dir,
         revx_transmission_layers,
         row_config,
         polarity_config,
@@ -393,7 +391,7 @@ def test_config_given_but_no_mult_in_layers(
     revx_transmission_layers,
     route_table,
     tmp_path,
-    routing_data_dir,
+    test_routing_data_dir,
     cli_runner,
 ):
     """Test Least cost path with transmission config but no volt in points"""
@@ -403,7 +401,7 @@ def test_config_given_but_no_mult_in_layers(
     cost_layer_config = {}
     test, truth = _run_cli(
         tmp_path,
-        routing_data_dir,
+        test_routing_data_dir,
         revx_transmission_layers,
         row_config,
         polarity_config,
@@ -424,7 +422,7 @@ def test_apply_row_mult(
     revx_transmission_layers,
     route_table,
     tmp_path,
-    routing_data_dir,
+    test_routing_data_dir,
     cli_runner,
 ):
     """Test applying row multiplier"""
@@ -437,7 +435,7 @@ def test_apply_row_mult(
     cost_layer_config = {"apply_row_mult": True}
     test, truth = _run_cli(
         tmp_path,
-        routing_data_dir,
+        test_routing_data_dir,
         revx_transmission_layers,
         row_config,
         polarity_config,
@@ -459,7 +457,7 @@ def test_apply_polarity_mult(
     revx_transmission_layers,
     route_table,
     tmp_path,
-    routing_data_dir,
+    test_routing_data_dir,
     cli_runner,
 ):
     """Test applying polarity multiplier"""
@@ -472,7 +470,7 @@ def test_apply_polarity_mult(
     cost_layer_config = {"apply_polarity_mult": True}
     test, truth = _run_cli(
         tmp_path,
-        routing_data_dir,
+        test_routing_data_dir,
         revx_transmission_layers,
         row_config,
         polarity_config,
@@ -494,7 +492,7 @@ def test_apply_row_and_polarity_mult(
     revx_transmission_layers,
     route_table,
     tmp_path,
-    routing_data_dir,
+    test_routing_data_dir,
     cli_runner,
 ):
     """Test applying row multiplier"""
@@ -507,7 +505,7 @@ def test_apply_row_and_polarity_mult(
     cost_layer_config = {"apply_row_mult": True, "apply_polarity_mult": True}
     test, truth = _run_cli(
         tmp_path,
-        routing_data_dir,
+        test_routing_data_dir,
         revx_transmission_layers,
         row_config,
         polarity_config,
@@ -529,7 +527,7 @@ def test_apply_row_and_polarity_with_existing_mult(
     revx_transmission_layers,
     route_table,
     tmp_path,
-    routing_data_dir,
+    test_routing_data_dir,
     cli_runner,
 ):
     """Test applying both row and polarity multiplier when mult exists"""
@@ -546,7 +544,7 @@ def test_apply_row_and_polarity_with_existing_mult(
     }
     test, truth = _run_cli(
         tmp_path,
-        routing_data_dir,
+        test_routing_data_dir,
         revx_transmission_layers,
         row_config,
         polarity_config,
@@ -568,7 +566,7 @@ def test_apply_multipliers_by_route(
     revx_transmission_layers,
     route_table,
     tmp_path,
-    routing_data_dir,
+    test_routing_data_dir,
     cli_runner,
 ):
     """Test applying unique multipliers per route"""
@@ -596,7 +594,7 @@ def test_apply_multipliers_by_route(
     }
     test, truth = _run_cli(
         tmp_path,
-        routing_data_dir,
+        test_routing_data_dir,
         revx_transmission_layers,
         row_config,
         polarity_config,

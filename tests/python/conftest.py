@@ -35,6 +35,12 @@ def test_utility_data_dir(test_data_dir):
 
 
 @pytest.fixture(scope="module")
+def test_routing_data_dir(test_data_dir):
+    """Return Path to routing test data directory"""
+    return test_data_dir / "routing"
+
+
+@pytest.fixture(scope="module")
 def revx_transmission_layers(test_utility_data_dir):
     """Return Path to test data directory"""
     return test_utility_data_dir / "transmission_layers.zarr"

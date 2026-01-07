@@ -266,11 +266,11 @@ def test_map_to_costs_filters_routes_outside_cost_domain(cost_grid):
 
 
 def test_filter_transmission_features_drops_empty_categories(
-    test_data_dir,
+    test_routing_data_dir,
 ):
     """_filter_transmission_features removes empty category records"""
 
-    features_src = test_data_dir / "routing" / "ri_transmission_features.gpkg"
+    features_src = test_routing_data_dir / "ri_transmission_features.gpkg"
     features = gpd.read_file(features_src, rows=2)
     features["bgid"] = [1, 2]
     features["egid"] = [3, 4]
@@ -288,11 +288,11 @@ def test_filter_transmission_features_drops_empty_categories(
 
 
 def test_filter_transmission_features_without_category_column(
-    test_data_dir,
+    test_routing_data_dir,
 ):
     """_filter_transmission_features tolerates missing category column"""
 
-    features_src = test_data_dir / "routing" / "ri_transmission_features.gpkg"
+    features_src = test_routing_data_dir / "ri_transmission_features.gpkg"
     features = gpd.read_file(features_src, rows=1)
     features = features.drop(columns="category", errors="ignore")
 
