@@ -28,6 +28,7 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
     features_fpath,
     out_dir,
     regions_fpath=None,
+    clip_points_to_regions=False,
     resolution=None,
     radius=None,
     points_fpath=None,
@@ -59,13 +60,6 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
         point (see the `radius` input for details). At least one of
         `points_fpath` or `resolution` must be provided.
         By default, ``None``.
-    resolution : int, optional
-        reV supply curve point resolution used to generate the supply
-        curve point grid. It is assumed that the `cost_fpath` input
-        is of the same shape and resolution as the exclusion grid used
-        to generate the supply curve points. If `points_fpath` is
-        provided, this input is ignored. At least one of `points_fpath`
-        or `resolution` must be provided. By default, ``None``.
     regions_fpath : path-like, optional
         Optional path to file containing region boundaries that should
         be used to clip features. Specifically, points will only be
@@ -73,6 +67,19 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
         limit connections by geography (i.e. within a state or county).
         At least one of `regions_fpath` or `radius` must be provided.
         By default, ``None``.
+    clip_points_to_regions : bool, default=False
+        If ``True``, points are clipped to the given `regions` before
+        mapping to features. If the `regions` input is not set,
+        this parameter has no effect. If ``False``, all points are
+        used as-is, which means points outside of the regions domain
+        are mapped to the closest region. By default, ``False``.
+    resolution : int, optional
+        reV supply curve point resolution used to generate the supply
+        curve point grid. It is assumed that the `cost_fpath` input
+        is of the same shape and resolution as the exclusion grid used
+        to generate the supply curve points. If `points_fpath` is
+        provided, this input is ignored. At least one of `points_fpath`
+        or `resolution` must be provided. By default, ``None``.
     radius : str or float, optional
         Distance (in cost CRS units) used to limit radial connection
         length (i.e. a radius input of ``25_000`` in a "meter" CRS will
@@ -158,6 +165,7 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
         feature_out_fp,
         radius=radius,
         expand_radius=expand_radius,
+        clip_points_to_regions=clip_points_to_regions,
         batch_size=batch_size,
     )
     route_table.drop(columns="geometry").to_csv(
