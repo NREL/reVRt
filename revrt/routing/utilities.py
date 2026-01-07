@@ -262,18 +262,17 @@ class PointToFeatureMapper:
 
     def _drop_unpaired_points(self, points):
         """Drop points that did not map to any features"""
-        if not points[self._feature_id_column].any():
+        feature_ids = points[self._feature_id_column]
+        if not feature_ids.isna().any():
             return points
 
-        empty_point_indices = points[
-            points[self._feature_id_column].isna()
-        ].index.tolist()
+        empty_point_indices = feature_ids[feature_ids.isna()].index.tolist()
         msg = (
             f"No features found for {len(empty_point_indices)} point(s) "
             f"at the following indices: {empty_point_indices}"
         )
         warn(msg, revrtWarning)
-        points = points[~points[self._feature_id_column].isna()]
+        points = points[~feature_ids.isna()]
         return points.reset_index(drop=True)
 
 
