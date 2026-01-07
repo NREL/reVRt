@@ -83,6 +83,7 @@ class PointToFeatureMapper:
         feature_out_fp,
         radius=None,
         expand_radius=True,
+        clip_points_to_regions=False,
         batch_size=500,
     ):
         """Map points to features within the point region
@@ -105,6 +106,12 @@ class PointToFeatureMapper:
         expand_radius : bool, optional
             If ``True``, the radius is expanded until at least one
             feature is found. By default, ``True``.
+        clip_points_to_regions : bool, default=False
+            If ``True``, points are clipped to the given regions before
+            mapping to features. If the `regions` input is not set,
+            this parameter has no effect. If ``False``, all points are
+            used as-is, which means points outside of the regions domain
+            are mapped to the closest region. By default, ``False``.
         batch_size : int, default=500
             Number of points to process in each batch when writing
             clipped features to file. By default, ``500``.
@@ -122,10 +129,12 @@ class PointToFeatureMapper:
             raise revrtValueError(msg)
 
         points = points.to_crs(self._crs)
+        points[self._feature_id_column] = np.nan
 
         if self._regions is not None:
-            map_func = region_mapper(self._regions, self._rid_column)
-            points[self._rid_column] = points.centroid.apply(map_func)
+            points = self._map_points_to_nearest_region(
+                points, clip_points_to_regions
+            )
 
         writer = _init_streaming_writer(feature_out_fp)
         batches = []
@@ -133,6 +142,9 @@ class PointToFeatureMapper:
             clipped_features = self._clip_to_point(
                 point, radius, expand_radius
             )
+            if clipped_features.empty:
+                continue
+
             clipped_features[self._feature_id_column] = ind
             points.loc[row_ind, self._feature_id_column] = ind
             batches.append(clipped_features)
@@ -146,6 +158,23 @@ class PointToFeatureMapper:
             logger.debug("Dumping batch of features to file...")
             writer.save(pd.concat(batches))
 
+        return self._drop_unpaired_points(points)
+
+    def _map_points_to_nearest_region(self, points, clip_points_to_regions):
+        """Map points to nearest region; optionally clip to regions"""
+        if clip_points_to_regions:
+            logger.info("Clipping points to regions...")
+            logger.debug("\t- Initial number of points: %d", len(points))
+            points = gpd.sjoin(
+                points,
+                self._regions[["geometry"]],
+                predicate="within",
+                how="inner",
+            ).drop(columns="index_right")
+            logger.debug("\t- Final number of points: %d", len(points))
+
+        map_func = region_mapper(self._regions, self._rid_column)
+        points[self._rid_column] = points.centroid.apply(map_func)
         return points
 
     def _clip_to_point(self, point, radius=None, expand_radius=True):
@@ -230,6 +259,22 @@ class PointToFeatureMapper:
             )
 
         return gpd.clip(features, region)
+
+    def _drop_unpaired_points(self, points):
+        """Drop points that did not map to any features"""
+        if not points[self._feature_id_column].any():
+            return points
+
+        empty_point_indices = points[
+            points[self._feature_id_column].isna()
+        ].index.tolist()
+        msg = (
+            f"No features found for {len(empty_point_indices)} point(s) "
+            f"at the following indices: {empty_point_indices}"
+        )
+        warn(msg, revrtWarning)
+        points = points[~points[self._feature_id_column].isna()]
+        return points.reset_index(drop=True)
 
 
 def map_to_costs(route_points, crs, transform, shape):
@@ -420,7 +465,7 @@ def filter_points_outside_cost_domain(route_table, shape):
 
     if any(~mask):
         msg = (
-            "The following features are outside of the cost exclusion "
+            f"The following {sum(~mask)} feature(s) are outside of the cost "
             f"domain and will be dropped:\n{route_table.loc[~mask]}"
         )
         warn(msg, revrtWarning)

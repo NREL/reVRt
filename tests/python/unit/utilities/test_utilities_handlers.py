@@ -1008,9 +1008,9 @@ def test_convert_pois_to_lines_cli_creates_expected_outputs(
         assert actual_geom.equals(expected_geom)
 
 
-def test_num_feats_in_gpkg_normal(test_data_dir):
+def test_num_feats_in_gpkg_normal(test_routing_data_dir):
     """Test counting features in a GeoPackage file"""
-    test_fp = test_data_dir / "routing" / "ri_regions.gpkg"
+    test_fp = test_routing_data_dir / "ri_regions.gpkg"
     assert num_feats_in_gpkg(test_fp) == len(gpd.read_file(test_fp))
 
 
