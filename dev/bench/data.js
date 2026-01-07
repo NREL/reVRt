@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767742492773,
+  "lastUpdate": 1767812863231,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4031,6 +4031,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 236772816,
             "range": "± 1798577",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5b9a22f55fff446123b14ce5f0a1863314a93ef2",
+          "message": "Add ability to route to features (#196)\n\n* Handle case when only one point in route\n\n* Start CLI refactor\n\n* Minor test update\n\n* Add `RouteToDefinitionConverter` base class\n\n* Fix tests\n\n* Add logic for `[NOT PUBLIC API]`\n\n* Fix function\n\n* Rename variable\n\n* Move file\n\n* Rename file\n\n* Add `point_to_feature` module\n\n* Add new CLI command\n\n* Fix revx integration tests\n\n* Add tests for function\n\n* Add unit tests for point to feature routing\n\n* Move tests files\n\n* Add test for function\n\n* Minor update to parameter\n\n* Block error for now\n\n* Use `np.isclose`",
+          "timestamp": "2026-01-07T11:55:31-07:00",
+          "tree_id": "4eedeb77e8ee04939e8a3f316afddc07eb57c89b",
+          "url": "https://github.com/NREL/reVRt/commit/5b9a22f55fff446123b14ce5f0a1863314a93ef2"
+        },
+        "date": 1767812861909,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 75329600,
+            "range": "± 906543",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 105372090,
+            "range": "± 1602461",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 98348529,
+            "range": "± 1964607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 149796327,
+            "range": "± 2455494",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 624460015,
+            "range": "± 14757238",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 151350116,
+            "range": "± 2339246",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155935629,
+            "range": "± 899627",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170144960,
+            "range": "± 1954083",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 213855514,
+            "range": "± 2331810",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 371726186,
+            "range": "± 3972408",
             "unit": "ns/iter"
           }
         ]
