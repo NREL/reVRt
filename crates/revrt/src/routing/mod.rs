@@ -1,3 +1,4 @@
+mod algorithm;
 mod features;
 mod scenario;
 
@@ -6,7 +7,8 @@ use std::sync::{Arc, mpsc};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::debug;
 
-use crate::{ArrayIndex, RevrtRoutingSolutions, Solution, error::Result};
+use crate::{error::Result, ArrayIndex, RevrtRoutingSolutions, Solution};
+use algorithm::Algorithm;
 use features::Features;
 use scenario::Scenario;
 
@@ -145,5 +147,3 @@ fn cost_as_u64(cost: f32) -> u64 {
 fn unscaled_cost(cost: u64) -> f32 {
     (cost as f32) / PRECISION_SCALAR
 }
-
-// struct Algorithm {}
