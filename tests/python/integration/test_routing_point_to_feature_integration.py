@@ -572,12 +572,7 @@ def test_clip_to_point_without_radius_uses_region_only(
     reason="CLI does not work under tox env on windows",
 )
 def test_cli_build_feature_route_table_and_run_lcp(
-    tmp_path,
-    routing_test_inputs,
-    cost_metadata,
-    revx_transmission_layers,
-    cli_runner,
-    test_routing_data_dir,
+    tmp_path, revx_transmission_layers, cli_runner, test_routing_data_dir
 ):
     """Run CLI main entry via config file to build feature route table"""
 
@@ -608,8 +603,7 @@ def test_cli_build_feature_route_table_and_run_lcp(
     }
 
     config_path = out_dir / "build_feature_route_table.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     route_table_path = out_dir / "config_routes.csv"
     mapped_features_path = out_dir / "config_features.gpkg"
@@ -662,8 +656,7 @@ def test_cli_build_feature_route_table_and_run_lcp(
     }
 
     config_path = out_dir / "lcp.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     assert not list(out_dir.glob("*_route_features.gpkg"))
     result = cli_runner.invoke(
