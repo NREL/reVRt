@@ -1779,6 +1779,7 @@ dependencies = [
  "criterion",
  "derive_builder",
  "ndarray",
+ "num-traits",
  "object_store",
  "pathfinding",
  "pyo3",

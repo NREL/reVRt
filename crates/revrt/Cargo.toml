@@ -17,6 +17,7 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 derive_builder = { workspace = true }
 ndarray = { workspace = true }
+num-traits = "0.2.19"
 object_store = { workspace = true }
 pathfinding = { workspace = true }
 pyo3 = { workspace = true }
