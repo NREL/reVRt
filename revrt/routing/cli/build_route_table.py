@@ -5,16 +5,15 @@ import logging
 from pathlib import Path
 from warnings import warn
 
-import pandas as pd
 import geopandas as gpd
 import xarray as xr
 from gaps.cli import CLICommandFromFunction
 
 from revrt.routing.utilities import (
     PointToFeatureMapper,
-    make_rev_sc_points,
-    convert_lat_lon_to_row_col,
     filter_points_outside_cost_domain,
+    make_rev_sc_points,
+    points_csv_to_geo_dataframe,
 )
 from revrt.exceptions import revrtValueError
 from revrt.warn import revrtWarning
@@ -190,16 +189,7 @@ def _make_points(
         raise revrtValueError(msg)
 
     if points_fpath is not None:
-        points = pd.read_csv(points_fpath)
-        points = convert_lat_lon_to_row_col(
-            points,
-            crs,
-            transform,
-            lat_col="latitude",
-            lon_col="longitude",
-            out_row_name="start_row",
-            out_col_name="start_col",
-        )
+        points = points_csv_to_geo_dataframe(points_fpath, crs, transform)
     else:
         points = make_rev_sc_points(
             cost_shape[0], cost_shape[1], crs, transform, resolution=resolution
