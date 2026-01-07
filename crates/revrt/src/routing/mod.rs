@@ -14,7 +14,7 @@ use scenario::Scenario;
 
 pub(super) struct Routing {
     scenario: Scenario,
-    // algorithm: Algorithm,
+    algorithm: Algorithm,
 }
 
 impl Routing {
@@ -33,9 +33,11 @@ impl Routing {
     ) -> Result<Self> {
         let scenario = Scenario::new(store_path, cost_function, cache_size)?;
 
+        let algorithm = Algorithm::new();
+
         Ok(Self {
             scenario,
-            // algorithm,
+            algorithm,
         })
     }
 
