@@ -566,5 +566,122 @@ def test_clip_to_point_without_radius_uses_region_only(
     assert isinstance(result, gpd.GeoDataFrame)
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_build_feature_route_table_and_run_lcp(
+    tmp_path,
+    routing_test_inputs,
+    cost_metadata,
+    revx_transmission_layers,
+    cli_runner,
+    test_routing_data_dir,
+):
+    """Run CLI main entry via config file to build feature route table"""
+
+    out_dir = tmp_path / "mini_test"
+    out_dir.mkdir()
+
+    gpd.read_file(test_routing_data_dir / "ri_regions.gpkg").iloc[[3]].to_file(
+        out_dir / "regions.gpkg", driver="GPKG"
+    )
+
+    # -- Build Route Table --
+
+    config = {
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(
+            test_routing_data_dir / "ri_transmission_features.gpkg"
+        ),
+        "out_dir": str(out_dir),
+        "regions_fpath": str(out_dir / "regions.gpkg"),
+        "resolution": 64,
+        "radius": 10_000,
+        "feature_out_fp": "config_features.gpkg",
+        "route_table_out_fp": "config_routes.csv",
+        "region_identifier_column": "rid",
+        "feature_identifier_column": "cfg_feat_id",
+        "expand_radius": False,
+        "clip_points_to_regions": True,
+    }
+
+    config_path = out_dir / "build_feature_route_table.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    route_table_path = out_dir / "config_routes.csv"
+    mapped_features_path = out_dir / "config_features.gpkg"
+    assert not route_table_path.exists()
+    assert not mapped_features_path.exists()
+
+    result = cli_runner.invoke(
+        main, ["build-feature-route-table", "-c", str(config_path)]
+    )
+    err_msg = None
+    if result.exc_info is not None:
+        err_msg = "".join(traceback.format_exception(*result.exc_info))
+    assert result.exit_code == 0, err_msg
+
+    assert route_table_path.exists()
+    assert mapped_features_path.exists()
+
+    route_table = pd.read_csv(route_table_path)
+    mapped_features = gpd.read_file(mapped_features_path)
+
+    assert len(mapped_features) == 89
+    assert len(route_table) == 36
+
+    assert {"start_row", "start_col", "cfg_feat_id"}.issubset(
+        route_table.columns
+    )
+    assert route_table["start_row"].between(480, 1248).all()
+    assert route_table["start_col"].between(32, 416).all()
+    assert route_table["cfg_feat_id"].notna().all()
+    assert "rid" in route_table.columns
+    assert route_table["rid"].notna().all()
+    assert "cfg_feat_id" in mapped_features.columns
+    assert "rid" in mapped_features.columns
+    assert set(mapped_features["cfg_feat_id"].unique()) == set(
+        route_table["cfg_feat_id"]
+    )
+
+    # -- RUN LCP --
+
+    config = {
+        "cost_fpath": str(revx_transmission_layers),
+        "route_table_fpath": str(route_table_path),
+        "features_fpath": str(mapped_features_path),
+        "out_dir": str(out_dir),
+        "cost_layers": [
+            {"layer_name": "tie_line_costs_102MW"},
+        ],
+        "save_paths": True,
+        "feature_identifier_column": "cfg_feat_id",
+    }
+
+    config_path = out_dir / "lcp.json"
+    with config_path.open("w", encoding="utf-8") as fh:
+        json.dump(config, fh)
+
+    assert not list(out_dir.glob("*_route_features.gpkg"))
+    result = cli_runner.invoke(
+        main, ["route-features", "-c", str(config_path)]
+    )
+    err_msg = None
+    if result.exc_info is not None:
+        err_msg = "".join(traceback.format_exception(*result.exc_info))
+    assert result.exit_code == 0, err_msg
+
+    out_fp = list(out_dir.glob("*_route_features.gpkg"))
+    msg = f"No output file found: {list(out_dir.glob('*'))}"
+    assert len(out_fp) == 1, msg
+
+    routes = gpd.read_file(out_fp[0])
+    assert len(routes) == len(route_table)
+    assert routes["length_km"].between(0.18, 12).all()
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
