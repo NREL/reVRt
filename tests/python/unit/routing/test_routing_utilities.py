@@ -16,6 +16,7 @@ from revrt.routing.utilities import (
     _filter_transmission_features,
     _init_streaming_writer,
     _transform_lat_lon_to_row_col,
+    points_csv_to_geo_dataframe,
     convert_lat_lon_to_row_col,
     filter_points_outside_cost_domain,
     make_rev_sc_points,
@@ -96,6 +97,61 @@ def test_transform_lat_lon_to_row_col_expected_indices(cost_grid):
     assert isinstance(col, np.ndarray)
     np.testing.assert_array_equal(row, np.array([0, 3]))
     np.testing.assert_array_equal(col, np.array([0, 4]))
+
+
+def test_points_csv_to_geo_dataframe_from_dataframe(cost_grid):
+    """DataFrame input adds grid indices and preserves CRS"""
+
+    crs, transform, _ = cost_grid
+    lon_a, lat_a = xy(transform, 0, 0, offset="center")
+    lon_b, lat_b = xy(transform, 1, 2, offset="center")
+
+    points = pd.DataFrame(
+        {
+            "latitude": [str(lat_a), str(lat_b)],
+            "longitude": [str(lon_a), str(lon_b)],
+            "label": ["first", "second"],
+        }
+    )
+
+    geo_df = points_csv_to_geo_dataframe(points, crs, transform)
+
+    assert isinstance(geo_df, gpd.GeoDataFrame)
+    assert geo_df.crs.to_string() == crs
+    np.testing.assert_array_equal(geo_df["start_row"], np.array([0, 1]))
+    np.testing.assert_array_equal(geo_df["start_col"], np.array([0, 2]))
+    np.testing.assert_allclose(
+        geo_df.geometry.x.to_numpy(), np.array([lon_a, lon_b])
+    )
+    np.testing.assert_allclose(
+        geo_df.geometry.y.to_numpy(), np.array([lat_a, lat_b])
+    )
+
+
+def test_points_csv_to_geo_dataframe_from_csv_path(cost_grid, tmp_path):
+    """CSV path input is read and re-projected to target CRS"""
+
+    crs, transform, _ = cost_grid
+    lon, lat = xy(transform, 2, 3, offset="center")
+    csv_points = pd.DataFrame(
+        {
+            "latitude": [lat],
+            "longitude": [lon],
+            "category": ["test"],
+        }
+    )
+    csv_fp = tmp_path / "route_points.csv"
+    csv_points.to_csv(csv_fp, index=False)
+
+    geo_df = points_csv_to_geo_dataframe(csv_fp, crs, transform)
+
+    assert isinstance(geo_df, gpd.GeoDataFrame)
+    assert geo_df.crs.to_string() == crs
+    assert geo_df["category"].tolist() == ["test"]
+    np.testing.assert_array_equal(geo_df["start_row"], np.array([2]))
+    np.testing.assert_array_equal(geo_df["start_col"], np.array([3]))
+    np.testing.assert_allclose(geo_df.geometry.iloc[0].x, lon)
+    np.testing.assert_allclose(geo_df.geometry.iloc[0].y, lat)
 
 
 def test_map_to_costs_adds_expected_columns(cost_grid):
