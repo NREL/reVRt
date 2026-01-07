@@ -174,7 +174,7 @@ def test_filter_points_outside_cost_domain_warns_and_drops(cost_grid):
 
     assert len(record) == 1
     assert (
-        "The following features are outside of the cost exclusion "
+        "The following 1 feature(s) are outside of the cost "
         "domain and will be dropped"
     ) in str(record[0].message)
     assert filtered.index.tolist() == [0]
@@ -540,8 +540,8 @@ def test_filter_points_outside_cost_domain_only_start_indices(cost_grid):
     with pytest.warns(
         revrtWarning,
         match=(
-            "The following features are outside of the cost exclusion "
-            "domain and will be dropped"
+            r"The following 1 feature\(s\) are outside of the cost "
+            r"domain and will be dropped"
         ),
     ):
         filtered = filter_points_outside_cost_domain(route_points, shape)

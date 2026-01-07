@@ -445,7 +445,7 @@ def filter_points_outside_cost_domain(route_table, shape):
 
     if any(~mask):
         msg = (
-            "The following features are outside of the cost exclusion "
+            f"The following {sum(~mask)} feature(s) are outside of the cost "
             f"domain and will be dropped:\n{route_table.loc[~mask]}"
         )
         warn(msg, revrtWarning)
