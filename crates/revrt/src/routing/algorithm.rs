@@ -19,6 +19,7 @@ pub(super) enum AlgorithmType {
     // LongRangeDijkstra,
 }
 
+#[derive(Debug)]
 pub(super) struct Algorithm {
     algorithm_type: AlgorithmType,
 }
