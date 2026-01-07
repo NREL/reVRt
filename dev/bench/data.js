@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767812863231,
+  "lastUpdate": 1767822231809,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4115,6 +4115,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 371726186,
             "range": "± 3972408",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bccedc6adbce90f3ac6377845ccc393e8dd544b4",
+          "message": "Add a routing to feature integration test (#197)\n\n* Add functionality to clip points to region\n\n* Change logger statement type\n\n* Expose clip option to user\n\n* Update logger message\n\n* Drop points that don't map to a domain\n\n* Update fixture\n\n* Update fixture\n\n* Add small integration test\n\n* Add unit test",
+          "timestamp": "2026-01-07T14:32:57-07:00",
+          "tree_id": "58ad1424c75aceeb9b1786516d25d2ccaa590109",
+          "url": "https://github.com/NREL/reVRt/commit/bccedc6adbce90f3ac6377845ccc393e8dd544b4"
+        },
+        "date": 1767822230972,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 73830936,
+            "range": "± 969578",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 112299439,
+            "range": "± 2724211",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 98159253,
+            "range": "± 1706737",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 149970729,
+            "range": "± 2267841",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 627765534,
+            "range": "± 21618444",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 152665405,
+            "range": "± 1795650",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 157099497,
+            "range": "± 1663334",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170537853,
+            "range": "± 2403308",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 212362619,
+            "range": "± 2370831",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 368249662,
+            "range": "± 4095939",
             "unit": "ns/iter"
           }
         ]
