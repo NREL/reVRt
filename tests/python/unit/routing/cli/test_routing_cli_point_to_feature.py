@@ -212,7 +212,7 @@ def test_compute_lcp_routes_returns_none_when_subset_empty(
     out_dir = point_feature_dataset["tmp_path"] / "empty_outputs"
     result = compute_lcp_routes(
         cost_fpath=point_feature_dataset["cost_fp"],
-        route_table=route_table_fp,
+        route_table_fpath=route_table_fp,
         features_fpath=point_feature_dataset["features_fp"],
         cost_layers=[{"layer_name": "tie_line_costs_400MW"}],
         out_dir=out_dir,
@@ -238,7 +238,7 @@ def test_compute_lcp_routes_creates_csv_output(point_feature_dataset):
 
     csv_path = compute_lcp_routes(
         cost_fpath=point_feature_dataset["cost_fp"],
-        route_table=route_table_fp,
+        route_table_fpath=route_table_fp,
         features_fpath=point_feature_dataset["features_fp"],
         cost_layers=[{"layer_name": "tie_line_costs_400MW"}],
         out_dir=out_dir,
@@ -270,7 +270,7 @@ def test_compute_lcp_routes_creates_geo_package_output(point_feature_dataset):
     out_dir = point_feature_dataset["tmp_path"] / "gpkg_outputs"
     gpkg_path = compute_lcp_routes(
         cost_fpath=point_feature_dataset["cost_fp"],
-        route_table=route_table_fp,
+        route_table_fpath=route_table_fp,
         features_fpath=point_feature_dataset["features_fp"],
         cost_layers=[{"layer_name": "tie_line_costs_400MW"}],
         out_dir=out_dir,
@@ -302,7 +302,7 @@ def test_route_features_cli_executes(point_feature_dataset, cli_runner):
     out_dir = point_feature_dataset["tmp_path"] / "cli_outputs"
     config = {
         "cost_fpath": str(point_feature_dataset["cost_fp"]),
-        "route_table": str(route_table_fp),
+        "route_table_fpath": str(route_table_fp),
         "features_fpath": str(point_feature_dataset["features_fp"]),
         "cost_layers": [{"layer_name": "tie_line_costs_400MW"}],
         "out_dir": str(out_dir),

@@ -116,7 +116,7 @@ def _run_cli(
             "voltage_polarity_mult": str(polarity_config_path),
         },
         "cost_fpath": str(revx_transmission_layers),
-        "route_table": str(routes_fp),
+        "route_table_fpath": str(routes_fp),
         "save_paths": save_paths,
         "cost_layers": [cost_layer_config],
         "friction_layers": [DEFAULT_BARRIER_CONFIG],

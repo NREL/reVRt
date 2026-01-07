@@ -229,11 +229,11 @@ def run_lcp(
     )
 
 
-def route_points_subset(route_table, split_params):
+def route_points_subset(route_points, split_params):
     """[NOT PUBLIC API] Get indices of points sorted by location"""
 
     with contextlib.suppress(TypeError, UnicodeDecodeError):
-        route_points = pd.read_csv(route_table)
+        route_points = pd.read_csv(route_points)
 
     sort_cols = ["start_lat", "start_lon"]
     if not set(sort_cols).issubset(route_points.columns):

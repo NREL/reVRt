@@ -179,7 +179,7 @@ def test_compute_lcp_routes_generates_csv(sample_layered_data, tmp_path):
 
     result_fp = compute_lcp_routes(
         cost_fpath=sample_layered_data,
-        route_table=route_table_fp,
+        route_table_fpath=route_table_fp,
         cost_layers=cost_layers,
         out_dir=out_dir,
         job_name="run",
@@ -259,7 +259,7 @@ def test_compute_lcp_routes_returns_none_on_empty_indices(
 
     result = compute_lcp_routes(
         cost_fpath=sample_layered_data,
-        route_table=route_table_fp,
+        route_table_fpath=route_table_fp,
         cost_layers=[{"layer_name": "layer_1"}],
         out_dir=tmp_path,
         job_name="no_routes",
@@ -799,7 +799,7 @@ def test_cli_route_points_skips_precomputed_routes(
 
     config = {
         "cost_fpath": str(sample_layered_data),
-        "route_table": str(route_table_fp),
+        "route_table_fpath": str(route_table_fp),
         "cost_layers": [{"layer_name": "layer_1"}],
     }
     config_fp = tmp_path / "route_points_config.json"
@@ -905,7 +905,7 @@ def test_cli_route_points_skips_precomputed_routes_gpkg(
 
     config = {
         "cost_fpath": str(sample_layered_data),
-        "route_table": str(route_table_fp),
+        "route_table_fpath": str(route_table_fp),
         "cost_layers": [{"layer_name": "layer_1"}],
         "save_paths": True,
     }
@@ -1035,7 +1035,7 @@ def test_cli_route_points_flip_start_end(
 
     config = {
         "cost_fpath": str(sample_layered_data),
-        "route_table": str(route_table_fp),
+        "route_table_fpath": str(route_table_fp),
         "cost_layers": [{"layer_name": "layer_1"}],
     }
     config_fp = tmp_path / "route_points_config.json"

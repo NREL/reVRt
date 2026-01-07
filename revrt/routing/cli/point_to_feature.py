@@ -192,7 +192,7 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
 
 def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     cost_fpath,
-    route_table,
+    route_table_fpath,
     features_fpath,
     cost_layers,
     out_dir,
@@ -220,7 +220,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     cost_fpath : path-like
         Path to layered Zarr file containing cost and other required
         routing layers.
-    route_table : path-like
+    route_table_fpath : path-like
         Path to CSV file defining the start points and end features of
         all routes. Must have the following columns:
 
@@ -456,7 +456,9 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
 
     transmission_config = parse_config(config=transmission_config)
 
-    route_points = route_points_subset(route_table, split_params=_split_params)
+    route_points = route_points_subset(
+        route_table_fpath, split_params=_split_params
+    )
     if len(route_points) == 0:
         logger.info("No routes to process!")
         return None
