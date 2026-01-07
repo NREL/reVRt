@@ -159,7 +159,7 @@ class PointToFeatureMapper:
     def _map_points_to_nearest_region(self, points, clip_points_to_regions):
         """Map points to nearest region; optionally clip to regions"""
         if clip_points_to_regions:
-            logger.debug("Clipping points to regions...")
+            logger.info("Clipping points to regions...")
             logger.debug("\t- Initial number of points: %d", len(points))
             points = gpd.sjoin(
                 points,
