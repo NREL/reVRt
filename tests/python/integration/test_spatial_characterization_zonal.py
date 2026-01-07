@@ -174,17 +174,6 @@ def test_categorization_single_stat(sc_dir, zonal_polygon_fp):
     assert stats == expected
 
 
-@pytest.mark.skipif(
-    (os.environ.get("TOX_RUNNING") == "True")
-    and (platform.system() != "Windows"),
-    reason=(
-        "Weird failure ONLY on TOX for ONLY the combinations of: "
-        "macOS + Python 3.12 and Ubuntu + Python 3.13. Needs investigation. "
-        "Error is: "
-        "{'value_multiplied_by_fractional_area': 53332734326.6, 'id': 1} "
-        "!= {'value_multiplied_by_fractional_area': 53332734934.61, 'id': 1}"
-    ),
-)
 def test_fractional_area(sc_dir, zonal_polygon_fp):
     """Test `zonal_stats` for fractional area characterization"""
     expected = [
@@ -205,11 +194,15 @@ def test_fractional_area(sc_dir, zonal_polygon_fp):
     stats = zs.from_files(
         zonal_polygon_fp, sc_dir / "layer_c.tif", copy_properties=["id"]
     )
-    for zone_stats in stats:
-        zone_stats["value_multiplied_by_fractional_area"] = round(
-            zone_stats["value_multiplied_by_fractional_area"], 2
+
+    for got, exp in zip(stats, expected, strict=True):
+        assert got["id"] == exp["id"]
+        assert np.isclose(
+            got["value_multiplied_by_fractional_area"],
+            exp["value_multiplied_by_fractional_area"],
+            rtol=1e-6,
+            atol=1e-2,
         )
-    assert stats == expected
 
 
 @pytest.mark.parametrize("nodata", [None, 11])
