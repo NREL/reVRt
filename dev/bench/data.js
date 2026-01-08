@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767903537738,
+  "lastUpdate": 1767908145005,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4451,6 +4451,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 367992640,
             "range": "± 5890725",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a45f72196eb4fdfa7e77c75c3a91b30db8ea187b",
+          "message": "Internal re-organization of dataset module (#201)\n\n* refact: Moving internally module dataset\n\nThere are no changes on accessing `dataset`, but just cleaning library\nstructure since we already adopted a directory for the module.\n\n* doc: dataset module level",
+          "timestamp": "2026-01-08T14:24:59-07:00",
+          "tree_id": "427d53603b432e92ebe5776c1e80c0453d676aef",
+          "url": "https://github.com/NREL/reVRt/commit/a45f72196eb4fdfa7e77c75c3a91b30db8ea187b"
+        },
+        "date": 1767908144447,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 72941239,
+            "range": "± 1632845",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 94413206,
+            "range": "± 1530337",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 98618566,
+            "range": "± 2581810",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 148585841,
+            "range": "± 2649135",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 620245089,
+            "range": "± 15733260",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 152116609,
+            "range": "± 3213191",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 157272263,
+            "range": "± 1996729",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 171107706,
+            "range": "± 1436254",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 214270035,
+            "range": "± 3579427",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 369319377,
+            "range": "± 7225809",
             "unit": "ns/iter"
           }
         ]
