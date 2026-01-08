@@ -167,13 +167,12 @@ def test_integer_dimension_window_rounds_offsets():
     transform = Affine(1.0, 0.0, 0.0, 0.0, -1.0, 0.0)
     bounds = (0.25, -3.75, 6.6, 1.4)
 
-    raw = from_bounds(*bounds, transform=transform)
     window = integer_dimension_window(bounds, transform)
 
-    assert window.col_off == round(raw.col_off)
-    assert window.row_off == round(raw.row_off)
-    assert window.width == max(1, round(raw.width))
-    assert window.height == max(1, round(raw.height))
+    assert window.col_off == 0
+    assert window.row_off == -2
+    assert window.width == 8
+    assert window.height == 7
 
 
 def test_integer_dimension_window_enforces_min_size():
@@ -188,8 +187,8 @@ def test_integer_dimension_window_enforces_min_size():
 
     window = integer_dimension_window(bounds, transform)
 
-    assert window.width == 1
-    assert window.height == 1
+    assert window.width == 2
+    assert window.height == 2
 
 
 if __name__ == "__main__":

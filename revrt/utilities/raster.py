@@ -1,6 +1,7 @@
 """reVRt rasterization utilities"""
 
 import logging
+from math import ceil
 from functools import lru_cache
 
 import rasterio
@@ -152,7 +153,7 @@ def integer_dimension_window(bounds, transform):
     """Make valid-size window with integer dimensions
 
     This method guarantees the window dimensions are integers >= 1.
-    Window offsets are also rounded to the nearest integer.
+    Window offsets are also floored to the nearest integer.
 
     Parameters
     ----------
@@ -168,8 +169,8 @@ def integer_dimension_window(bounds, transform):
     """
     window = rasterio.windows.from_bounds(*bounds, transform=transform)
     return rasterio.windows.Window(
-        round(window.col_off),
-        round(window.row_off),
-        max(1, round(window.width)),
-        max(1, round(window.height)),
+        ceil(window.col_off - 1),
+        ceil(window.row_off - 1),
+        max(1, ceil(window.width)) + 1,
+        max(1, ceil(window.height)) + 1,
     )
