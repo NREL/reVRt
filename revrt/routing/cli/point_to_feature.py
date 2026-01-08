@@ -18,6 +18,7 @@ from revrt.routing.cli.base import (
 )
 from revrt.routing.utilities import map_to_costs
 from revrt.costs.config import parse_config
+from revrt.utilities.raster import integer_dimension_window
 from revrt.warn import revrtWarning
 
 
@@ -157,8 +158,10 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
 
     def _end_feats_to_row_col(self, end_feats):
         """Convert end features to row/col indices in cost grid"""
-        window = self._integer_dimension_window(end_feats)
-
+        window = integer_dimension_window(
+            bounds=end_feats.total_bounds,
+            transform=self.cost_metadata["transform"],
+        )
         window_transform = rasterio.windows.transform(
             window=window, transform=self.cost_metadata["transform"]
         )
@@ -174,20 +177,6 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
         rows += window.row_off
         cols += window.col_off
         return rows, cols
-
-    def _integer_dimension_window(self, end_feats):
-        """Make window with integer dimensions for end features
-
-        Note: We can't use ``.round_offsets().round_lengths()`` since
-        that can round down to a 0 dimension window in some cases.
-        Instead, we force the window to come from a slice, which
-        guarantees the dimensions to be >= 1.
-        """
-        window = rasterio.windows.from_bounds(
-            *end_feats.total_bounds,
-            transform=self.cost_metadata["transform"],
-        )
-        return rasterio.windows.Window.from_slices(*window.toslices())
 
 
 def compute_lcp_routes(  # noqa: PLR0913, PLR0917
