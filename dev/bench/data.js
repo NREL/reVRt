@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767822231809,
+  "lastUpdate": 1767892662980,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4199,6 +4199,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 368249662,
             "range": "± 4095939",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ca59b8e3cea81f014edb98f6f3447d4c3690fdf2",
+          "message": "Build(deps): Bump lru from 0.16.1 to 0.16.3 (#198)\n\nBumps [lru](https://github.com/jeromefroe/lru-rs) from 0.16.1 to 0.16.3.\n- [Changelog](https://github.com/jeromefroe/lru-rs/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/jeromefroe/lru-rs/compare/0.16.1...0.16.3)\n\n---\nupdated-dependencies:\n- dependency-name: lru\n  dependency-version: 0.16.3\n  dependency-type: indirect\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2026-01-08T10:02:26-07:00",
+          "tree_id": "559725a0ae0216cfff2f00744439d5f381ea2898",
+          "url": "https://github.com/NREL/reVRt/commit/ca59b8e3cea81f014edb98f6f3447d4c3690fdf2"
+        },
+        "date": 1767892662393,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74188498,
+            "range": "± 899216",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 89973421,
+            "range": "± 1019934",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 98716724,
+            "range": "± 1820338",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 150099329,
+            "range": "± 2117883",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 620769808,
+            "range": "± 16508372",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 149630706,
+            "range": "± 1716003",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 154488717,
+            "range": "± 970192",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 167454194,
+            "range": "± 900637",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 210117332,
+            "range": "± 1431987",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 365245747,
+            "range": "± 2776200",
             "unit": "ns/iter"
           }
         ]
