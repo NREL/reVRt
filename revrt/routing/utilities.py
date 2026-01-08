@@ -1,6 +1,7 @@
 """reVRt routing module utilities"""
 
 import logging
+import contextlib
 from pathlib import Path
 from warnings import warn
 
@@ -29,7 +30,7 @@ class PointToFeatureMapper:
         features_fp,
         regions=None,
         region_identifier_column="rid",
-        feature_identifier_column="end_feat_id",
+        connection_identifier_column="end_feat_id",
     ):
         """
 
@@ -52,7 +53,7 @@ class PointToFeatureMapper:
             Column in `regions` data to use as the identifier for that
             region. If not given, a simple index will be put under the
             `rid` column. By default, ``"rid"``.
-        feature_identifier_column : str, optional
+        connection_identifier_column : str, optional
             Column in output data (both features and points) that will
             be used to link the points to the features that should be
             routed to. By default, ``"end_feat_id"``.
@@ -61,7 +62,7 @@ class PointToFeatureMapper:
         self._features_fp = features_fp
         self._regions = None
         self._rid_column = region_identifier_column
-        self._feature_id_column = feature_identifier_column
+        self._conn_id_column = connection_identifier_column
         self._set_regions(regions)
 
     def _set_regions(self, regions):
@@ -129,7 +130,7 @@ class PointToFeatureMapper:
             raise revrtValueError(msg)
 
         points = points.to_crs(self._crs)
-        points[self._feature_id_column] = np.nan
+        points[self._conn_id_column] = np.nan
 
         if self._regions is not None:
             points = self._map_points_to_nearest_region(
@@ -145,8 +146,8 @@ class PointToFeatureMapper:
             if clipped_features.empty:
                 continue
 
-            clipped_features[self._feature_id_column] = ind
-            points.loc[row_ind, self._feature_id_column] = ind
+            clipped_features[self._conn_id_column] = ind
+            points.loc[row_ind, self._conn_id_column] = ind
             batches.append(clipped_features)
 
             if len(batches) >= batch_size:
@@ -262,18 +263,17 @@ class PointToFeatureMapper:
 
     def _drop_unpaired_points(self, points):
         """Drop points that did not map to any features"""
-        if not points[self._feature_id_column].any():
+        feature_ids = points[self._conn_id_column]
+        if not feature_ids.isna().any():
             return points
 
-        empty_point_indices = points[
-            points[self._feature_id_column].isna()
-        ].index.tolist()
+        empty_point_indices = feature_ids[feature_ids.isna()].index.tolist()
         msg = (
             f"No features found for {len(empty_point_indices)} point(s) "
             f"at the following indices: {empty_point_indices}"
         )
         warn(msg, revrtWarning)
-        points = points[~points[self._feature_id_column].isna()]
+        points = points[~feature_ids.isna()]
         return points.reset_index(drop=True)
 
 
@@ -382,6 +382,47 @@ def make_rev_sc_points(excl_rows, excl_cols, crs, transform, resolution=128):
     sc_points["latitude"] = lat
     sc_points["longitude"] = lon
     return gpd.GeoDataFrame(sc_points, crs=crs, geometry=geo)
+
+
+def points_csv_to_geo_dataframe(points, crs, transform):
+    """Convert points CSV or DataFrame to GeoDataFrame
+
+    Parameters
+    ----------
+    points : path-like or pandas.DataFrame
+        Points CSV file path or DataFrame. If a file path is given, the
+        file is read as a CSV. The CSV or DataFrame must have `latitude`
+        and `longitude` columns.
+    crs : str or pyproj.crs.CRS
+        Coordinate reference system for the exclusion raster.
+    transform : affine.Affine
+        Affine transform object representing the exclusion raster
+        transformation.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        Points as a GeoDataFrame in the given CRS. Will contain
+        `start_row` and `start_col` columns giving the row and column
+        indices in the cost raster.
+    """
+    with contextlib.suppress(TypeError, UnicodeDecodeError):
+        points = pd.read_csv(points)
+
+    points = convert_lat_lon_to_row_col(
+        points,
+        crs,
+        transform,
+        lat_col="latitude",
+        lon_col="longitude",
+        out_row_name="start_row",
+        out_col_name="start_col",
+    )
+    return gpd.GeoDataFrame(
+        points,
+        geometry=gpd.points_from_xy(points.longitude, points.latitude),
+        crs="EPSG:4326",
+    ).to_crs(crs)
 
 
 def convert_lat_lon_to_row_col(

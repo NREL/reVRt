@@ -385,7 +385,7 @@ class CharacterizedLayer:
         if len(route) == 1:
             return {
                 f"{self.name}_cost": 0,
-                f"{self.name}_dist_km": 0,
+                f"{self.name}_length_km": 0,
             }
 
         lens, __ = _compute_lens(route, cell_size)
@@ -403,7 +403,7 @@ class CharacterizedLayer:
 
         return {
             f"{self.name}_cost": layer_cost.astype(np.float32).compute(),
-            f"{self.name}_dist_km": (
+            f"{self.name}_length_km": (
                 layer_length.astype(np.float32).compute()
             ),
         }

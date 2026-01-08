@@ -15,6 +15,7 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 
+from revrt._cli import main
 from revrt.utilities import LayeredFile, features_to_route_table
 from revrt.costs.config import TransmissionConfig, parse_cap_class
 from revrt.routing.base import BatchRouteProcessor, RoutingScenario
@@ -24,8 +25,8 @@ from revrt.routing.cli.base import (
 from revrt.routing.cli.point_to_point import (
     PointToPointRouteDefinitionConverter,
 )
-
-from revrt._cli import main
+from revrt.routing.cli.build_route_table import point_to_feature_route_table
+from revrt.routing.cli.point_to_feature import compute_lcp_routes
 from revrt.routing.utilities import map_to_costs
 
 DEFAULT_CONFIG = TransmissionConfig()
@@ -615,6 +616,87 @@ def test_apply_multipliers_by_route(
     test["cost"] /= divisors
 
     check(truth, test)
+
+
+def test_tracked_layers(
+    tmp_path, revx_transmission_layers, test_routing_data_dir
+):
+    """Test tracked layers functionality"""
+
+    route_table_path = tmp_path / "route_table.csv"
+    mapped_features_path = tmp_path / "mapped_features.gpkg"
+    assert not route_table_path.exists()
+    assert not mapped_features_path.exists()
+
+    point_to_feature_route_table(
+        revx_transmission_layers,
+        test_routing_data_dir / "ri_transmission_features.gpkg",
+        out_dir=tmp_path,
+        regions_fpath=test_routing_data_dir / "ri_regions.gpkg",
+        resolution=64,
+        radius=10_000,
+        points_fpath=test_routing_data_dir / "sample_ri_points.csv",
+        expand_radius=False,
+    )
+
+    assert route_table_path.exists()
+    assert mapped_features_path.exists()
+
+    route_table = pd.read_csv(route_table_path)
+    mapped_features = gpd.read_file(mapped_features_path)
+
+    assert len(mapped_features) == 89
+    assert len(route_table) == 36
+
+    assert {"start_row", "start_col", "end_feat_id"}.issubset(
+        route_table.columns
+    )
+    assert route_table["start_row"].between(480, 1248).all()
+    assert route_table["start_col"].between(32, 416).all()
+    assert route_table["end_feat_id"].notna().all()
+
+    temp_layer_file = tmp_path / "temp_multiplier_layer.zarr"
+    shutil.copytree(revx_transmission_layers, temp_layer_file)
+
+    lf = LayeredFile(temp_layer_file)
+    lf.write_layer(np.ones(shape=lf.shape) * 1, "layer1", overwrite=True)
+    lf.write_layer(np.ones(shape=lf.shape) * 2, "layer2", overwrite=True)
+    lf.write_layer(np.ones(shape=lf.shape) * 4, "layer4", overwrite=True)
+    lf.write_layer(np.ones(shape=lf.shape) * 1, "layer5", overwrite=True)
+
+    out_fp = compute_lcp_routes(
+        cost_fpath=temp_layer_file,
+        route_table_fpath=route_table_path,
+        features_fpath=mapped_features_path,
+        cost_layers=[
+            {"layer_name": "tie_line_costs_102MW"},
+        ],
+        out_dir=tmp_path,
+        job_name="test_route_to_features",
+        tracked_layers={
+            "layer1": "sum",
+            "layer2": "max",
+            "layer3": "min",
+            "layer4": "dne",
+            "layer5": "mean",
+        },
+        save_paths=True,
+    )
+
+    assert Path(out_fp)
+
+    test = gpd.read_file(out_fp)
+    assert len(test) == 36
+
+    assert "layer1_sum" in test
+    assert "layer2_max" in test
+    assert "layer3_min" not in test
+    assert "layer4_dne" not in test
+    assert "layer5_mean" in test
+
+    assert (test["layer1_sum"] <= test["length_km"] / 90 * 1000 + 1).all()
+    assert np.allclose(test["layer2_max"], 2)
+    assert np.allclose(test["layer5_mean"], 1)
 
 
 if __name__ == "__main__":

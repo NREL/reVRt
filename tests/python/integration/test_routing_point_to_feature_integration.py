@@ -95,7 +95,7 @@ def test_point_to_feature_route_table_generates_expected_outputs(
             feature_out_fp="mapped_features",
             route_table_out_fp="route_table",
             region_identifier_column="region_key",
-            feature_identifier_column="custom_feat_id",
+            connection_identifier_column="custom_feat_id",
             batch_size=2,
         )
 
@@ -151,7 +151,7 @@ def test_cli_build_feature_route_table(
         feature_out_fp="cli_features.gpkg",
         route_table_out_fp="cli_routes.csv",
         region_identifier_column="rid",
-        feature_identifier_column="cli_feat_id",
+        connection_identifier_column="cli_feat_id",
         batch_size=2,
     )
 
@@ -197,7 +197,7 @@ def test_cli_build_feature_route_table_from_config(
         "feature_out_fp": "config_features.gpkg",
         "route_table_out_fp": "config_routes.csv",
         "region_identifier_column": "rid",
-        "feature_identifier_column": "cfg_feat_id",
+        "connection_identifier_column": "cfg_feat_id",
         "batch_size": 2,
         "expand_radius": True,
     }
@@ -572,12 +572,7 @@ def test_clip_to_point_without_radius_uses_region_only(
     reason="CLI does not work under tox env on windows",
 )
 def test_cli_build_feature_route_table_and_run_lcp(
-    tmp_path,
-    routing_test_inputs,
-    cost_metadata,
-    revx_transmission_layers,
-    cli_runner,
-    test_routing_data_dir,
+    tmp_path, revx_transmission_layers, cli_runner, test_routing_data_dir
 ):
     """Run CLI main entry via config file to build feature route table"""
 
@@ -602,14 +597,13 @@ def test_cli_build_feature_route_table_and_run_lcp(
         "feature_out_fp": "config_features.gpkg",
         "route_table_out_fp": "config_routes.csv",
         "region_identifier_column": "rid",
-        "feature_identifier_column": "cfg_feat_id",
+        "connection_identifier_column": "cfg_feat_id",
         "expand_radius": False,
         "clip_points_to_regions": True,
     }
 
     config_path = out_dir / "build_feature_route_table.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     route_table_path = out_dir / "config_routes.csv"
     mapped_features_path = out_dir / "config_features.gpkg"
@@ -658,12 +652,11 @@ def test_cli_build_feature_route_table_and_run_lcp(
             {"layer_name": "tie_line_costs_102MW"},
         ],
         "save_paths": True,
-        "feature_identifier_column": "cfg_feat_id",
+        "connection_identifier_column": "cfg_feat_id",
     }
 
     config_path = out_dir / "lcp.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     assert not list(out_dir.glob("*_route_features.gpkg"))
     result = cli_runner.invoke(

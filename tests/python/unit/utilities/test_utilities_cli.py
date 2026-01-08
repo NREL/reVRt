@@ -210,11 +210,11 @@ def test_map_ss_to_rr_filters_low_voltage(tmp_path):
             features_path,
             regions_path,
             "region_id",
-            out_file=out_file,
+            out_fpath=out_file,
         )
 
     frame = gpd.read_file(out_file)
-    assert frame["gid"].tolist() == [1]
+    assert frame["trans_gid"].tolist() == [1]
     assert frame["region_id"].tolist() == ["A"]
     assert frame.loc[0, "min_volts"] == 115
     assert frame.loc[0, "max_volts"] == 115
@@ -258,11 +258,11 @@ def test_map_ss_to_rr_without_drops(tmp_path):
         features_path,
         regions_path,
         "region_id",
-        out_file=out_file,
+        out_fpath=out_file,
     )
 
     frame = gpd.read_file(out_file)
-    assert frame["gid"].tolist() == [1, 2]
+    assert frame["trans_gid"].tolist() == [1, 2]
     assert frame["region_id"].tolist() == ["A", "B"]
 
 
@@ -348,7 +348,7 @@ def test_add_rr_to_nn_with_zarr_template(tmp_path):
         regions_path,
         "region",
         crs_template_file=template_path,
-        out_file=out_file,
+        out_fpath=out_file,
     )
 
     frame = gpd.read_file(out_file)
@@ -384,7 +384,7 @@ def test_add_rr_to_nn_with_existing_region_column(tmp_path):
             regions_path,
             "region",
             crs_template_file=template_path,
-            out_file=out_file,
+            out_fpath=out_file,
         )
 
     assert not out_file.exists()
@@ -418,36 +418,10 @@ def test_add_rr_to_nn_with_tif_template(tmp_path):
         regions_path,
         "region",
         crs_template_file=template_path,
-        out_file=out_file,
+        out_fpath=out_file,
     )
 
     frame = gpd.read_file(out_file)
-    assert frame["region"].tolist() == ["west"]
-
-
-def test_add_rr_to_nn_default_output_path(tmp_path):
-    """Ensure add_rr_to_nn uses default output path when omitted"""
-
-    network = gpd.GeoDataFrame(
-        {"value": [1]},
-        geometry=[Point(0.0, 0.0)],
-        crs="EPSG:4326",
-    )
-    regions = gpd.GeoDataFrame(
-        {"region": ["west"]},
-        geometry=[Polygon([(-1, -1), (-1, 1), (1, 1), (1, -1)])],
-        crs="EPSG:4326",
-    )
-
-    network_path = tmp_path / "network.gpkg"
-    regions_path = tmp_path / "regions.gpkg"
-
-    network.to_file(network_path, driver="GPKG")
-    regions.to_file(regions_path, driver="GPKG")
-
-    cli.add_rr_to_nn(network_path, regions_path, "region")
-
-    frame = gpd.read_file(network_path)
     assert frame["region"].tolist() == ["west"]
 
 
@@ -475,8 +449,7 @@ def test_cli_layers_to_file_command(cli_runner, tmp_path, sample_tiff_fp):
     }
 
     config_path = tmp_path / "config_layers_to_file.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(
         main, ["layers-to-file", "-c", str(config_path)]
@@ -526,8 +499,7 @@ def test_cli_layers_from_file_command(cli_runner, tmp_path, sample_tiff_fp):
     }
 
     config_path = tmp_path / "config_layers_from_file.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(
         main, ["layers-from-file", "-c", str(config_path)]
@@ -604,8 +576,7 @@ def test_cli_convert_pois_to_lines_command(
     }
 
     config_path = tmp_path / "config_convert_pois.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(
         main, ["convert-pois-to-lines", "-c", str(config_path)]
@@ -667,7 +638,6 @@ def test_cli_map_ss_to_rr_command(cli_runner, tmp_path):
 
     features_path = tmp_path / "features.gpkg"
     regions_path = tmp_path / "regions.gpkg"
-    out_path = tmp_path / "mapped_subs.gpkg"
     features.to_file(features_path, driver="GPKG")
     regions.to_file(regions_path, driver="GPKG")
 
@@ -676,20 +646,22 @@ def test_cli_map_ss_to_rr_command(cli_runner, tmp_path):
         "regions_fpath": str(regions_path),
         "region_identifier_column": "region_id",
         "minimum_substation_voltage_kv": 100,
-        "out_file": str(out_path),
     }
 
     config_path = tmp_path / "config_map_ss.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
+
+    assert not list(tmp_path.glob("*_map_ss_to_rr.gpkg"))
 
     result = cli_runner.invoke(main, ["map-ss-to-rr", "-c", str(config_path)])
     msg = f"Failed with error {_cli_error_message(result)}"
     assert result.exit_code == 0, msg
-    assert out_path.exists()
 
-    mapped = gpd.read_file(out_path)
-    assert mapped["gid"].tolist() == [1]
+    out_path = list(tmp_path.glob("*_map_ss_to_rr.gpkg"))
+    assert len(out_path) == 1
+
+    mapped = gpd.read_file(out_path[0])
+    assert mapped["trans_gid"].tolist() == [1]
     assert mapped["region_id"].tolist() == ["A"]
     assert mapped.loc[0, "min_volts"] == 230
     assert mapped.loc[0, "max_volts"] == 230
@@ -713,23 +685,24 @@ def test_cli_ss_from_conn_command(cli_runner, tmp_path):
         }
     ).to_csv(csv_path, index=False)
 
-    out_path = tmp_path / "subs.gpkg"
     config = {
         "connections_fpath": str(csv_path),
         "region_identifier_column": "region_id",
-        "out_file": str(out_path),
     }
 
     config_path = tmp_path / "config_ss_from_conn.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
+
+    assert not list(tmp_path.glob("*_ss_from_conn.gpkg"))
 
     result = cli_runner.invoke(main, ["ss-from-conn", "-c", str(config_path)])
     msg = f"Failed with error {_cli_error_message(result)}"
     assert result.exit_code == 0, msg
-    assert out_path.exists()
 
-    subs = gpd.read_file(out_path)
+    out_path = list(tmp_path.glob("*_ss_from_conn.gpkg"))
+    assert len(out_path) == 1
+
+    subs = gpd.read_file(out_path[0])
     assert len(subs) == 1
     assert subs.loc[0, "poi_gid"] == 1
 
@@ -758,7 +731,6 @@ def test_cli_add_rr_to_nn_command(cli_runner, tmp_path, sample_tiff_fp):
 
     network_path = tmp_path / "network.gpkg"
     regions_path = tmp_path / "regions.gpkg"
-    out_path = tmp_path / "network_with_regions.gpkg"
     network.to_file(network_path, driver="GPKG")
     regions.to_file(regions_path, driver="GPKG")
 
@@ -767,19 +739,23 @@ def test_cli_add_rr_to_nn_command(cli_runner, tmp_path, sample_tiff_fp):
         "regions_fpath": str(regions_path),
         "region_identifier_column": "region",
         "crs_template_file": str(sample_tiff_fp),
-        "out_file": str(out_path),
     }
 
     config_path = tmp_path / "config_add_rr.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
+
+    assert not list(tmp_path.glob("*_add_rr_to_nn.gpkg"))
 
     result = cli_runner.invoke(main, ["add-rr-to-nn", "-c", str(config_path)])
     msg = f"Failed with error {_cli_error_message(result)}"
     assert result.exit_code == 0, msg
-    assert out_path.exists()
 
-    nodes = gpd.read_file(out_path).sort_values("value").reset_index(drop=True)
+    out_path = list(tmp_path.glob("*_add_rr_to_nn.gpkg"))
+    assert len(out_path) == 1
+
+    nodes = (
+        gpd.read_file(out_path[0]).sort_values("value").reset_index(drop=True)
+    )
     assert nodes["region"].tolist() == ["west", "east"]
 
 

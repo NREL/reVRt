@@ -161,9 +161,9 @@ def map_ss_to_rr(
     features_fpath,
     regions_fpath,
     region_identifier_column,
+    out_fpath,
     substation_category_name="Substation",
     minimum_substation_voltage_kv=69,
-    out_file=None,
 ):
     """
     Map substation locations to reinforcement regions.
@@ -197,17 +197,18 @@ def map_ss_to_rr(
     region_identifier_column : str
         Name of column in reinforcement regions GeoPackage
         containing a unique identifier for each region.
+    out_fpath : path-like, optional
+        Name for output GeoPackage file.
     substation_category_name : str, default="Substation"
         Name of category in features GeoPackage that contains
         substation features. By default, "Substation".
     minimum_substation_voltage_kv : float, default=69
         Minimum voltage (kV) that a substation must have to be
         included in the output file. By default, 69 kV.
-    out_file : path-like, optional
-        Name for output GeoPackage file. By default, ``None``.
     """
 
     features = gpd.read_file(features_fpath)
+    features = features.rename(columns={"gid": "trans_gid"})
     substations = (
         features[features.category == substation_category_name]
         .reset_index(drop=True)
@@ -232,7 +233,7 @@ def map_ss_to_rr(
         if isinstance(lines, str):
             lines = json.loads(lines)
 
-        lines_mask = features["gid"].isin(lines)
+        lines_mask = features["trans_gid"].isin(lines)
         voltage = features.loc[lines_mask, "voltage"].to_numpy()
 
         if np.max(voltage) >= minimum_substation_voltage_kv:
@@ -245,16 +246,17 @@ def map_ss_to_rr(
         msg = (
             "The following sub-stations do not have the minimum "
             "required voltage of 69 kV and will be dropped:\n"
-            f"{substations.loc[bad_subs, 'gid']}"
+            f"{substations.loc[bad_subs, 'trans_gid']}"
         )
         warn(msg, revrtWarning)
         substations = substations.loc[~bad_subs].reset_index(drop=True)
 
-    logger.info("Writing substation output to %r", out_file)
-    substations.to_file(out_file, driver="GPKG", index=False)
+    out_fpath = Path(out_fpath).with_suffix(".gpkg")
+    logger.info("Writing substation output to %s", out_fpath)
+    substations.to_file(out_fpath, driver="GPKG", index=False)
 
 
-def ss_from_conn(connections_fpath, region_identifier_column, out_file):
+def ss_from_conn(connections_fpath, region_identifier_column, out_fpath):
     """Extract substations from connections table output by LCP.
 
     Substations extracted by this method can be used for reinforcement
@@ -285,7 +287,7 @@ def ss_from_conn(connections_fpath, region_identifier_column, out_file):
     region_identifier_column : str
         Name of column in reinforcement regions GeoPackage
         containing a unique identifier for each region.
-    out_file : path-like
+    out_fpath : path-like, optional
         Name for output GeoPackage file.
     """
 
@@ -316,18 +318,19 @@ def ss_from_conn(connections_fpath, region_identifier_column, out_file):
         Point(row["poi_lon"], row["poi_lat"]) for __, row in pois.iterrows()
     ]
     substations = gpd.GeoDataFrame(pois, crs="epsg:4326", geometry=geo)
-
-    logger.info("Writing substation output to %r", out_file)
     substations["poi_gid"] = substations["poi_gid"].astype("Int64")
-    substations.to_file(out_file, driver="GPKG", index=False)
+
+    out_fpath = Path(out_fpath).with_suffix(".gpkg")
+    logger.info("Writing substation output to %s", out_fpath)
+    substations.to_file(out_fpath, driver="GPKG", index=False)
 
 
 def add_rr_to_nn(
     network_nodes_fpath,
     regions_fpath,
     region_identifier_column,
+    out_fpath,
     crs_template_file=None,
-    out_file=None,
 ):
     """Add reinforcement region column to network node file.
 
@@ -348,16 +351,14 @@ def add_rr_to_nn(
     region_identifier_column : str
         Name of column in reinforcement regions GeoPackage
         containing a unique identifier for each region.
+    out_fpath : path-like
+        Name for output GeoPackage file.
     crs_template_file : path-like, optional
         Path to a file containing the CRS that should be used to
         perform the mapping. This input can be an exclusions Zarr file,
         a GeoTIFF, or any file tha can be read with GeoPandas. If
         ``None``, the `network_nodes_fpath` file CRS is used to
         perform the mapping. By default, ``None``.
-    out_file : path-like, optional
-        Name for output GeoPackage file. If ``None``, the
-        `network_nodes_fpath` file will be overwritten. By default,
-        ``None``.
     """
     crs_template_file = Path(crs_template_file or network_nodes_fpath)
 
@@ -393,12 +394,9 @@ def add_rr_to_nn(
     map_func = region_mapper(regions, region_identifier_column)
     network_nodes[region_identifier_column] = centroids.apply(map_func)
 
-    if out_file is None:
-        out_fn = f"{network_nodes_fpath.stem}.gpkg"
-        out_file = network_nodes_fpath.parent / out_fn
-
-    logger.info("Writing updated network node data to %r", str(out_file))
-    network_nodes.to_file(out_file, driver="GPKG")
+    out_fpath = Path(out_fpath).with_suffix(".gpkg")
+    logger.info("Writing updated network node data to %s", out_fpath)
+    network_nodes.to_file(out_fpath, driver="GPKG")
 
 
 layers_to_file_command = CLICommandFromClass(

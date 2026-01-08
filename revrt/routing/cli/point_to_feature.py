@@ -18,6 +18,7 @@ from revrt.routing.cli.base import (
 )
 from revrt.routing.utilities import map_to_costs
 from revrt.costs.config import parse_config
+from revrt.utilities.raster import integer_dimension_window
 from revrt.warn import revrtWarning
 
 
@@ -36,7 +37,7 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
         cost_layers,
         friction_layers=None,
         transmission_config=None,
-        feature_identifier_column="end_feat_id",
+        connection_identifier_column="end_feat_id",
     ):
         """
 
@@ -82,7 +83,7 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
             transmission_config=transmission_config,
         )
         self.features_fpath = features_fpath
-        self.feature_identifier_column = feature_identifier_column
+        self.connection_identifier_column = connection_identifier_column
 
     def _validate_route_points(self):
         """Ensure route points has required columns"""
@@ -106,7 +107,7 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
         return (
             int(row["start_row"]),
             int(row["start_col"]),
-            str(row[self.feature_identifier_column]),
+            str(row[self.connection_identifier_column]),
             str(row.get("polarity", "unknown")),
             str(row.get("voltage", "unknown")),
         )
@@ -119,16 +120,16 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
         route_attrs = {}
         cost_height, cost_width = self.cost_metadata["shape"]
         for route_id, (feat_id, sub_routes) in enumerate(
-            routes.groupby(self.feature_identifier_column)
+            routes.groupby(self.connection_identifier_column)
         ):
             end_feats = gpd.read_file(
                 self.features_fpath,
-                where=f"{self.feature_identifier_column} == {feat_id}",
+                where=f"{self.connection_identifier_column} == {feat_id}",
             )
             if end_feats.empty:
                 msg = (
-                    f"No features found with {self.feature_identifier_column} "
-                    f"== {feat_id}!"
+                    f"No features found with "
+                    f"{self.connection_identifier_column} == {feat_id}!"
                 )
                 warn(msg, revrtWarning)
                 continue
@@ -157,8 +158,10 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
 
     def _end_feats_to_row_col(self, end_feats):
         """Convert end features to row/col indices in cost grid"""
-        window = self._integer_dimension_window(end_feats)
-
+        window = integer_dimension_window(
+            bounds=end_feats.total_bounds,
+            transform=self.cost_metadata["transform"],
+        )
         window_transform = rasterio.windows.transform(
             window=window, transform=self.cost_metadata["transform"]
         )
@@ -175,20 +178,6 @@ class PointToFeatureRouteDefinitionConverter(RouteToDefinitionConverter):
         cols += window.col_off
         return rows, cols
 
-    def _integer_dimension_window(self, end_feats):
-        """Make window with integer dimensions for end features
-
-        Note: We can't use ``.round_offsets().round_lengths()`` since
-        that can round down to a 0 dimension window in some cases.
-        Instead, we force the window to come from a slice, which
-        guarantees the dimensions to be >= 1.
-        """
-        window = rasterio.windows.from_bounds(
-            *end_feats.total_bounds,
-            transform=self.cost_metadata["transform"],
-        )
-        return rasterio.windows.Window.from_slices(*window.toslices())
-
 
 def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     cost_fpath,
@@ -204,7 +193,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
     transmission_config=None,
     save_paths=False,
     ignore_invalid_costs=False,
-    feature_identifier_column="end_feat_id",
+    connection_identifier_column="end_feat_id",
     _split_params=None,
 ):
     r"""Run least-cost path routing for points mapped to features
@@ -230,16 +219,16 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
             - "start_lon": Stating point longitude (can alternatively
               use "start_row" to define the start point row index in the
               cost raster).
-            - `feature_identifier_column`: ID of the feature that should
-              be mapped to. This ID should match at least one of the
-              feature IDs in the `features_fpath` input; otherwise, no
-              route will be computed for that point.
+            - `connection_identifier_column`: ID of the feature that
+              should be mapped to. This ID should match at least one of
+              the feature IDs in the `features_fpath` input; otherwise,
+              no route will be computed for that point.
 
     features_fpath : path-like
         Path to vector file containing features to map points to. This
-        file must have a column matching the `feature_identifier_column`
-        parameter that maps each feature back to the starting points
-        defined in the `route_table`.
+        file must have a column matching the
+        `connection_identifier_column` parameter that maps each feature
+        back to the starting points defined in the `route_table`.
     cost_layers : list
         List of dictionaries defining the layers that are summed to
         determine total costs raster used for routing. Each layer is
@@ -425,7 +414,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         (i.e. no paths can ever cross this). If ``False``, cost values
         of <= 0 are set to a large value to simulate a strong but
         permeable "quasi-barrier". By default, ``False``.
-    feature_identifier_column : str, default="end_feat_id"
+    connection_identifier_column : str, default="end_feat_id"
         Column in the `features_fpath` data used to uniquely identify
         each feature. This column is also expected to be in the
         `route_table` input to map points to features. If a column name
@@ -477,7 +466,7 @@ def compute_lcp_routes(  # noqa: PLR0913, PLR0917
         cost_layers=cost_layers,
         friction_layers=friction_layers,
         transmission_config=transmission_config,
-        feature_identifier_column=feature_identifier_column,
+        connection_identifier_column=connection_identifier_column,
     )
 
     run_lcp(

@@ -5,16 +5,15 @@ import logging
 from pathlib import Path
 from warnings import warn
 
-import pandas as pd
 import geopandas as gpd
 import xarray as xr
 from gaps.cli import CLICommandFromFunction
 
 from revrt.routing.utilities import (
     PointToFeatureMapper,
-    make_rev_sc_points,
-    convert_lat_lon_to_row_col,
     filter_points_outside_cost_domain,
+    make_rev_sc_points,
+    points_csv_to_geo_dataframe,
 )
 from revrt.exceptions import revrtValueError
 from revrt.warn import revrtWarning
@@ -36,7 +35,7 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
     feature_out_fp="mapped_features.gpkg",
     route_table_out_fp="route_table.csv",
     region_identifier_column="rid",
-    feature_identifier_column="end_feat_id",
+    connection_identifier_column="end_feat_id",
     batch_size=500,
 ):
     """Create a route table mapping points to nearest features
@@ -109,7 +108,7 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
         each region. If a column name is given that does not exist in
         the data, it will created using the feature index as the ID.
         By default, ``"rid"``.
-    feature_identifier_column : str, default="end_feat_id"
+    connection_identifier_column : str, default="end_feat_id"
         Column name in the `feature_out_fp` and `route_table_out_fp`
         used to identify which features map to which points.
         By default, ``"end_feat_id"``.
@@ -158,7 +157,7 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
         features_fpath,
         regions,
         region_identifier_column=region_identifier_column,
-        feature_identifier_column=feature_identifier_column,
+        connection_identifier_column=connection_identifier_column,
     )
     route_table = mapper.map_points(
         points,
@@ -190,16 +189,7 @@ def _make_points(
         raise revrtValueError(msg)
 
     if points_fpath is not None:
-        points = pd.read_csv(points_fpath)
-        points = convert_lat_lon_to_row_col(
-            points,
-            crs,
-            transform,
-            lat_col="latitude",
-            lon_col="longitude",
-            out_row_name="start_row",
-            out_col_name="start_col",
-        )
+        points = points_csv_to_geo_dataframe(points_fpath, crs, transform)
     else:
         points = make_rev_sc_points(
             cost_shape[0], cost_shape[1], crs, transform, resolution=resolution

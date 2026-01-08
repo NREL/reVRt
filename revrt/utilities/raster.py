@@ -1,10 +1,11 @@
 """reVRt rasterization utilities"""
 
 import logging
+from math import ceil
 from functools import lru_cache
 
+import rasterio
 import geopandas as gpd
-from rasterio import features
 
 from revrt.constants import DEFAULT_DTYPE
 
@@ -136,7 +137,7 @@ def rasterize(
         logger.debug("%d features after removing empty features.", len(gdf))
 
     logger.debug("Rasterizing shapes")
-    return features.rasterize(
+    return rasterio.features.rasterize(
         list(gdf.boundary if boundary_only else gdf.geometry),
         out_shape=(height, width),
         fill=0,
@@ -145,4 +146,31 @@ def rasterize(
         all_touched=all_touched,
         default_value=burn_value,
         dtype=dtype,
+    )
+
+
+def integer_dimension_window(bounds, transform):
+    """Make valid-size window with integer dimensions
+
+    This method guarantees the window dimensions are integers >= 1.
+    Window offsets are also floored to the nearest integer.
+
+    Parameters
+    ----------
+    bounds : tuple
+        4-tuple defining bounding box (left, bottom, right, top).
+    transform : affine.Affine
+        Affine transform for raster for which to generate window.
+
+    Returns
+    -------
+    rasterio.windows.Window
+        Window with integer offsets and non-zero integer dimensions.
+    """
+    window = rasterio.windows.from_bounds(*bounds, transform=transform)
+    return rasterio.windows.Window(
+        ceil(window.col_off - 1),
+        ceil(window.row_off - 1),
+        max(1, ceil(window.width)) + 1,
+        max(1, ceil(window.height)) + 1,
     )
