@@ -30,7 +30,7 @@ pub(super) struct Algorithm {
 #[allow(dead_code)]
 /// Manhattan distance
 ///
-/// For a given start point, calculates the shortests manhattan distance to a
+/// For a given start point, calculates the shortest manhattan distance to a
 /// collection of possible end points, i.e. assume that there are multiple
 /// possible ends.
 fn manhattan_distance(start: &ArrayIndex, end: &[ArrayIndex]) -> u64 {
