@@ -161,9 +161,9 @@ def map_ss_to_rr(
     features_fpath,
     regions_fpath,
     region_identifier_column,
+    out_fpath,
     substation_category_name="Substation",
     minimum_substation_voltage_kv=69,
-    out_file=None,
 ):
     """
     Map substation locations to reinforcement regions.
@@ -197,17 +197,18 @@ def map_ss_to_rr(
     region_identifier_column : str
         Name of column in reinforcement regions GeoPackage
         containing a unique identifier for each region.
+    out_fpath : path-like, optional
+        Name for output GeoPackage file.
     substation_category_name : str, default="Substation"
         Name of category in features GeoPackage that contains
         substation features. By default, "Substation".
     minimum_substation_voltage_kv : float, default=69
         Minimum voltage (kV) that a substation must have to be
         included in the output file. By default, 69 kV.
-    out_file : path-like, optional
-        Name for output GeoPackage file. By default, ``None``.
     """
 
     features = gpd.read_file(features_fpath)
+    features = features.rename(columns={"gid": "trans_gid"})
     substations = (
         features[features.category == substation_category_name]
         .reset_index(drop=True)
@@ -232,7 +233,7 @@ def map_ss_to_rr(
         if isinstance(lines, str):
             lines = json.loads(lines)
 
-        lines_mask = features["gid"].isin(lines)
+        lines_mask = features["trans_gid"].isin(lines)
         voltage = features.loc[lines_mask, "voltage"].to_numpy()
 
         if np.max(voltage) >= minimum_substation_voltage_kv:
@@ -245,13 +246,14 @@ def map_ss_to_rr(
         msg = (
             "The following sub-stations do not have the minimum "
             "required voltage of 69 kV and will be dropped:\n"
-            f"{substations.loc[bad_subs, 'gid']}"
+            f"{substations.loc[bad_subs, 'trans_gid']}"
         )
         warn(msg, revrtWarning)
         substations = substations.loc[~bad_subs].reset_index(drop=True)
 
-    logger.info("Writing substation output to %r", out_file)
-    substations.to_file(out_file, driver="GPKG", index=False)
+    out_fpath = Path(out_fpath).with_suffix(".gpkg")
+    logger.info("Writing substation output to %r", out_fpath)
+    substations.to_file(out_fpath, driver="GPKG", index=False)
 
 
 def ss_from_conn(connections_fpath, region_identifier_column, out_file):
