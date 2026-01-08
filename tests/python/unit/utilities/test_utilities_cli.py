@@ -210,11 +210,11 @@ def test_map_ss_to_rr_filters_low_voltage(tmp_path):
             features_path,
             regions_path,
             "region_id",
-            out_file=out_file,
+            out_fpath=out_file,
         )
 
     frame = gpd.read_file(out_file)
-    assert frame["gid"].tolist() == [1]
+    assert frame["trans_gid"].tolist() == [1]
     assert frame["region_id"].tolist() == ["A"]
     assert frame.loc[0, "min_volts"] == 115
     assert frame.loc[0, "max_volts"] == 115
@@ -258,11 +258,11 @@ def test_map_ss_to_rr_without_drops(tmp_path):
         features_path,
         regions_path,
         "region_id",
-        out_file=out_file,
+        out_fpath=out_file,
     )
 
     frame = gpd.read_file(out_file)
-    assert frame["gid"].tolist() == [1, 2]
+    assert frame["trans_gid"].tolist() == [1, 2]
     assert frame["region_id"].tolist() == ["A", "B"]
 
 
@@ -667,7 +667,6 @@ def test_cli_map_ss_to_rr_command(cli_runner, tmp_path):
 
     features_path = tmp_path / "features.gpkg"
     regions_path = tmp_path / "regions.gpkg"
-    out_path = tmp_path / "mapped_subs.gpkg"
     features.to_file(features_path, driver="GPKG")
     regions.to_file(regions_path, driver="GPKG")
 
@@ -676,20 +675,23 @@ def test_cli_map_ss_to_rr_command(cli_runner, tmp_path):
         "regions_fpath": str(regions_path),
         "region_identifier_column": "region_id",
         "minimum_substation_voltage_kv": 100,
-        "out_file": str(out_path),
     }
 
     config_path = tmp_path / "config_map_ss.json"
     with config_path.open("w", encoding="utf-8") as fh:
         json.dump(config, fh)
 
+    assert not list(tmp_path.glob("*_map_ss_to_rr.gpkg"))
+
     result = cli_runner.invoke(main, ["map-ss-to-rr", "-c", str(config_path)])
     msg = f"Failed with error {_cli_error_message(result)}"
     assert result.exit_code == 0, msg
-    assert out_path.exists()
 
-    mapped = gpd.read_file(out_path)
-    assert mapped["gid"].tolist() == [1]
+    out_path = list(tmp_path.glob("*_map_ss_to_rr.gpkg"))
+    assert len(out_path) == 1
+
+    mapped = gpd.read_file(out_path[0])
+    assert mapped["trans_gid"].tolist() == [1]
     assert mapped["region_id"].tolist() == ["A"]
     assert mapped.loc[0, "min_volts"] == 230
     assert mapped.loc[0, "max_volts"] == 230
