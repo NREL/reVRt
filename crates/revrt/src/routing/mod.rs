@@ -1,3 +1,5 @@
+//! Routing module
+
 mod algorithm;
 mod features;
 mod scenario;

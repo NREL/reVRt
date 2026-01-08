@@ -1,5 +1,7 @@
 //! Algorithms to find optimal path
 //!
+//! A collection of different strategies to find optimal paths.
+//! Common algorithms are based on the external crate `pathfinding`.
 
 /*
  * pathfinding::dijkstra(start, successor, success)
@@ -13,6 +15,7 @@ use std::hash::Hash;
 use crate::{ArrayIndex, Solution};
 
 #[derive(Clone, Debug)]
+/// Types of algorithms to determine optimal paths
 pub(super) enum AlgorithmType {
     // Astar,
     Dijkstra,
