@@ -5,7 +5,7 @@
 
 /*
  * pathfinding::dijkstra(start, successor, success)
- * pathfinging::astar(start, successor, heuristic, success)
+ * pathfinding::astar(start, successor, heuristic, success)
  * pathfinding::dfs(start, successor, success)
  */
 
