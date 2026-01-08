@@ -28,11 +28,20 @@ pub(super) struct Algorithm {
 }
 
 #[allow(dead_code)]
-fn manhattan_distance(from: &ArrayIndex, to: &ArrayIndex) -> u64 {
-    let ArrayIndex { i: i1, j: j1 } = from;
-    let ArrayIndex { i: i2, j: j2 } = to;
-
-    i1.abs_diff(*i2) + j1.abs_diff(*j2)
+/// Manhattan distance
+///
+/// For a given start point, calculates the shortests manhattan distance to a
+/// collection of possible end points, i.e. assume that there are multiple
+/// possible ends.
+fn manhattan_distance(start: &ArrayIndex, end: &[ArrayIndex]) -> u64 {
+    end.iter()
+        .map(|end| {
+            let di = start.i.abs_diff(end.i);
+            let dj = start.j.abs_diff(end.j);
+            di + dj
+        })
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap()
 }
 
 impl Algorithm {
