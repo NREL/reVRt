@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767903485288,
+  "lastUpdate": 1767903537738,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4367,6 +4367,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 367851874,
             "range": "± 4151555",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c5b8ee10cb0888d60107dea46eb7eefeecdd2cd2",
+          "message": "Minor refactor (#200)\n\n* Fix logic\n\n* Port `test_tracked_layers`\n\n* Add `points_csv_to_geo_dataframe` utility function\n\n* Use `points_csv_to_geo_dataframe` utility function\n\n* Add unit tests\n\n* Minor changes\n\n* Update param name\n\n* Fix `map_ss_to_rr` command\n\n* Better window method\n\n* Standardize output\n\n* Fix tests\n\n* Add unit tests\n\n* Fix window implementation\n\n* Align helper CLI command inputs",
+          "timestamp": "2026-01-08T13:07:34-07:00",
+          "tree_id": "9d394d8658a2ad7f8e3615929a23a434c2753d56",
+          "url": "https://github.com/NREL/reVRt/commit/c5b8ee10cb0888d60107dea46eb7eefeecdd2cd2"
+        },
+        "date": 1767903537009,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74483650,
+            "range": "± 2010664",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 75221182,
+            "range": "± 2554798",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 99948037,
+            "range": "± 2392481",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 150987174,
+            "range": "± 4393786",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 628979953,
+            "range": "± 16835582",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 151945965,
+            "range": "± 833956",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 157521188,
+            "range": "± 842054",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170381967,
+            "range": "± 3123539",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 214113079,
+            "range": "± 5376459",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 367992640,
+            "range": "± 5890725",
             "unit": "ns/iter"
           }
         ]
