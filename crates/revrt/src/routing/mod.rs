@@ -7,7 +7,7 @@ use std::sync::{Arc, mpsc};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::debug;
 
-use crate::{error::Result, ArrayIndex, RevrtRoutingSolutions, Solution};
+use crate::{ArrayIndex, RevrtRoutingSolutions, Solution, error::Result};
 use algorithm::Algorithm;
 use features::Features;
 use scenario::Scenario;
