@@ -1,3 +1,6 @@
+//! Routing module
+
+mod algorithm;
 mod features;
 mod scenario;
 
@@ -7,12 +10,13 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use tracing::debug;
 
 use crate::{ArrayIndex, RevrtRoutingSolutions, Solution, error::Result};
+use algorithm::Algorithm;
 use features::Features;
 use scenario::Scenario;
 
 pub(super) struct Routing {
     scenario: Scenario,
-    // algorithm: Algorithm,
+    algorithm: Algorithm,
 }
 
 impl Routing {
@@ -21,7 +25,21 @@ impl Routing {
         start: &[ArrayIndex],
         end: Vec<ArrayIndex>,
     ) -> impl Iterator<Item = Solution<ArrayIndex, f32>> {
-        self.scout(start, end).into_iter()
+        debug!("Starting compute with {} start points", start.len());
+
+        let solution: Vec<Solution<ArrayIndex, f32>> = start
+            .into_par_iter()
+            .filter_map(|s| {
+                self.algorithm.compute(
+                    s,
+                    |p| self.scenario.successors(p),
+                    None::<fn(&ArrayIndex) -> u64>,
+                    |p| end.contains(p),
+                )
+            })
+            .collect();
+
+        solution.into_iter()
     }
 
     pub(super) fn new<P: AsRef<std::path::Path>>(
@@ -31,30 +49,12 @@ impl Routing {
     ) -> Result<Self> {
         let scenario = Scenario::new(store_path, cost_function, cache_size)?;
 
+        let algorithm = Algorithm::new();
+
         Ok(Self {
             scenario,
-            // algorithm,
+            algorithm,
         })
-    }
-
-    pub(super) fn scout(
-        &mut self,
-        start: &[ArrayIndex],
-        end: Vec<ArrayIndex>,
-    ) -> Vec<Solution<ArrayIndex, f32>> {
-        debug!("Starting scout with {} start points", start.len());
-
-        start
-            .into_par_iter()
-            .filter_map(|s| {
-                pathfinding::prelude::dijkstra(
-                    s,
-                    |p| self.scenario.successors(p),
-                    |p| end.contains(p),
-                )
-            })
-            .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
-            .collect()
     }
 }
 
@@ -145,5 +145,3 @@ fn cost_as_u64(cost: f32) -> u64 {
 fn unscaled_cost(cost: u64) -> f32 {
     (cost as f32) / PRECISION_SCALAR
 }
-
-// struct Algorithm {}
