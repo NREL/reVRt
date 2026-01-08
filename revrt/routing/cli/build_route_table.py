@@ -35,7 +35,7 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
     feature_out_fp="mapped_features.gpkg",
     route_table_out_fp="route_table.csv",
     region_identifier_column="rid",
-    feature_identifier_column="end_feat_id",
+    connection_identifier_column="end_feat_id",
     batch_size=500,
 ):
     """Create a route table mapping points to nearest features
@@ -108,7 +108,7 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
         each region. If a column name is given that does not exist in
         the data, it will created using the feature index as the ID.
         By default, ``"rid"``.
-    feature_identifier_column : str, default="end_feat_id"
+    connection_identifier_column : str, default="end_feat_id"
         Column name in the `feature_out_fp` and `route_table_out_fp`
         used to identify which features map to which points.
         By default, ``"end_feat_id"``.
@@ -157,7 +157,7 @@ def point_to_feature_route_table(  # noqa: PLR0913, PLR0917
         features_fpath,
         regions,
         region_identifier_column=region_identifier_column,
-        feature_identifier_column=feature_identifier_column,
+        connection_identifier_column=connection_identifier_column,
     )
     route_table = mapper.map_points(
         points,

@@ -30,7 +30,7 @@ class PointToFeatureMapper:
         features_fp,
         regions=None,
         region_identifier_column="rid",
-        feature_identifier_column="end_feat_id",
+        connection_identifier_column="end_feat_id",
     ):
         """
 
@@ -53,7 +53,7 @@ class PointToFeatureMapper:
             Column in `regions` data to use as the identifier for that
             region. If not given, a simple index will be put under the
             `rid` column. By default, ``"rid"``.
-        feature_identifier_column : str, optional
+        connection_identifier_column : str, optional
             Column in output data (both features and points) that will
             be used to link the points to the features that should be
             routed to. By default, ``"end_feat_id"``.
@@ -62,7 +62,7 @@ class PointToFeatureMapper:
         self._features_fp = features_fp
         self._regions = None
         self._rid_column = region_identifier_column
-        self._feature_id_column = feature_identifier_column
+        self._conn_id_column = connection_identifier_column
         self._set_regions(regions)
 
     def _set_regions(self, regions):
@@ -130,7 +130,7 @@ class PointToFeatureMapper:
             raise revrtValueError(msg)
 
         points = points.to_crs(self._crs)
-        points[self._feature_id_column] = np.nan
+        points[self._conn_id_column] = np.nan
 
         if self._regions is not None:
             points = self._map_points_to_nearest_region(
@@ -146,8 +146,8 @@ class PointToFeatureMapper:
             if clipped_features.empty:
                 continue
 
-            clipped_features[self._feature_id_column] = ind
-            points.loc[row_ind, self._feature_id_column] = ind
+            clipped_features[self._conn_id_column] = ind
+            points.loc[row_ind, self._conn_id_column] = ind
             batches.append(clipped_features)
 
             if len(batches) >= batch_size:
@@ -263,7 +263,7 @@ class PointToFeatureMapper:
 
     def _drop_unpaired_points(self, points):
         """Drop points that did not map to any features"""
-        feature_ids = points[self._feature_id_column]
+        feature_ids = points[self._conn_id_column]
         if not feature_ids.isna().any():
             return points
 
