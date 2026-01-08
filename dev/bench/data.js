@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767892662980,
+  "lastUpdate": 1767903485288,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4283,6 +4283,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 365245747,
             "range": "± 2776200",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "440b0c01c7ebfb0bb8dc2dc4a4af27ae498faf28",
+          "message": "Generalizing routing algorithm (#199)\n\n* feat: Module to handle multiple algorithms\n\n* Loading Algorithm from sub-module\n\n* Adding algorithm::Algorithm as a component of Routing\n\n* refact: Removing useless legacy scout()\n\n* cfg: Adding dependency on num-traits\n\nTo support a generic `Zero`.\n\n* Deriving Debug for Algorithm\n\n* style:\n\n* doc:\n\n* refact: Simplify distance\n\n* refact:\n\n* feat: Manhattan distance to a collection of possible ends\n\n* Update crates/revrt/src/routing/algorithm.rs\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>\n\n* typo:\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>",
+          "timestamp": "2026-01-08T13:07:18-07:00",
+          "tree_id": "3f2c46fb298a2d0577422197fb4d3c461caef953",
+          "url": "https://github.com/NREL/reVRt/commit/440b0c01c7ebfb0bb8dc2dc4a4af27ae498faf28"
+        },
+        "date": 1767903484608,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74753288,
+            "range": "± 1226657",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 107605975,
+            "range": "± 1621340",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 98473785,
+            "range": "± 2137034",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 149846074,
+            "range": "± 2146801",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 623470683,
+            "range": "± 17835489",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 151079714,
+            "range": "± 1340189",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155580417,
+            "range": "± 1799657",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 169543319,
+            "range": "± 1330128",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 212329622,
+            "range": "± 1842259",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 367851874,
+            "range": "± 4151555",
             "unit": "ns/iter"
           }
         ]
