@@ -32,9 +32,7 @@ fn manhattan_distance(from: &ArrayIndex, to: &ArrayIndex) -> u64 {
     let ArrayIndex { i: i1, j: j1 } = from;
     let ArrayIndex { i: i2, j: j2 } = to;
 
-    let di = if i1 > i2 { i1 - i2 } else { i2 - i1 };
-    let dj = if j1 > j2 { j1 - j2 } else { j2 - j1 };
-    di + dj
+    i1.abs_diff(*i2) + j1.abs_diff(*j2)
 }
 
 impl Algorithm {
