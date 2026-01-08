@@ -200,9 +200,9 @@ def test_compute_lcp_routes_generates_csv(sample_layered_data, tmp_path):
         "length_km",
         "optimized_objective",
         "layer_1_cost",
-        "layer_1_dist_km",
+        "layer_1_length_km",
         "layer_2_cost",
-        "layer_2_dist_km",
+        "layer_2_length_km",
     ]
     for col in numeric_cols:
         if col in df.columns:

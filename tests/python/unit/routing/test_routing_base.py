@@ -546,10 +546,10 @@ def test_multi_layer_route_with_scalar_and_layer_multipliers(
     assert route["layer_2_cost"] == pytest.approx(0.5, rel=1e-4)
     assert route["layer_3_cost"] == pytest.approx(0.0, abs=1e-8)
     assert route["layer_5_cost"] == pytest.approx(0.0, abs=1e-8)
-    assert route["layer_1_dist_km"] == pytest.approx(0.001, rel=1e-4)
-    assert route["layer_2_dist_km"] == pytest.approx(0.001, rel=1e-4)
-    assert route["layer_3_dist_km"] == pytest.approx(0.0, abs=1e-8)
-    assert route["layer_5_dist_km"] == pytest.approx(0.0, abs=1e-8)
+    assert route["layer_1_length_km"] == pytest.approx(0.001, rel=1e-4)
+    assert route["layer_2_length_km"] == pytest.approx(0.001, rel=1e-4)
+    assert route["layer_3_length_km"] == pytest.approx(0.0, abs=1e-8)
+    assert route["layer_5_length_km"] == pytest.approx(0.0, abs=1e-8)
     assert np.isclose(route["cost"], route["optimized_objective"], rtol=1e-6)
 
 
@@ -1039,7 +1039,7 @@ def test_length_invariant_layers_sum_raw_values(sample_layered_data, tmp_path):
         route["layer_1_cost"] + expected_invariant_cost,
         rel=1e-6,
     )
-    assert route["layer_2_dist_km"] == pytest.approx(
+    assert route["layer_2_length_km"] == pytest.approx(
         route["length_km"],
         rel=1e-6,
     )
@@ -1091,7 +1091,7 @@ def test_length_invariant_hidden_and_friction_layers(
         0.00682842712474619,
         rel=1e-6,
     )
-    assert route["layer_2_dist_km"] == pytest.approx(
+    assert route["layer_2_length_km"] == pytest.approx(
         route["length_km"],
         rel=1e-6,
     )
@@ -1115,7 +1115,7 @@ def test_length_invariant_hidden_and_friction_layers(
         170.71068,
         rel=1e-6,
     )
-    assert route["layer_5_dist_km"] == pytest.approx(
+    assert route["layer_5_length_km"] == pytest.approx(
         0.0017071,
         rel=1e-4,
     )
@@ -1272,7 +1272,7 @@ def test_friction_layer_influences_objective_without_reporting(
         > base_route["optimized_objective"]
     )
     assert "layer_2_cost" not in friction_route
-    assert "layer_2_dist_km" not in friction_route
+    assert "layer_2_length_km" not in friction_route
 
 
 def test_friction_layer_influences_objective(sample_layered_data, tmp_path):
@@ -1331,7 +1331,7 @@ def test_friction_layer_influences_objective(sample_layered_data, tmp_path):
     )
 
     assert "layer_5_cost" not in friction_route
-    assert "layer_5_dist_km" not in friction_route
+    assert "layer_5_length_km" not in friction_route
 
 
 def test_negative_friction_layer_influences_objective(
@@ -1392,7 +1392,7 @@ def test_negative_friction_layer_influences_objective(
     )
 
     assert "layer_5_cost" not in friction_route
-    assert "layer_5_dist_km" not in friction_route
+    assert "layer_5_length_km" not in friction_route
 
 
 def test_negative_friction_layer_does_not_go_thru_barrier(
@@ -1455,7 +1455,7 @@ def test_negative_friction_layer_does_not_go_thru_barrier(
     )
 
     assert "layer_5_cost" not in friction_route
-    assert "layer_5_dist_km" not in friction_route
+    assert "layer_5_length_km" not in friction_route
 
 
 def test_include_in_final_cost_false_behaves_like_friction(
@@ -1563,7 +1563,7 @@ def test_characterized_layer_length_metric_uses_positive_mask(
         route = [(1, 1), (1, 2), (2, 3)]
         metrics = layer.compute(route, abs(routing_layers.transform.a))
 
-        assert metrics["layer_1_dist_km"] >= 0
+        assert metrics["layer_1_length_km"] >= 0
     finally:
         routing_layers.close()
 
@@ -1639,7 +1639,7 @@ def test_characterized_layer_total_length_computation(sample_layered_data):
         metrics = layer.compute(route, abs(routing_layers.transform.a))
 
         assert metrics["layer_1_cost"] > 0
-        assert metrics["layer_1_dist_km"] >= 0
+        assert metrics["layer_1_length_km"] >= 0
     finally:
         routing_layers.close()
 
