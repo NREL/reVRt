@@ -8,8 +8,12 @@ import geopandas as gpd
 from shapely.geometry import box
 from shapely.ops import unary_union
 from rasterio.transform import Affine
+from rasterio.windows import from_bounds
 
-from revrt.utilities.raster import rasterize_shape_file
+from revrt.utilities.raster import (
+    integer_dimension_window,
+    rasterize_shape_file,
+)
 
 
 @pytest.mark.parametrize("at", [True, False])
@@ -155,6 +159,37 @@ def test_rasterize_with_reproject(tmp_path):
     assert out.max() == 0
     assert out.min() == 0
     assert out.sum() == 0
+
+
+def test_integer_dimension_window_rounds_offsets():
+    """integer_dimension_window rounds offsets and dimensions"""
+
+    transform = Affine(1.0, 0.0, 0.0, 0.0, -1.0, 0.0)
+    bounds = (0.25, -3.75, 6.6, 1.4)
+
+    raw = from_bounds(*bounds, transform=transform)
+    window = integer_dimension_window(bounds, transform)
+
+    assert window.col_off == round(raw.col_off)
+    assert window.row_off == round(raw.row_off)
+    assert window.width == max(1, round(raw.width))
+    assert window.height == max(1, round(raw.height))
+
+
+def test_integer_dimension_window_enforces_min_size():
+    """integer_dimension_window enforces minimum positive size"""
+
+    transform = Affine(1.0, 0.0, 0.0, 0.0, -1.0, 0.0)
+    bounds = (5.0, -5.0, 5.0, -5.0)
+
+    raw = from_bounds(*bounds, transform=transform)
+    assert raw.width == 0
+    assert raw.height == 0
+
+    window = integer_dimension_window(bounds, transform)
+
+    assert window.width == 1
+    assert window.height == 1
 
 
 if __name__ == "__main__":
