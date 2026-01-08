@@ -65,12 +65,8 @@ impl Algorithm {
             AlgorithmType::Dijkstra => pathfinding::prelude::dijkstra(start, successors, success),
         };
 
-        match ans {
-            Some((route, total_cost)) => Some(Solution::new(
-                route,
-                super::unscaled_cost(u64::from(total_cost)),
-            )),
-            None => None,
-        }
+        ans.map(|(route, total_cost)| {
+            Solution::new(route, super::unscaled_cost(u64::from(total_cost)))
+        })
     }
 }
