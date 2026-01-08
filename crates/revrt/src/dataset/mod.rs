@@ -1,3 +1,19 @@
+//! Source Dataset Access
+//!
+//! This module focus on accessing the input features data that are used by
+//! the cost function.
+//!
+//! We are currently based on Zarr but we might move this to a generalized
+//! backend on the future to access different data formats.
+//!
+//! The main benefits of using Zarr in the moment are the natural support
+//! to concurrent access to multiple chunks, async support, rich metadata,
+//! and up to a 20x factor on size reduction (mostly due to efficient
+//! compression and constant values within the same chunk).
+//!
+//! Note: This is currently in a transition state. The initial prototype
+//! included the cost function, which was removed to the `Scenario` level.
+
 mod lazy_subset;
 #[cfg(test)]
 pub(crate) mod samples;
