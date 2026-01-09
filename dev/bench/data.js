@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767989727203,
+  "lastUpdate": 1768002031806,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4619,6 +4619,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 259988523,
             "range": "± 5629983",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c2cfc7a1971eeec4169ae7c81c79091a6a268ac9",
+          "message": "Add algorithm to par routing struct (#203)",
+          "timestamp": "2026-01-09T16:18:03-07:00",
+          "tree_id": "75babc65e47a016527b12217d1e15fde0596c3d6",
+          "url": "https://github.com/NREL/reVRt/commit/c2cfc7a1971eeec4169ae7c81c79091a6a268ac9"
+        },
+        "date": 1768002031277,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74424618,
+            "range": "± 1944282",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 53288011,
+            "range": "± 1149187",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 98589749,
+            "range": "± 2069147",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 150891354,
+            "range": "± 5003183",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 628346536,
+            "range": "± 17717270",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 156102825,
+            "range": "± 2905731",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 160312513,
+            "range": "± 1867663",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170397467,
+            "range": "± 3015236",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 215539817,
+            "range": "± 2455931",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 366993205,
+            "range": "± 9953546",
             "unit": "ns/iter"
           }
         ]
