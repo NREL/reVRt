@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767908145005,
+  "lastUpdate": 1767989727203,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4535,6 +4535,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 369319377,
             "range": "± 7225809",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "89432fe9e3de4edd694b30ff7cf05edfe6654614",
+          "message": "Only run unit tests in TOX on PR  (#202)\n\n* Allow env to specify path to tests dir\n\n* set env var to only run unit tests on PR\n\n* Bump Ruff version\n\n* Update ruff version\n\n* Add Ruff back in\n\n* Update lockfile",
+          "timestamp": "2026-01-09T12:52:29-07:00",
+          "tree_id": "8a4158267eb95c9599a7c63a3e57dde87182b2e7",
+          "url": "https://github.com/NREL/reVRt/commit/89432fe9e3de4edd694b30ff7cf05edfe6654614"
+        },
+        "date": 1767989725869,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 59980546,
+            "range": "± 1323362",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 72876496,
+            "range": "± 1918659",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 87192248,
+            "range": "± 2222394",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 129783081,
+            "range": "± 3484263",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 458423351,
+            "range": "± 16085914",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 94720470,
+            "range": "± 2038602",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 97278883,
+            "range": "± 2587749",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 106668582,
+            "range": "± 2196504",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 140321470,
+            "range": "± 2871136",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 259988523,
+            "range": "± 5629983",
             "unit": "ns/iter"
           }
         ]
