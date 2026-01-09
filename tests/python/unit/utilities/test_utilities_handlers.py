@@ -841,8 +841,7 @@ def test_cli_layers_from_file_single(
     }
 
     config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(main, ["layers-from-file", "-c", config_path])
     msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
@@ -881,8 +880,7 @@ def test_cli_layers_from_file_all(
     config = {"fp": str(out_file_fp)}
 
     config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(main, ["layers-from-file", "-c", config_path])
     msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"

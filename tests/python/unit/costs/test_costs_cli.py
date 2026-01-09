@@ -291,8 +291,7 @@ def test_build_masks_cli_creates_expected_outputs(
     }
 
     config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(main, ["build-masks", "-c", str(config_path)])
     msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
