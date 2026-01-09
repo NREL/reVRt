@@ -66,6 +66,7 @@ pub(super) struct RouteDefinition {
 
 pub(super) struct ParRouting {
     scenario: Arc<Scenario>,
+    algorithm: Arc<Algorithm>,
 }
 
 impl ParRouting {
@@ -75,9 +76,9 @@ impl ParRouting {
         cache_size: u64,
     ) -> Result<Self> {
         let scenario = Scenario::new(store_path, cost_function, cache_size)?;
-
         Ok(Self {
             scenario: Arc::new(scenario),
+            algorithm: Arc::new(Algorithm::new()),
         })
     }
     pub(super) fn lazy_scout<I>(
@@ -89,6 +90,7 @@ impl ParRouting {
         I::Iter: Send,
     {
         let scenario = Arc::clone(&self.scenario);
+        let algorithm = Arc::clone(&self.algorithm);
         rayon::spawn(move || {
             let _ = route_definitions.into_par_iter().try_for_each_with(
                 tx,
@@ -119,13 +121,19 @@ impl ParRouting {
                     let routes: RevrtRoutingSolutions = start_inds
                         .into_par_iter()
                         .filter_map(|s| {
-                            pathfinding::prelude::dijkstra(
+                            algorithm.compute(
                                 &s,
                                 |p| scenario.successors(p),
+                                None::<fn(&ArrayIndex) -> u64>,
                                 |p| end_inds.contains(p),
                             )
+                            // pathfinding::prelude::dijkstra(
+                            //     &s,
+                            //     |p| scenario.successors(p),
+                            //     |p| end_inds.contains(p),
+                            // )
                         })
-                        .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
+                        // .map(|(route, total_cost)| Solution::new(route, unscaled_cost(total_cost)))
                         .collect();
                     let num_routes = routes.len();
                     debug!("Finished computing {num_routes} to {end_inds:?}");
