@@ -184,7 +184,7 @@ def _handle_chunk_file(out_dir, chunk_fp, purge_chunks):
         shutil.move(chunk_fp, new_dir / chunk_fp.name)
 
 
-collect_routes_command = CLICommandFromFunction(
+finalize_routes_command = CLICommandFromFunction(
     finalize_routes,
     name="finalize-routes",
     add_collect=False,

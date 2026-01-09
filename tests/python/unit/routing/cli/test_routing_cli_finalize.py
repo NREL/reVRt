@@ -9,7 +9,7 @@ import pytest
 import geopandas as gpd
 from shapely.geometry import LineString
 
-from revrt.routing.cli.collect import finalize_routes
+from revrt.routing.cli.finalize import finalize_routes
 from revrt.exceptions import revrtFileNotFoundError
 
 
