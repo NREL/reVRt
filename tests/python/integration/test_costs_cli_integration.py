@@ -1,18 +1,14 @@
 """reVRt routing creator CLI tests"""
 
 import os
-import json
 import shutil
 import platform
-import traceback
 from pathlib import Path
 
 import pytest
 import numpy as np
 import xarray as xr
 import dask.array as da
-
-from revrt._cli import main
 
 
 TEST_DEFAULT_MULTS = {
@@ -33,7 +29,7 @@ TEST_DEFAULT_MULTS = {
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli(tmp_path, cli_runner, test_utility_data_dir):
+def test_cli(run_gaps_cli_with_expected_file, tmp_path, test_utility_data_dir):
     """Test routing layer builder CLI"""
     tb_tiff = test_utility_data_dir / "ri_transmission_barriers.tif"
     regions_tiff = test_utility_data_dir / "ri_regions.tif"
@@ -65,15 +61,9 @@ def test_cli(tmp_path, cli_runner, test_utility_data_dir):
         },
     }
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    result = cli_runner.invoke(
-        main, ["build-routing-layers", "-c", str(config_path)]
+    run_gaps_cli_with_expected_file(
+        "build-routing-layers", config, tmp_path, glob_pattern="*.zarr"
     )
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
 
     to_check_ds = [
         "tie_line_multipliers",

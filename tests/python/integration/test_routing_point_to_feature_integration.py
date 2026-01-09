@@ -1,10 +1,8 @@
 """Integration tests for point to feature routing"""
 
 import os
-import json
 import math
 import platform
-import traceback
 from pathlib import Path
 
 import geopandas as gpd
@@ -12,7 +10,6 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from revrt._cli import main
 from revrt.exceptions import revrtValueError
 from revrt.routing.cli.build_route_table import (
     build_point_to_feature_route_table_command,
@@ -175,22 +172,19 @@ def test_cli_build_feature_route_table(
     reason="CLI does not work under tox env on windows",
 )
 def test_cli_build_feature_route_table_from_config(
+    run_gaps_cli_with_expected_file,
     tmp_path,
     routing_test_inputs,
     cost_metadata,
     revx_transmission_layers,
-    cli_runner,
 ):
     """Run CLI main entry via config file to build feature route table"""
 
     resolution = _determine_sparse_resolution(cost_metadata["shape"])
-    out_dir = tmp_path / "cli_config"
-    out_dir.mkdir()
 
     config = {
         "cost_fpath": str(revx_transmission_layers),
         "features_fpath": str(routing_test_inputs["features_fp"]),
-        "out_dir": str(out_dir),
         "regions_fpath": str(routing_test_inputs["regions_fp"]),
         "resolution": resolution,
         "radius": 75_000,
@@ -202,21 +196,16 @@ def test_cli_build_feature_route_table_from_config(
         "expand_radius": True,
     }
 
-    config_path = out_dir / "build_feature_route_table.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    mapped_features_path = tmp_path / "config_features.gpkg"
+    assert not mapped_features_path.exists()
 
-    result = cli_runner.invoke(
-        main, ["build-feature-route-table", "-c", str(config_path)]
+    route_table_path = run_gaps_cli_with_expected_file(
+        "build-feature-route-table",
+        config,
+        tmp_path,
+        glob_pattern="config_routes.csv",
     )
-    err_msg = None
-    if result.exc_info is not None:
-        err_msg = "".join(traceback.format_exception(*result.exc_info))
-    assert result.exit_code == 0, err_msg
 
-    route_table_path = out_dir / "config_routes.csv"
-    mapped_features_path = out_dir / "config_features.gpkg"
-    assert route_table_path.exists()
     assert mapped_features_path.exists()
 
     route_table = pd.read_csv(route_table_path)
