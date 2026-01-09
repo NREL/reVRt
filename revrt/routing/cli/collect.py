@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 def finalize_routes(
     collect_pattern,
     project_dir,
+    out_dir,
+    job_name,
     chunk_size=10_000,
     simplify_geo_tolerance=None,
-    out_fp=None,
     purge_chunks=False,
 ):
     """Merge routing output files matching a pattern into a single file
@@ -38,6 +39,10 @@ def finalize_routes(
     project_dir : path-like
         Path to project directory. This path is used to resolve the
         out filepath input from the user.
+    out_dir : path-like
+        Directory where finalized routing file should be written.
+    job_name : str
+        Label used to name the generated output file.
     chunk_size : int, default=10_000
         Number of features to read into memory at a time when merging
         files. This helps limit memory usage when merging large files.
@@ -62,28 +67,19 @@ def finalize_routes(
     purge_chunks : bool, default=False
         Option to delete single-node input files after the collection
         step. By default, ``False``.
+
+    Raises
+    ------
+    revrtFileNotFoundError
+        Raised when no files are found matching the provided pattern.
+    revrtValueError
+        Raised when multiple file types are found matching the pattern.
     """
-    if "*" not in collect_pattern:
-        msg = "Collect pattern has no wildcard (`*`)! No collection performed"
-        raise revrtValueError(msg)
+    files_to_collect = _files_to_collect(collect_pattern, project_dir)
 
-    collect_pattern = resolve_path(
-        collect_pattern
-        if collect_pattern.startswith("/")
-        else f"./{collect_pattern}",
-        project_dir,
-    )
-
-    if out_fp is None:
-        out_fp = str(collect_pattern).replace("*", "")
-
+    file_suffix = _out_file_suffix(files_to_collect)
+    out_fp = out_dir / f"{job_name}{file_suffix}"
     logger.info("Collecting routing outputs to: %s", out_fp)
-
-    out_fp = Path(out_fp)
-    files_to_collect = list(glob.glob(str(collect_pattern)))  # noqa
-    if not files_to_collect:
-        msg = f"No files found using collect pattern: {collect_pattern}"
-        raise revrtFileNotFoundError(msg)
 
     if simplify_geo_tolerance:
         logger.info(
@@ -93,7 +89,7 @@ def finalize_routes(
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        if out_fp.suffix.lower() == ".gpkg":
+        if file_suffix == ".gpkg":
             _collect_geo_files(
                 files_to_collect,
                 out_fp,
@@ -107,6 +103,36 @@ def finalize_routes(
             )
 
     return str(out_fp)
+
+
+def _files_to_collect(collect_pattern, project_dir):
+    """Get list of files to collect based on pattern"""
+    collect_pattern = resolve_path(
+        collect_pattern
+        if collect_pattern.startswith("/")
+        else f"./{collect_pattern}",
+        project_dir,
+    )
+
+    files_to_collect = list(glob.glob(str(collect_pattern)))  # noqa
+    if not files_to_collect:
+        msg = f"No files found using collect pattern: {collect_pattern}"
+        raise revrtFileNotFoundError(msg)
+
+    return files_to_collect
+
+
+def _out_file_suffix(files_to_collect):
+    """Get the file suffix of the output file based on input files"""
+    file_types = {Path(fp).suffix.lower() for fp in files_to_collect}
+    if len(file_types) > 1:
+        msg = (
+            "Multiple file types found to collect! All files must be of "
+            f"the same type. Found: {file_types}"
+        )
+        raise revrtValueError(msg)
+
+    return file_types.pop()
 
 
 def _collect_geo_files(
