@@ -576,18 +576,40 @@ def test_cli_convert_pois_to_lines_command(
         "convert-pois-to-lines", config, tmp_path, glob_pattern="pois.gpkg"
     )
 
-    pois = gpd.read_file(out_gpkg).sort_values("gid").reset_index(drop=True)
+    pois = gpd.read_file(out_gpkg)
     assert pois.crs and pois.crs.to_string().upper() == "EPSG:4326"
+
+    pois = pois.sort_values("gid").reset_index(drop=True)
     assert pois["POI Name"].tolist() == ["alpha", "beta", "fake"]
     assert pois["category"].tolist() == [
         "Substation",
         "Substation",
         "TransLine",
     ]
-    assert int(pois.loc[0, "Voltage (kV)"]) == 230
-    assert int(pois.loc[1, "Voltage (kV)"]) == 345
+    assert pois["State"].iloc[:2].tolist() == ["CO", "NM"]
+    assert pd.isna(pois.loc[2, "State"])
+
+    expected_voltage_kv = [230, 345]
+    assert [int(pois.loc[i, "Voltage (kV)"]) for i in range(2)] == (
+        expected_voltage_kv
+    )
     assert pd.isna(pois.loc[2, "Voltage (kV)"])
-    assert int(pois.loc[2, "gid"]) == 9999
+
+    assert list(pois["ac_cap"]) == [9999999] * 3
+    assert list(pois["voltage"]) == [500, 500, 500]
+    assert list(pois["trans_gids"].iloc[:2]) == ["[9999]"] * 2
+    assert pd.isna(pois.loc[2, "trans_gids"])
+    assert [int(gid) for gid in pois["gid"]] == [0, 1, 9999]
+
+    expected_geometries = [
+        LineString([(-110.0, 35.0), (-60.0, 85.0)]),
+        LineString([(-109.0, 36.0), (-59.0, 86.0)]),
+        LineString([(0.0, 0.0), (100000.0, 100000.0)]),
+    ]
+    for actual_geom, expected_geom in zip(
+        pois.geometry.to_list(), expected_geometries, strict=True
+    ):
+        assert actual_geom.equals(expected_geom)
 
 
 @pytest.mark.skipif(
