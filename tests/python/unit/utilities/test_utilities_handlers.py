@@ -768,7 +768,11 @@ def test_layers_to_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path, as_list):
 )
 @pytest.mark.parametrize("as_list", [True, False])
 def test_cli_layers_to_file(
-    cli_runner, tmp_path, sample_tiff_fp, sample_tiff_fp_2x, as_list
+    run_gaps_cli_with_expected_file,
+    tmp_path,
+    sample_tiff_fp,
+    sample_tiff_fp_2x,
+    as_list,
 ):
     """Test layers-to-file CLI"""
 
@@ -789,13 +793,9 @@ def test_cli_layers_to_file(
         }
         config["descriptions"] = {tl1_name: "desc_1", tl2_name: "desc_2"}
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    result = cli_runner.invoke(main, ["layers-to-file", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
+    run_gaps_cli_with_expected_file(
+        "layers-to-file", config, tmp_path, glob_pattern="*.zarr"
+    )
 
     with (
         xr.open_dataset(out_file_fp, consolidated=False, engine="zarr") as ds,
@@ -918,7 +918,7 @@ def test_cli_layers_from_file_all(
     reason="CLI does not work under tox env on windows",
 )
 def test_convert_pois_to_lines_cli_creates_expected_outputs(
-    cli_runner, tmp_path, sample_tiff_fp
+    run_gaps_cli_with_expected_file, tmp_path, sample_tiff_fp
 ):
     """CLI convert-pois-to-lines command writes expected GeoPackage"""
 
@@ -961,16 +961,9 @@ def test_convert_pois_to_lines_cli_creates_expected_outputs(
         "out_f": str(out_gpkg),
     }
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
-
-    result = cli_runner.invoke(
-        main, ["convert-pois-to-lines", "-c", str(config_path)]
+    run_gaps_cli_with_expected_file(
+        "convert-pois-to-lines", config, tmp_path, glob_pattern="pois.gpkg"
     )
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-    assert out_gpkg.exists()
 
     pois = gpd.read_file(out_gpkg)
     assert pois.crs and pois.crs.to_string().upper() == "EPSG:4326"
