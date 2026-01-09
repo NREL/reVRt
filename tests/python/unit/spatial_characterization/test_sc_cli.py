@@ -288,7 +288,10 @@ def test_buffered_route_characterizations_percentile(tmp_path, sample_raster):
 )
 @pytest.mark.parametrize("use_top_level_default", [True, False])
 def test_cli_command_minimal(
-    tmp_cwd, sample_raster, cli_runner, use_top_level_default
+    run_gaps_cli_with_expected_file,
+    tmp_cwd,
+    sample_raster,
+    use_top_level_default,
 ):
     """Test running from config with minimal user inputs"""
     raster_fp = tmp_cwd / "test_raster.tif"
@@ -319,19 +322,11 @@ def test_cli_command_minimal(
             },
             "row_widths": {"1": 200, "2": 8},
         }
-    config_fp = tmp_cwd / "config.json"
-    with config_fp.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
 
-    assert not list(tmp_cwd.glob("*.csv"))
-    cli_runner.invoke(
-        main, ["route-characterization", "-c", config_fp.as_posix()]
+    out_fp = run_gaps_cli_with_expected_file(
+        "route-characterization", config, tmp_cwd, glob_pattern="*.csv"
     )
 
-    out_files = list(tmp_cwd.glob("*.csv"))
-    assert len(out_files) == 1
-
-    out_fp = Path(out_files[0])
     assert out_fp.name == "characterized_test_raster_test_zones.csv"
 
     out_stats = pd.read_csv(out_fp)
@@ -418,8 +413,7 @@ def test_cli_command_multiple_rasters(
             "row_widths": str(row_widths_fp),
         }
     config_fp = tmp_cwd / "config.json"
-    with config_fp.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
+    config_fp.write_text(json.dumps(config))
 
     assert not list(tmp_cwd.glob("*.csv"))
     cli_runner.invoke(
@@ -474,7 +468,9 @@ def test_cli_command_multiple_rasters(
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_local_overrides_top_level(tmp_cwd, sample_raster, cli_runner):
+def test_cli_local_overrides_top_level(
+    run_gaps_cli_with_expected_file, tmp_cwd, sample_raster
+):
     """Test that local route_fp overrides top-level default_route_fp"""
     raster_fp = tmp_cwd / "test_raster.tif"
     zones_fp = tmp_cwd / "test_zones.gpkg"
@@ -497,19 +493,11 @@ def test_cli_local_overrides_top_level(tmp_cwd, sample_raster, cli_runner):
         },
         "row_widths": {"1": 200, "2": 8},
     }
-    config_fp = tmp_cwd / "config.json"
-    with config_fp.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
 
-    assert not list(tmp_cwd.glob("*.csv"))
-    cli_runner.invoke(
-        main, ["route-characterization", "-c", config_fp.as_posix()]
+    out_fp = run_gaps_cli_with_expected_file(
+        "route-characterization", config, tmp_cwd, glob_pattern="*.csv"
     )
 
-    out_files = list(tmp_cwd.glob("*.csv"))
-    assert len(out_files) == 1
-
-    out_fp = Path(out_files[0])
     assert out_fp.name == "characterized_test_raster_test_zones.csv"
 
     out_stats = pd.read_csv(out_fp)
@@ -529,6 +517,7 @@ def test_cli_local_overrides_top_level(tmp_cwd, sample_raster, cli_runner):
     )
     assert np.allclose(out_stats["voltage"], [1, 2])
     assert out_stats["A"].to_list() == ["a", "b"]
+
 
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
