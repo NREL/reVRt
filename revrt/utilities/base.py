@@ -508,37 +508,6 @@ def region_mapper(regions, region_identifier_column):
     return _map_region
 
 
-def _compute_half_width_using_ranges(
-    routes, row_width_ranges, row_width_key="voltage"
-):
-    """Compute half-width for routes using row width ranges"""
-
-    ranges = [(r["min"], r["max"], r["width"]) for r in row_width_ranges]
-
-    def get_half_width(value):
-        for min_val, max_val, width in ranges:
-            if min_val <= value < max_val:
-                return width / 2
-        return -1
-
-    return routes[row_width_key].map(get_half_width)
-
-
-def _compute_half_width_using_voltages(
-    routes, row_widths, row_width_key="voltage"
-):
-    """Compute half-width for routes using row width ranges"""
-    row_widths = {float(k): v for k, v in row_widths.items()}
-
-    def get_half_width(value):
-        for voltage, width in row_widths.items():
-            if np.isclose(value, voltage):
-                return width / 2
-        return -1
-
-    return routes[row_width_key].map(get_half_width)
-
-
 def log_mem(log_level="DEBUG"):
     """Log the memory usage to the input logger object
 
@@ -631,3 +600,34 @@ def features_to_route_table(features):
     all_routes = pd.concat(all_routes, axis=0).reset_index(drop=True)
     all_routes.index.name = "rid"
     return all_routes.reset_index(drop=False)
+
+
+def _compute_half_width_using_ranges(
+    routes, row_width_ranges, row_width_key="voltage"
+):
+    """Compute half-width for routes using row width ranges"""
+
+    ranges = [(r["min"], r["max"], r["width"]) for r in row_width_ranges]
+
+    def get_half_width(value):
+        for min_val, max_val, width in ranges:
+            if min_val <= value < max_val:
+                return width / 2
+        return -1
+
+    return routes[row_width_key].map(get_half_width)
+
+
+def _compute_half_width_using_voltages(
+    routes, row_widths, row_width_key="voltage"
+):
+    """Compute half-width for routes using row width ranges"""
+    row_widths = {float(k): v for k, v in row_widths.items()}
+
+    def get_half_width(value):
+        for voltage, width in row_widths.items():
+            if np.isclose(value, voltage):
+                return width / 2
+        return -1
+
+    return routes[row_width_key].map(get_half_width)

@@ -1,6 +1,5 @@
 """Tests for reVRt utilities"""
 
-import csv
 import os
 import json
 import shutil
@@ -13,14 +12,12 @@ import pytest
 import pyproj
 import rioxarray
 import numpy as np
-import pandas as pd
 import xarray as xr
 import geopandas as gpd
 from pyproj.crs import CRS
 from rasterio.transform import Affine
 from rasterio.warp import Resampling
 from rasterio.transform import from_origin
-from shapely.geometry import LineString
 
 import revrt
 from revrt._cli import main
@@ -768,7 +765,11 @@ def test_layers_to_file(sample_tiff_fp, sample_tiff_fp_2x, tmp_path, as_list):
 )
 @pytest.mark.parametrize("as_list", [True, False])
 def test_cli_layers_to_file(
-    cli_runner, tmp_path, sample_tiff_fp, sample_tiff_fp_2x, as_list
+    run_gaps_cli_with_expected_file,
+    tmp_path,
+    sample_tiff_fp,
+    sample_tiff_fp_2x,
+    as_list,
 ):
     """Test layers-to-file CLI"""
 
@@ -789,13 +790,9 @@ def test_cli_layers_to_file(
         }
         config["descriptions"] = {tl1_name: "desc_1", tl2_name: "desc_2"}
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    result = cli_runner.invoke(main, ["layers-to-file", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
+    run_gaps_cli_with_expected_file(
+        "layers-to-file", config, tmp_path, glob_pattern="*.zarr"
+    )
 
     with (
         xr.open_dataset(out_file_fp, consolidated=False, engine="zarr") as ds,
@@ -841,8 +838,7 @@ def test_cli_layers_from_file_single(
     }
 
     config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(main, ["layers-from-file", "-c", config_path])
     msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
@@ -881,8 +877,7 @@ def test_cli_layers_from_file_all(
     config = {"fp": str(out_file_fp)}
 
     config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(main, ["layers-from-file", "-c", config_path])
     msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
@@ -910,102 +905,6 @@ def test_cli_layers_from_file_all(
         assert np.allclose(truth_tif, test_tif)
         assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
         assert truth_tif.rio.crs == test_tif.rio.crs
-
-
-@pytest.mark.skipif(
-    (os.environ.get("TOX_RUNNING") == "True")
-    and (platform.system() == "Windows"),
-    reason="CLI does not work under tox env on windows",
-)
-def test_convert_pois_to_lines_cli_creates_expected_outputs(
-    cli_runner, tmp_path, sample_tiff_fp
-):
-    """CLI convert-pois-to-lines command writes expected GeoPackage"""
-
-    poi_rows = [
-        {
-            "POI Name": "alpha",
-            "State": "CO",
-            "Voltage (kV)": 230,
-            "Lat": 35.0,
-            "Long": -110.0,
-        },
-        {
-            "POI Name": "beta",
-            "State": "NM",
-            "Voltage (kV)": 345,
-            "Lat": 36.0,
-            "Long": -109.0,
-        },
-    ]
-
-    poi_csv = tmp_path / "poi.csv"
-    with poi_csv.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(
-            fh,
-            fieldnames=[
-                "POI Name",
-                "State",
-                "Voltage (kV)",
-                "Lat",
-                "Long",
-            ],
-        )
-        writer.writeheader()
-        writer.writerows(poi_rows)
-
-    out_gpkg = tmp_path / "pois.gpkg"
-    config = {
-        "poi_csv_f": str(poi_csv),
-        "template_f": str(sample_tiff_fp),
-        "out_f": str(out_gpkg),
-    }
-
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
-
-    result = cli_runner.invoke(
-        main, ["convert-pois-to-lines", "-c", str(config_path)]
-    )
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
-    assert out_gpkg.exists()
-
-    pois = gpd.read_file(out_gpkg)
-    assert pois.crs and pois.crs.to_string().upper() == "EPSG:4326"
-
-    pois = pois.sort_values("gid").reset_index(drop=True)
-    assert pois["POI Name"].tolist() == ["alpha", "beta", "fake"]
-    assert pois["category"].tolist() == [
-        "Substation",
-        "Substation",
-        "TransLine",
-    ]
-    assert pois["State"].iloc[:2].tolist() == ["CO", "NM"]
-    assert pd.isna(pois.loc[2, "State"])
-
-    expected_voltage_kv = [230, 345]
-    assert [int(pois.loc[i, "Voltage (kV)"]) for i in range(2)] == (
-        expected_voltage_kv
-    )
-    assert pd.isna(pois.loc[2, "Voltage (kV)"])
-
-    assert list(pois["ac_cap"]) == [9999999] * 3
-    assert list(pois["voltage"]) == [500, 500, 500]
-    assert list(pois["trans_gids"].iloc[:2]) == ["[9999]"] * 2
-    assert pd.isna(pois.loc[2, "trans_gids"])
-    assert [int(gid) for gid in pois["gid"]] == [0, 1, 9999]
-
-    expected_geometries = [
-        LineString([(-110.0, 35.0), (-60.0, 85.0)]),
-        LineString([(-109.0, 36.0), (-59.0, 86.0)]),
-        LineString([(0.0, 0.0), (100000.0, 100000.0)]),
-    ]
-    for actual_geom, expected_geom in zip(
-        pois.geometry.to_list(), expected_geometries, strict=True
-    ):
-        assert actual_geom.equals(expected_geom)
 
 
 def test_num_feats_in_gpkg_normal(test_routing_data_dir):

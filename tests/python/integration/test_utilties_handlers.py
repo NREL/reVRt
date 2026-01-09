@@ -340,16 +340,14 @@ def test_roundtrip_cli(cli_runner, tmp_path, test_utility_data_dir, as_list):
         config["layers"] = list(map(str, config["layers"]))
 
     config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(main, ["layers-to-file", "-c", config_path])
     msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
     assert result.exit_code == 0, msg
 
     config_extract_path = tmp_path / "config_extract.json"
-    with config_extract_path.open("w", encoding="utf-8") as f:
-        json.dump({"fp": str(out_file_fp)}, f)
+    config_extract_path.write_text(json.dumps({"fp": str(out_file_fp)}))
 
     result = cli_runner.invoke(
         main, ["layers-from-file", "-c", config_extract_path]

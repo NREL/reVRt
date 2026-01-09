@@ -291,8 +291,7 @@ def test_build_masks_cli_creates_expected_outputs(
     }
 
     config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as fh:
-        json.dump(config, fh)
+    config_path.write_text(json.dumps(config))
 
     result = cli_runner.invoke(main, ["build-masks", "-c", str(config_path)])
     msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
@@ -613,6 +612,7 @@ def test_build_layers_only(
     reason="CLI does not work under tox env on windows",
 )
 def test_build_basic_from_cli(
+    run_gaps_cli_with_expected_file,
     tmp_path,
     sample_iso_fp,
     sample_nlcd_fp,
@@ -620,14 +620,12 @@ def test_build_basic_from_cli(
     sample_extra_fp,
     tiff_layers_for_testing,
     masks_for_testing,
-    cli_runner,
 ):
     """Test basic building from command line"""
     test_fp = tmp_path / "test.zarr"
     out_tiff_dir = tmp_path / "out_tiffs"
     layer_dir, layers = tiff_layers_for_testing
 
-    assert not test_fp.exists()
     assert not out_tiff_dir.exists()
 
     config = {
@@ -668,17 +666,10 @@ def test_build_basic_from_cli(
         },
     }
 
-    config_path = tmp_path / "config.json"
-    with config_path.open("w", encoding="utf-8") as f:
-        json.dump(config, f)
-
-    result = cli_runner.invoke(
-        main, ["build-routing-layers", "-c", str(config_path)]
+    test_fp = run_gaps_cli_with_expected_file(
+        "build-routing-layers", config, tmp_path, glob_pattern="test.zarr"
     )
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
 
-    assert test_fp.exists()
     assert out_tiff_dir.exists()
     assert (out_tiff_dir / "fi_1.tif").exists()
     assert (out_tiff_dir / "friction.tif").exists()
