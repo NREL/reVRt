@@ -537,7 +537,7 @@ def test_cli_route_points_skips_precomputed_routes_gpkg(
     reason="CLI does not work under tox env on windows",
 )
 def test_cli_route_points_flip_start_end(
-    cli_runner, sample_layered_data, tmp_path
+    run_gaps_cli_with_expected_file, sample_layered_data, tmp_path
 ):
     """route-points CLI that internally flips start and end points"""
 
@@ -563,18 +563,9 @@ def test_cli_route_points_flip_start_end(
         "route_table_fpath": str(route_table_fp),
         "cost_layers": [{"layer_name": "layer_1"}],
     }
-    config_fp = tmp_path / "route_points_config.json"
-    config_fp.write_text(json.dumps(config))
-
-    first_result = cli_runner.invoke(
-        main, ["route-points", "-c", str(config_fp)]
+    out_fp = run_gaps_cli_with_expected_file(
+        "route-points", config, tmp_path, glob_pattern="*test*.csv"
     )
-    assert first_result.exit_code == 0, first_result.output
-
-    out_fp = list(tmp_path.glob("*test*.csv"))
-    assert len(out_fp) == 1
-    out_fp = out_fp[0]
-    assert out_fp.exists()
 
     output = pd.read_csv(out_fp)
     assert len(output) == len(routes)

@@ -430,7 +430,9 @@ def test_add_rr_to_nn_with_tif_template(tmp_path):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_layers_to_file_command(cli_runner, tmp_path, sample_tiff_fp):
+def test_cli_layers_to_file_command(
+    run_gaps_cli_with_expected_file, tmp_path, sample_tiff_fp
+):
     """Ensure layers-to-file CLI writes expected layers"""
 
     doubled_tiff = tmp_path / "sample_doubled.tif"
@@ -448,14 +450,9 @@ def test_cli_layers_to_file_command(cli_runner, tmp_path, sample_tiff_fp):
         },
     }
 
-    config_path = tmp_path / "config_layers_to_file.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(
-        main, ["layers-to-file", "-c", str(config_path)]
+    run_gaps_cli_with_expected_file(
+        "layers-to-file", config, tmp_path, glob_pattern="*.zarr"
     )
-    msg = f"Failed with error {_cli_error_message(result)}"
-    assert result.exit_code == 0, msg
 
     with (
         xr.open_dataset(out_file_fp, consolidated=False, engine="zarr") as ds,
@@ -532,7 +529,7 @@ def test_cli_layers_from_file_command(cli_runner, tmp_path, sample_tiff_fp):
     reason="CLI does not work under tox env on windows",
 )
 def test_cli_convert_pois_to_lines_command(
-    cli_runner, tmp_path, sample_tiff_fp
+    run_gaps_cli_with_expected_file, tmp_path, sample_tiff_fp
 ):
     """Ensure convert-pois-to-lines CLI creates GeoPackage"""
 
@@ -575,15 +572,9 @@ def test_cli_convert_pois_to_lines_command(
         "out_f": str(out_gpkg),
     }
 
-    config_path = tmp_path / "config_convert_pois.json"
-    config_path.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(
-        main, ["convert-pois-to-lines", "-c", str(config_path)]
+    run_gaps_cli_with_expected_file(
+        "convert-pois-to-lines", config, tmp_path, glob_pattern="pois.gpkg"
     )
-    msg = f"Failed with error {_cli_error_message(result)}"
-    assert result.exit_code == 0, msg
-    assert out_gpkg.exists()
 
     pois = gpd.read_file(out_gpkg).sort_values("gid").reset_index(drop=True)
     assert pois.crs and pois.crs.to_string().upper() == "EPSG:4326"
