@@ -54,7 +54,7 @@ dev = [
   "maturin>=1.9.3,<2",
   "pipreqs>=0.4.13,<0.5",
   "ruff>=0.14.11,<0.15",
-  "ruff-lsp>=0.0.62,<0.0.63",
+#   "ruff-lsp>=0.0.62,<0.0.63",
 ]
 test = [
   "hypothesis>=6.0,<7",
@@ -263,8 +263,8 @@ jupyter = ">=1.1.1,<2"
 matplotlib = ">=3.10.1,<4"
 pip = ">=25.1.1,<26"
 pipreqs = ">=0.4.13,<0.5"
-ruff = ">=0.14.11,<0.15"
-ruff-lsp = ">=0.0.62,<0.0.63"
+# ruff = ">=0.14.11,<0.15"
+# ruff-lsp = ">=0.0.62,<0.0.63"
 rust-src = ">=1.90.0,<2"
 
 [tool.pixi.feature.test.dependencies]
