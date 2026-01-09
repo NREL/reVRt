@@ -181,5 +181,42 @@ def test_cli_finalize_routes_merges_gpkg(
     assert not (chunk_dir / "chunk_files").exists()
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_finalize_single_csv(run_gaps_cli_with_expected_file, tmp_path):
+    """finalize-routes CLI should accept single CSV chunk"""
+
+    chunk_dir = tmp_path / "outputs"
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+
+    frame = pd.DataFrame(
+        {
+            "route_id": ["chunk0_route0", "chunk0_route1"],
+            "start_row": [0, 1],
+            "start_col": [0, 1],
+            "end_row": [2, 3],
+            "end_col": [2, 3],
+            "cost": [10.0, 20.0],
+        }
+    )
+
+    frame.to_csv(chunk_dir / "routes.csv", index=False)
+
+    config = {"collect_pattern": "outputs/routes.csv"}
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    merged_df = pd.read_csv(merged_fp)
+    pd.testing.assert_frame_equal(
+        merged_df.sort_values("route_id").reset_index(drop=True),
+        frame.sort_values("route_id").reset_index(drop=True),
+    )
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
