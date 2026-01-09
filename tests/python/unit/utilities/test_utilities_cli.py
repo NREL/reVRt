@@ -604,7 +604,7 @@ def test_cli_convert_pois_to_lines_command(
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_map_ss_to_rr_command(cli_runner, tmp_path):
+def test_cli_map_ss_to_rr_command(run_gaps_cli_with_expected_file, tmp_path):
     """Ensure map-ss-to-rr CLI filters and maps regions"""
 
     features = gpd.GeoDataFrame(
@@ -648,19 +648,11 @@ def test_cli_map_ss_to_rr_command(cli_runner, tmp_path):
         "minimum_substation_voltage_kv": 100,
     }
 
-    config_path = tmp_path / "config_map_ss.json"
-    config_path.write_text(json.dumps(config))
+    out_path = run_gaps_cli_with_expected_file(
+        "map-ss-to-rr", config, tmp_path
+    )
 
-    assert not list(tmp_path.glob("*_map_ss_to_rr.gpkg"))
-
-    result = cli_runner.invoke(main, ["map-ss-to-rr", "-c", str(config_path)])
-    msg = f"Failed with error {_cli_error_message(result)}"
-    assert result.exit_code == 0, msg
-
-    out_path = list(tmp_path.glob("*_map_ss_to_rr.gpkg"))
-    assert len(out_path) == 1
-
-    mapped = gpd.read_file(out_path[0])
+    mapped = gpd.read_file(out_path)
     assert mapped["trans_gid"].tolist() == [1]
     assert mapped["region_id"].tolist() == ["A"]
     assert mapped.loc[0, "min_volts"] == 230
@@ -672,7 +664,7 @@ def test_cli_map_ss_to_rr_command(cli_runner, tmp_path):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_ss_from_conn_command(cli_runner, tmp_path):
+def test_cli_ss_from_conn_command(run_gaps_cli_with_expected_file, tmp_path):
     """Ensure ss-from-conn CLI extracts substations"""
 
     csv_path = tmp_path / "connections.csv"
@@ -690,19 +682,11 @@ def test_cli_ss_from_conn_command(cli_runner, tmp_path):
         "region_identifier_column": "region_id",
     }
 
-    config_path = tmp_path / "config_ss_from_conn.json"
-    config_path.write_text(json.dumps(config))
+    out_path = run_gaps_cli_with_expected_file(
+        "ss-from-conn", config, tmp_path
+    )
 
-    assert not list(tmp_path.glob("*_ss_from_conn.gpkg"))
-
-    result = cli_runner.invoke(main, ["ss-from-conn", "-c", str(config_path)])
-    msg = f"Failed with error {_cli_error_message(result)}"
-    assert result.exit_code == 0, msg
-
-    out_path = list(tmp_path.glob("*_ss_from_conn.gpkg"))
-    assert len(out_path) == 1
-
-    subs = gpd.read_file(out_path[0])
+    subs = gpd.read_file(out_path)
     assert len(subs) == 1
     assert subs.loc[0, "poi_gid"] == 1
 
@@ -712,7 +696,9 @@ def test_cli_ss_from_conn_command(cli_runner, tmp_path):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_add_rr_to_nn_command(cli_runner, tmp_path, sample_tiff_fp):
+def test_cli_add_rr_to_nn_command(
+    run_gaps_cli_with_expected_file, tmp_path, sample_tiff_fp
+):
     """Ensure add-rr-to-nn CLI annotates network nodes"""
 
     network = gpd.GeoDataFrame(
@@ -741,21 +727,11 @@ def test_cli_add_rr_to_nn_command(cli_runner, tmp_path, sample_tiff_fp):
         "crs_template_file": str(sample_tiff_fp),
     }
 
-    config_path = tmp_path / "config_add_rr.json"
-    config_path.write_text(json.dumps(config))
-
-    assert not list(tmp_path.glob("*_add_rr_to_nn.gpkg"))
-
-    result = cli_runner.invoke(main, ["add-rr-to-nn", "-c", str(config_path)])
-    msg = f"Failed with error {_cli_error_message(result)}"
-    assert result.exit_code == 0, msg
-
-    out_path = list(tmp_path.glob("*_add_rr_to_nn.gpkg"))
-    assert len(out_path) == 1
-
-    nodes = (
-        gpd.read_file(out_path[0]).sort_values("value").reset_index(drop=True)
+    out_path = run_gaps_cli_with_expected_file(
+        "add-rr-to-nn", config, tmp_path
     )
+
+    nodes = gpd.read_file(out_path).sort_values("value").reset_index(drop=True)
     assert nodes["region"].tolist() == ["west", "east"]
 
 
