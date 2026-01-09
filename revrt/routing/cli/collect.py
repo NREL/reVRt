@@ -78,7 +78,7 @@ def finalize_routes(
     files_to_collect = _files_to_collect(collect_pattern, project_dir)
 
     file_suffix = _out_file_suffix(files_to_collect)
-    out_fp = out_dir / f"{job_name}{file_suffix}"
+    out_fp = Path(out_dir) / f"{job_name}{file_suffix}"
     logger.info("Collecting routing outputs to: %s", out_fp)
 
     if simplify_geo_tolerance:
