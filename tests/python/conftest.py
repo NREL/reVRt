@@ -114,20 +114,23 @@ def cli_runner():
 def run_gaps_cli_with_expected_file(cli_runner, cli_error_message):
     """Run a CLI command and check for expected output file"""
 
-    def _run_cli(cli_command, config, run_dir):
+    def _run_cli(cli_command, config, run_dir, glob_pattern=None):
         """Run a CLI command and check for expected output file"""
         out_pattern = cli_command.replace("-", "_")
         config_fp = run_dir / f"test_{out_pattern}_config.json"
         config_fp.write_text(json.dumps(config))
 
-        assert not list(run_dir.glob(f"*_{out_pattern}.*"))
+        if glob_pattern is None:
+            glob_pattern = f"*_{out_pattern}.*"
+
+        assert not list(run_dir.glob(glob_pattern))
         result = cli_runner.invoke(
             main, [cli_command, "-c", config_fp.as_posix()]
         )
         msg = f"Failed with error {cli_error_message(result)}"
         assert result.exit_code == 0, msg
 
-        out_path = list(run_dir.glob(f"*_{out_pattern}.*"))
+        out_path = list(run_dir.glob(glob_pattern))
         assert len(out_path) == 1
         return out_path[0]
 
