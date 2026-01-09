@@ -4,127 +4,13 @@ import os
 import platform
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
-import xarray as xr
 import geopandas as gpd
 from shapely.geometry import LineString
-from rasterio.transform import from_origin
 
 from revrt.routing.cli.collect import finalize_routes
-from revrt.utilities import LayeredFile
 from revrt.exceptions import revrtFileNotFoundError
-
-
-@pytest.fixture(scope="module")
-def sample_layered_data(tmp_path_factory):
-    """Create layered routing data mimicking point_to_point tests"""
-
-    data_dir = tmp_path_factory.mktemp("routing_cli_data")
-
-    layered_fp = data_dir / "test_layered.zarr"
-    layer_file = LayeredFile(layered_fp)
-
-    height, width = (7, 8)
-    cell_size = 1.0
-    x0, y0 = 0.0, float(height)
-    transform = from_origin(x0, y0, cell_size, cell_size)
-    x_coords = (
-        x0 + np.arange(width, dtype=np.float32) * cell_size + cell_size / 2
-    )
-    y_coords = (
-        y0 - np.arange(height, dtype=np.float32) * cell_size - cell_size / 2
-    )
-
-    layer_values = [
-        np.array(
-            [
-                [
-                    [7, 7, 8, 0, 9, 9, 9, 0],
-                    [8, 1, 2, 2, 9, 9, 9, 0],
-                    [9, 1, 3, 3, 9, 1, 2, 3],
-                    [9, 1, 2, 1, 9, 1, 9, 0],
-                    [9, 9, 9, 1, 9, 1, 9, 0],
-                    [9, 9, 9, 1, 1, 1, 9, 0],
-                    [9, 9, 9, 9, 9, 9, 9, 0],
-                ]
-            ],
-            dtype=np.float32,
-        ),
-        np.array(
-            [
-                [
-                    [8, 7, 6, 5, 5, 6, 7, 9],
-                    [7, 1, 1, 2, 3, 3, 2, 8],
-                    [6, 2, 9, 6, 5, 2, 1, 7],
-                    [7, 3, 8, 1, 2, 3, 2, 6],
-                    [8, 4, 7, 2, 8, 4, 3, 5],
-                    [9, 5, 6, 3, 4, 4, 3, 4],
-                    [9, 6, 7, 4, 5, 5, 4, 3],
-                ]
-            ],
-            dtype=np.float32,
-        ),
-        np.array(
-            [
-                [
-                    [6, 6, 6, 6, 6, 7, 8, 9],
-                    [5, 2, 2, 3, 4, 5, 6, 8],
-                    [4, 3, 7, 7, 6, 4, 5, 7],
-                    [5, 4, 6, 2, 3, 4, 4, 6],
-                    [6, 5, 5, 3, 7, 5, 5, 5],
-                    [7, 6, 6, 4, 5, 5, 4, 4],
-                    [8, 7, 7, 5, 6, 5, 4, 3],
-                ]
-            ],
-            dtype=np.float32,
-        ),
-    ]
-
-    for ind, routing_layer in enumerate(layer_values, start=1):
-        da = xr.DataArray(
-            routing_layer,
-            dims=("band", "y", "x"),
-            coords={"y": y_coords, "x": x_coords},
-        )
-        da = da.rio.write_crs("EPSG:4326")
-        da = da.rio.write_transform(transform)
-
-        geotiff_fp = data_dir / f"layer_{ind}.tif"
-        da.rio.to_raster(geotiff_fp, driver="GTiff")
-
-        layer_file.write_geotiff_to_file(
-            geotiff_fp, f"layer_{ind}", overwrite=True
-        )
-
-    return layered_fp
-
-
-def _build_route_table(layered_fp, rows_cols):
-    """Helper to construct route tables with CRS-aligned coordinates"""
-
-    with xr.open_dataset(layered_fp, consolidated=False, engine="zarr") as ds:
-        latitudes = ds["latitude"].to_numpy()
-        longitudes = ds["longitude"].to_numpy()
-
-    records = []
-    for idx, (start, end) in enumerate(rows_cols):
-        s_row, s_col = start
-        e_row, e_col = end
-        records.append(
-            {
-                "route_id": f"route_{idx}",
-                "start_lat": float(latitudes[s_row, s_col]),
-                "start_lon": float(longitudes[s_row, s_col]),
-                "end_lat": float(latitudes[e_row, e_col]),
-                "end_lon": float(longitudes[e_row, e_col]),
-                "voltage": 138,
-                "polarity": "ac",
-            }
-        )
-
-    return pd.DataFrame.from_records(records)
 
 
 def test_merge_routes_no_files(tmp_path):
