@@ -572,15 +572,15 @@ def test_clip_to_point_without_radius_uses_region_only(
     reason="CLI does not work under tox env on windows",
 )
 def test_cli_build_feature_route_table_and_run_lcp(
-    tmp_path, revx_transmission_layers, cli_runner, test_routing_data_dir
+    run_gaps_cli_with_expected_file,
+    tmp_path,
+    revx_transmission_layers,
+    test_routing_data_dir,
 ):
     """Run CLI main entry via config file to build feature route table"""
 
-    out_dir = tmp_path / "mini_test"
-    out_dir.mkdir()
-
     gpd.read_file(test_routing_data_dir / "ri_regions.gpkg").iloc[[3]].to_file(
-        out_dir / "regions.gpkg", driver="GPKG"
+        tmp_path / "regions.gpkg", driver="GPKG"
     )
 
     # -- Build Route Table --
@@ -590,8 +590,7 @@ def test_cli_build_feature_route_table_and_run_lcp(
         "features_fpath": str(
             test_routing_data_dir / "ri_transmission_features.gpkg"
         ),
-        "out_dir": str(out_dir),
-        "regions_fpath": str(out_dir / "regions.gpkg"),
+        "regions_fpath": str(tmp_path / "regions.gpkg"),
         "resolution": 64,
         "radius": 10_000,
         "feature_out_fp": "config_features.gpkg",
@@ -602,23 +601,16 @@ def test_cli_build_feature_route_table_and_run_lcp(
         "clip_points_to_regions": True,
     }
 
-    config_path = out_dir / "build_feature_route_table.json"
-    config_path.write_text(json.dumps(config))
-
-    route_table_path = out_dir / "config_routes.csv"
-    mapped_features_path = out_dir / "config_features.gpkg"
-    assert not route_table_path.exists()
+    mapped_features_path = tmp_path / "config_features.gpkg"
     assert not mapped_features_path.exists()
 
-    result = cli_runner.invoke(
-        main, ["build-feature-route-table", "-c", str(config_path)]
+    route_table_path = run_gaps_cli_with_expected_file(
+        "build-feature-route-table",
+        config,
+        tmp_path,
+        glob_pattern="config_routes.csv",
     )
-    err_msg = None
-    if result.exc_info is not None:
-        err_msg = "".join(traceback.format_exception(*result.exc_info))
-    assert result.exit_code == 0, err_msg
 
-    assert route_table_path.exists()
     assert mapped_features_path.exists()
 
     route_table = pd.read_csv(route_table_path)
@@ -647,7 +639,6 @@ def test_cli_build_feature_route_table_and_run_lcp(
         "cost_fpath": str(revx_transmission_layers),
         "route_table_fpath": str(route_table_path),
         "features_fpath": str(mapped_features_path),
-        "out_dir": str(out_dir),
         "cost_layers": [
             {"layer_name": "tie_line_costs_102MW"},
         ],
@@ -655,23 +646,11 @@ def test_cli_build_feature_route_table_and_run_lcp(
         "connection_identifier_column": "cfg_feat_id",
     }
 
-    config_path = out_dir / "lcp.json"
-    config_path.write_text(json.dumps(config))
-
-    assert not list(out_dir.glob("*_route_features.gpkg"))
-    result = cli_runner.invoke(
-        main, ["route-features", "-c", str(config_path)]
+    out_fp = run_gaps_cli_with_expected_file(
+        "route-features", config, tmp_path
     )
-    err_msg = None
-    if result.exc_info is not None:
-        err_msg = "".join(traceback.format_exception(*result.exc_info))
-    assert result.exit_code == 0, err_msg
 
-    out_fp = list(out_dir.glob("*_route_features.gpkg"))
-    msg = f"No output file found: {list(out_dir.glob('*'))}"
-    assert len(out_fp) == 1, msg
-
-    routes = gpd.read_file(out_fp[0])
+    routes = gpd.read_file(out_fp)
     assert len(routes) == len(route_table)
     assert routes["length_km"].between(0.18, 12).all()
 
