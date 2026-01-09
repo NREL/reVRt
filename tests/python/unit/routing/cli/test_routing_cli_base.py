@@ -601,7 +601,12 @@ def test_merge_routes_no_files(tmp_path):
     with pytest.raises(
         revrtFileNotFoundError, match="No files found using collect pattern:"
     ):
-        finalize_routes(collect_pattern="dne*.csv", project_dir=tmp_path)
+        finalize_routes(
+            collect_pattern="dne*.csv",
+            project_dir=tmp_path,
+            out_dir=tmp_path,
+            job_name="test",
+        )
 
 
 @pytest.mark.skipif(
@@ -609,7 +614,9 @@ def test_merge_routes_no_files(tmp_path):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_finalize_routes_merges_csv(cli_runner, tmp_path):
+def test_cli_finalize_routes_merges_csv(
+    run_gaps_cli_with_expected_file, tmp_path
+):
     """finalize-routes CLI should merge CSV chunk outputs"""
 
     chunk_dir = tmp_path / "outputs"
@@ -649,14 +656,9 @@ def test_cli_finalize_routes_merges_csv(cli_runner, tmp_path):
         "chunk_size": 1,
     }
 
-    config_fp = tmp_path / "finalize_csv_config.json"
-    config_fp.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["finalize-routes", "-c", str(config_fp)])
-    assert result.exit_code == 0, result.output
-
-    merged_fp = chunk_dir / "routes_part_.csv"
-    assert merged_fp.exists()
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
 
     merged_df = pd.read_csv(merged_fp)
     expected_df = pd.concat(chunk_frames, ignore_index=True)
@@ -665,7 +667,7 @@ def test_cli_finalize_routes_merges_csv(cli_runner, tmp_path):
         expected_df.sort_values("route_id").reset_index(drop=True),
     )
 
-    chunk_files_dir = chunk_dir / "chunk_files"
+    chunk_files_dir = tmp_path / "chunk_files"
     assert chunk_files_dir.exists()
 
     for idx in range(len(chunk_frames)):
@@ -686,7 +688,9 @@ def test_cli_finalize_routes_merges_csv(cli_runner, tmp_path):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_finalize_routes_merges_gpkg(cli_runner, tmp_path, tol):
+def test_cli_finalize_routes_merges_gpkg(
+    run_gaps_cli_with_expected_file, tmp_path, tol
+):
     """finalize-routes CLI should merge GeoPackage chunk outputs"""
 
     chunk_dir = tmp_path / "geoms"
@@ -739,14 +743,9 @@ def test_cli_finalize_routes_merges_gpkg(cli_runner, tmp_path, tol):
         "purge_chunks": True,
     }
 
-    config_fp = tmp_path / "finalize_gpkg_config.json"
-    config_fp.write_text(json.dumps(config))
-
-    result = cli_runner.invoke(main, ["finalize-routes", "-c", str(config_fp)])
-    assert result.exit_code == 0, result.output
-
-    merged_fp = tmp_path / "merged_routes.gpkg"
-    assert merged_fp.exists()
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
 
     merged_gdf = gpd.read_file(merged_fp)
     expected_count = sum(len(gdf) for gdf in chunk_geometries)
