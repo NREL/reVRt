@@ -149,6 +149,7 @@ jobs:
       run: tox -e ${{ matrix.python-version == '3.11' && 'msv' || 'latest' }}
       env:
         PYTHONDEVMODE: 1
+        REVRT_TOX_TEST_PATH: ${{ github.ref == 'refs/heads/main' && 'tests' || 'tests/python/unit' }}
 
     - name: Save tox cache only on main
       if: github.ref == 'refs/heads/main'
