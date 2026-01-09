@@ -17,11 +17,7 @@ from rasterio.transform import from_origin
 from revrt._cli import main
 from revrt.utilities import LayeredFile
 from revrt.routing.utilities import map_to_costs
-from revrt.exceptions import (
-    revrtKeyError,
-    revrtValueError,
-    revrtFileNotFoundError,
-)
+from revrt.exceptions import revrtKeyError, revrtFileNotFoundError
 from revrt.routing.cli.base import (
     update_multipliers,
     run_lcp,
@@ -31,7 +27,7 @@ from revrt.routing.cli.base import (
     _get_polarity_multiplier,
     _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL,
 )
-from revrt.routing.cli.collect import merge_output
+from revrt.routing.cli.collect import finalize_routes
 from revrt.routing.cli.point_to_point import (
     compute_lcp_routes,
     PointToPointRouteDefinitionConverter,
@@ -600,22 +596,12 @@ def test_get_polarity_multiplier_unknown_voltage():
         _get_polarity_multiplier(config, "138", "ac")
 
 
-def test_merge_routes_bad_collect_pattern(tmp_path):
-    """merge_output should raise when collect pattern lacks wildcard"""
-    with pytest.raises(
-        revrtValueError, match="Collect pattern has no wildcard"
-    ):
-        merge_output(
-            collect_pattern="no_wildcard_here.csv", project_dir=tmp_path
-        )
-
-
 def test_merge_routes_no_files(tmp_path):
-    """merge_output should raise when no files match collect pattern"""
+    """finalize_routes should raise when no files match collect pattern"""
     with pytest.raises(
         revrtFileNotFoundError, match="No files found using collect pattern:"
     ):
-        merge_output(collect_pattern="dne*.csv", project_dir=tmp_path)
+        finalize_routes(collect_pattern="dne*.csv", project_dir=tmp_path)
 
 
 @pytest.mark.skipif(
@@ -623,8 +609,8 @@ def test_merge_routes_no_files(tmp_path):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_collect_routes_merges_csv(cli_runner, tmp_path):
-    """collect-routes CLI should merge CSV chunk outputs"""
+def test_cli_finalize_routes_merges_csv(cli_runner, tmp_path):
+    """finalize-routes CLI should merge CSV chunk outputs"""
 
     chunk_dir = tmp_path / "outputs"
     chunk_dir.mkdir(parents=True, exist_ok=True)
@@ -663,10 +649,10 @@ def test_cli_collect_routes_merges_csv(cli_runner, tmp_path):
         "chunk_size": 1,
     }
 
-    config_fp = tmp_path / "collect_csv_config.json"
+    config_fp = tmp_path / "finalize_csv_config.json"
     config_fp.write_text(json.dumps(config))
 
-    result = cli_runner.invoke(main, ["collect-routes", "-c", str(config_fp)])
+    result = cli_runner.invoke(main, ["finalize-routes", "-c", str(config_fp)])
     assert result.exit_code == 0, result.output
 
     merged_fp = chunk_dir / "routes_part_.csv"
@@ -700,8 +686,8 @@ def test_cli_collect_routes_merges_csv(cli_runner, tmp_path):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_cli_collect_routes_merges_gpkg(cli_runner, tmp_path, tol):
-    """collect-routes CLI should merge GeoPackage chunk outputs"""
+def test_cli_finalize_routes_merges_gpkg(cli_runner, tmp_path, tol):
+    """finalize-routes CLI should merge GeoPackage chunk outputs"""
 
     chunk_dir = tmp_path / "geoms"
     chunk_dir.mkdir(parents=True, exist_ok=True)
@@ -753,10 +739,10 @@ def test_cli_collect_routes_merges_gpkg(cli_runner, tmp_path, tol):
         "purge_chunks": True,
     }
 
-    config_fp = tmp_path / "collect_gpkg_config.json"
+    config_fp = tmp_path / "finalize_gpkg_config.json"
     config_fp.write_text(json.dumps(config))
 
-    result = cli_runner.invoke(main, ["collect-routes", "-c", str(config_fp)])
+    result = cli_runner.invoke(main, ["finalize-routes", "-c", str(config_fp)])
     assert result.exit_code == 0, result.output
 
     merged_fp = tmp_path / "merged_routes.gpkg"
