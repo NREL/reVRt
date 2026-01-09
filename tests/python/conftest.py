@@ -131,7 +131,11 @@ def run_gaps_cli_with_expected_file(cli_runner, cli_error_message):
         assert result.exit_code == 0, msg
 
         out_path = list(run_dir.glob(glob_pattern))
-        assert len(out_path) == 1
+        msg = (
+            f"No output file found matching pattern {glob_pattern!r}: "
+            f"{list(run_dir.glob('*'))}"
+        )
+        assert len(out_path) == 1, msg
         return out_path[0]
 
     return _run_cli
