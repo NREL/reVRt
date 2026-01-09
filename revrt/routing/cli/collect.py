@@ -43,13 +43,17 @@ def merge_output(
         files. This helps limit memory usage when merging large files.
         By default, ``10_000``.
     simplify_geo_tolerance : float, optional
-        Option to simplify geometries before saving to output. This
-        value will be used as the tolerance parameter in the
-        `geopandas.GeoSeries.simplify` method. Specifically, all parts
-        of a simplified geometry will be no more than `tolerance`
-        distance from the original. This value has the same units as the
-        coordinate reference system of the GeoSeries. Only works for
-        GeoPackage outputs (errors otherwise). By default, ``None``.
+        Option to simplify geometries before saving to output. Note that
+        this changes the path geometry and therefore create a mismatch
+        between the geometry and any associated attributes (e.g.,
+        length, cost, etc). This also means the paths should not be used
+        for characterization. If provided, this value will be used as
+        the tolerance parameter in the `geopandas.GeoSeries.simplify`
+        method. Specifically, all parts of a simplified geometry will
+        be no more than `tolerance` distance from the original. This
+        value has the same units as the coordinate reference system of
+        the GeoSeries. Only works for GeoPackage outputs
+        (errors otherwise). By default, ``None``.
     out_fp : path-like, optional
         Path to output file where the merged results should be saved. If
         ``None``, the output file path will be inferred from the pattern
