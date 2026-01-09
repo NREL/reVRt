@@ -1,7 +1,6 @@
 """Unit tests for point-to-feature routing CLI module"""
 
 import os
-import json
 import platform
 from pathlib import Path
 
@@ -13,7 +12,6 @@ import geopandas as gpd
 from shapely.geometry import LineString
 from rasterio.transform import xy
 
-from revrt._cli import main
 from revrt.warn import revrtWarning
 from revrt.routing.cli.point_to_feature import (
     PointToFeatureRouteDefinitionConverter,
@@ -291,7 +289,9 @@ def test_compute_lcp_routes_creates_geo_package_output(point_feature_dataset):
     and (platform.system() == "Windows"),
     reason="CLI does not work under tox env on windows",
 )
-def test_route_features_cli_executes(point_feature_dataset, cli_runner):
+def test_route_features_cli_executes(
+    run_gaps_cli_with_expected_file, point_feature_dataset
+):
     """Test point-to-feature routing CLI execution"""
     route_table = _build_route_table(
         point_feature_dataset["metadata"], [(1, 1)], [1]
@@ -310,24 +310,11 @@ def test_route_features_cli_executes(point_feature_dataset, cli_runner):
         "save_paths": False,
     }
 
-    config_fp = (
-        point_feature_dataset["tmp_path"] / "route_features_config.json"
+    out_fp = run_gaps_cli_with_expected_file(
+        "route-features", config, point_feature_dataset["tmp_path"]
     )
-    config_fp.write_text(json.dumps(config), encoding="utf-8")
 
-    result = cli_runner.invoke(main, ["route-features", "-c", str(config_fp)])
-    assert result.exit_code == 0, result.output
-
-    csv_outputs = [
-        fp
-        for fp in point_feature_dataset["tmp_path"].rglob(
-            "*_route_features.csv"
-        )
-        if fp != route_table_fp
-    ]
-    assert len(csv_outputs) == 1
-    csv_output = csv_outputs[0]
-    df = pd.read_csv(csv_output)
+    df = pd.read_csv(out_fp)
     df = df[df["route_id"] != "route_id"].reset_index(drop=True)
     assert len(df) == 1
 
