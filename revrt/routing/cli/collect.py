@@ -17,7 +17,7 @@ from revrt.exceptions import revrtValueError, revrtFileNotFoundError
 logger = logging.getLogger(__name__)
 
 
-def merge_output(
+def finalize_routes(
     collect_pattern,
     project_dir,
     chunk_size=10_000,
@@ -159,7 +159,7 @@ def _handle_chunk_file(out_dir, chunk_fp, purge_chunks):
 
 
 collect_routes_command = CLICommandFromFunction(
-    merge_output,
-    name="collect-routes",
+    finalize_routes,
+    name="finalize-routes",
     add_collect=False,
 )
