@@ -63,7 +63,7 @@ class _RoutePostProcessor:
             this to work. The valid options for this input are:
             ``"step"``, which computes length multipliers using a step
             function, ``"linear"``, which computes the length multiplier
-            using a linear interpolation between 0 amd 10 mile spur-line
+            using a linear interpolation between 0 and 10 mile spur-line
             lengths, or ``None``, which indicates no length multipliers
             should be applied. The default for reV runs prior to 2024
             was ``"step"``, after which it was updated to default to
