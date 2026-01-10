@@ -7,6 +7,7 @@ import warnings
 from pathlib import Path
 from functools import cached_property
 
+import numpy as np
 import pandas as pd
 from gaps.cli import CLICommandFromClass
 from gaps.utilities import resolve_path
@@ -32,6 +33,7 @@ class _RoutePostProcessor:
         project_dir,
         job_name,
         out_dir=None,
+        min_line_length=0,
         length_mult_kind=None,
         simplify_geo_tolerance=None,
         purge_chunks=False,
@@ -55,6 +57,10 @@ class _RoutePostProcessor:
             Directory where finalized routing file should be written.
             If not given, defaults to ``project_dir``.
             By default, ``None``.
+        min_line_length : int or float, default=0
+            Minimum line length in km. If a line length is below this
+            value, its length and cost are adjust to meet this minimum.
+            Costs are scaled up linearly. By default, ``0``.
         length_mult_kind : {None, "step", "linear"}, optional
             Type of length multiplier calculation to apply. Length
             multipliers can be used to increase the cost of short lines
@@ -95,6 +101,7 @@ class _RoutePostProcessor:
         self.project_dir = project_dir
         self.job_name = job_name
         self.out_dir = Path(out_dir or project_dir)
+        self.min_line_length = min_line_length
         self.length_mult_kind = length_mult_kind
         self.simplify_geo_tolerance = simplify_geo_tolerance
         self.purge_chunks = purge_chunks
@@ -200,6 +207,9 @@ class _RoutePostProcessor:
                 if self.length_mult_kind:
                     _apply_length_mult(df, self.length_mult_kind)
 
+                if self.min_line_length > 0:
+                    _apply_min_length_floor(df, self.min_line_length)
+
                 self.writer.save(df)
 
     def _collect_csv_files(self):
@@ -218,6 +228,9 @@ class _RoutePostProcessor:
                 if self.length_mult_kind:
                     _apply_length_mult(df, self.length_mult_kind)
 
+                if self.min_line_length > 0:
+                    _apply_min_length_floor(df, self.min_line_length)
+
                 self.writer.save(df)
 
     def _handle_chunk_file(self, chunk_fp):
@@ -229,6 +242,28 @@ class _RoutePostProcessor:
         else:
             logger.debug("Retaining chunk file: %s", chunk_fp)
             shutil.move(chunk_fp, self.chunk_dir / chunk_fp.name)
+
+
+def _apply_min_length_floor(features, min_line_length):
+    """Apply minimum line length floor to features"""
+    if "length_km" not in features.columns:
+        msg = "Cannot set minimum line length without 'length_km' column!"
+        raise revrtValueError(msg)
+
+    mask = features["length_km"] < min_line_length
+    if mask.any():
+        msg = (
+            "Route length will be increased to the minimum allowed length "
+            f"({min_line_length}) for {mask.sum()} route(s)"
+        )
+        logger.info(msg)
+        lengths = features.loc[mask, "length_km"]
+        cost_multipliers = np.ones(len(lengths))
+        cost_multipliers[lengths > 0] = min_line_length / lengths
+        features.loc[mask, "length_km"] = min_line_length
+        features.loc[mask, "cost"] *= cost_multipliers
+
+    return features
 
 
 def _apply_length_mult(features, kind):
