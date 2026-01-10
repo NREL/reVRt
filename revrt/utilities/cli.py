@@ -15,7 +15,11 @@ from shapely.geometry import Point, LineString
 from gaps.cli import CLICommandFromClass, CLICommandFromFunction
 
 from revrt.utilities.base import region_mapper
-from revrt.utilities.handlers import LayeredFile
+from revrt.utilities.handlers import (
+    IncrementalWriter,
+    LayeredFile,
+    chunked_read_gpkg,
+)
 from revrt.exceptions import revrtValueError
 from revrt.warn import revrtWarning
 
@@ -256,7 +260,12 @@ def map_ss_to_rr(
     substations.to_file(out_fpath, driver="GPKG", index=False)
 
 
-def ss_from_conn(connections_fpath, out_fpath, region_identifier_column=None):
+def ss_from_conn(
+    connections_fpath,
+    out_fpath,
+    region_identifier_column=None,
+    batch_size=10_000,
+):
     """Extract substations from connections table output by LCP.
 
     Substations extracted by this method can be used for reinforcement
@@ -290,13 +299,26 @@ def ss_from_conn(connections_fpath, out_fpath, region_identifier_column=None):
         Name of column in reinforcement regions GeoPackage containing a
         unique identifier for each region. If ``None``, no column is
         ported. By default, ``None``.
+    batch_size : int, default=10_000
+        Number of records to load into memory at once when extracting
+        substations. By default, ``10_000``.
+
+    Raises
+    ------
+    revrtValueError
+        If `batch_size` is not a positive integer or if the connections
+        file does not end with '.csv' or '.gpkg'.
     """
 
-    logger.info("Reading in connection info...")
+    if batch_size <= 0:
+        msg = "`batch_size` must be a positive integer"
+        raise revrtValueError(msg)
+
+    logger.info("Processing connection info in batches of %d", batch_size)
     if connections_fpath.endswith(".csv"):
-        connections = pd.read_csv(connections_fpath)
+        chunk_iter = pd.read_csv(connections_fpath, chunksize=batch_size)
     elif connections_fpath.endswith(".gpkg"):
-        connections = gpd.read_file(connections_fpath)
+        chunk_iter = chunked_read_gpkg(connections_fpath, batch_size)
     else:
         msg = (
             "Unknown file ending for features file (must be "
@@ -305,27 +327,56 @@ def ss_from_conn(connections_fpath, out_fpath, region_identifier_column=None):
         raise revrtValueError(msg)
 
     logger.info("Filtering out NaN's in connection info...")
-    connections = connections[~connections["poi_gid"].isna()]
-    connections = connections[~connections["poi_lat"].isna()]
-    connections = connections[~connections["poi_lon"].isna()]
-
-    logger.info("Extracting substation locations...")
     cols = ["poi_gid", "poi_lat", "poi_lon"]
     if region_identifier_column:
         cols.append(region_identifier_column)
-    poi_groups = connections.groupby(cols)
-    pois = [info for info, __ in poi_groups]
-    pois = pd.DataFrame(pois, columns=cols)
-
-    geo = [
-        Point(row["poi_lon"], row["poi_lat"]) for __, row in pois.iterrows()
-    ]
-    substations = gpd.GeoDataFrame(pois, crs="epsg:4326", geometry=geo)
-    substations["poi_gid"] = substations["poi_gid"].astype("Int64")
 
     out_fpath = Path(out_fpath).with_suffix(".gpkg")
-    logger.info("Writing substation output to %s", out_fpath)
-    substations.to_file(out_fpath, driver="GPKG", index=False)
+    if out_fpath.exists():
+        out_fpath.unlink()
+
+    seen_keys = set()
+    writer = IncrementalWriter(out_fpath)
+    logger.info("Extracting substation locations...")
+    for chunk in chunk_iter:
+        if chunk is None:
+            continue
+
+        subset = chunk.dropna(subset=["poi_gid", "poi_lat", "poi_lon"])
+
+        if subset.empty:
+            continue
+
+        subset = subset[cols].drop_duplicates()
+        records = _deduplicate_records_across_batches(subset, cols, seen_keys)
+        if not records:
+            continue
+
+        substations = _records_to_geo_df_with_points(records, cols)
+        logger.debug("Writing %d substation records", len(substations))
+        writer.save(substations)
+
+    logger.info("Substation extraction complete; output at %s", out_fpath)
+
+
+def _deduplicate_records_across_batches(subset, cols, seen_keys):
+    """Deduplicate records across batches based on specified columns"""
+    records = []
+    for record in subset.to_dict("records"):
+        key = tuple(record[col] for col in cols)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        records.append(record)
+    return records
+
+
+def _records_to_geo_df_with_points(records, cols):
+    """Convert list of records to GeoDataFrame with Point geometry"""
+    pois = pd.DataFrame.from_records(records, columns=cols)
+    pois["poi_gid"] = pois["poi_gid"].astype("Int64")
+    geometry = gpd.points_from_xy(pois["poi_lon"], pois["poi_lat"])
+    return gpd.GeoDataFrame(pois, crs="epsg:4326", geometry=geometry)
 
 
 def add_rr_to_nn(
