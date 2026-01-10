@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768002031806,
+  "lastUpdate": 1768004232849,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4703,6 +4703,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 366993205,
             "range": "± 9953546",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c17bf38fdf22839f45450ff9284b5a2dc354ef2e",
+          "message": "Refactor command (#204)\n\n* Minor re-shuffle\n\n* Update docstring\n\n* Update function and command name\n\n* Begin refactor\n\n* Start fixing tests\n\n* Add new helper fixtures\n\n* Fix tests\n\n* Fix bug\n\n* New test module\n\n* Remove duplicate tests\n\n* Remove unused fixtures\n\n* Split up tests\n\n* Rename file\n\n* Use new fixture\n\n* Use new fixture\n\n* More flexible function\n\n* Better error message\n\n* Use new fixture\n\n* Use new fixture\n\n* Use new fixture\n\n* Use new fixture\n\n* Use new fixture\n\n* Use new fixture\n\n* Use write text method\n\n* Remove duplicate test",
+          "timestamp": "2026-01-09T16:39:02-07:00",
+          "tree_id": "a06457a8d00b3726e29349c51a86e67cc607a345",
+          "url": "https://github.com/NREL/reVRt/commit/c17bf38fdf22839f45450ff9284b5a2dc354ef2e"
+        },
+        "date": 1768004231442,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74337915,
+            "range": "± 1672830",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 77601774,
+            "range": "± 1463396",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 99228511,
+            "range": "± 1894516",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 151237410,
+            "range": "± 2783131",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 624599177,
+            "range": "± 20141938",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 153260417,
+            "range": "± 3473852",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 158313393,
+            "range": "± 3667752",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 171455409,
+            "range": "± 1563208",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 213986929,
+            "range": "± 2689827",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 372744499,
+            "range": "± 16000350",
             "unit": "ns/iter"
           }
         ]
