@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768015896737,
+  "lastUpdate": 1768040592010,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4955,6 +4955,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 369292756,
             "range": "± 2603852",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ffced97444b6c752a71be78d2ea4fda488eeade2",
+          "message": "Memory management for command (#207)\n\n* `region_identifier_column` is now optional\n\n* Fix tests\n\n* `ss_from_conn` now streams data\n\n* Fix tests\n\n* Minor formatting",
+          "timestamp": "2026-01-10T03:12:08-07:00",
+          "tree_id": "f11679a5c5e8057bfb96b5349627dad013b56565",
+          "url": "https://github.com/NREL/reVRt/commit/ffced97444b6c752a71be78d2ea4fda488eeade2"
+        },
+        "date": 1768040590902,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 74773761,
+            "range": "± 1424896",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 73724220,
+            "range": "± 1554659",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 96159523,
+            "range": "± 2956817",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 146829963,
+            "range": "± 2573754",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 611004129,
+            "range": "± 21684004",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 152786071,
+            "range": "± 3089456",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 155942194,
+            "range": "± 1855648",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170723023,
+            "range": "± 3045824",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 212386979,
+            "range": "± 2907127",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 365218334,
+            "range": "± 7118026",
             "unit": "ns/iter"
           }
         ]
