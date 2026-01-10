@@ -256,7 +256,7 @@ def map_ss_to_rr(
     substations.to_file(out_fpath, driver="GPKG", index=False)
 
 
-def ss_from_conn(connections_fpath, region_identifier_column, out_fpath):
+def ss_from_conn(connections_fpath, out_fpath, region_identifier_column=None):
     """Extract substations from connections table output by LCP.
 
     Substations extracted by this method can be used for reinforcement
@@ -284,11 +284,12 @@ def ss_from_conn(connections_fpath, region_identifier_column, out_fpath):
     ----------
     connections_fpath : path-like
         Path to GeoPackage with substation and transmission features.
-    region_identifier_column : str
-        Name of column in reinforcement regions GeoPackage
-        containing a unique identifier for each region.
     out_fpath : path-like, optional
         Name for output GeoPackage file.
+    region_identifier_column : str, optional
+        Name of column in reinforcement regions GeoPackage containing a
+        unique identifier for each region. If ``None``, no column is
+        ported. By default, ``None``.
     """
 
     logger.info("Reading in connection info...")
@@ -309,7 +310,9 @@ def ss_from_conn(connections_fpath, region_identifier_column, out_fpath):
     connections = connections[~connections["poi_lon"].isna()]
 
     logger.info("Extracting substation locations...")
-    cols = ["poi_gid", "poi_lat", "poi_lon", region_identifier_column]
+    cols = ["poi_gid", "poi_lat", "poi_lon"]
+    if region_identifier_column:
+        cols.append(region_identifier_column)
     poi_groups = connections.groupby(cols)
     pois = [info for info, __ in poi_groups]
     pois = pd.DataFrame(pois, columns=cols)
