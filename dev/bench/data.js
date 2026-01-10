@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768010814483,
+  "lastUpdate": 1768015896737,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -4871,6 +4871,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 368891612,
             "range": "± 10782655",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4b35de099ed6cdda1602bf896ab66409f9051ef5",
+          "message": "Add min line length functionality (#206)\n\n* Add test for single file collection\n\n* Refactor command and add length mult\n\n* Add new constants\n\n* Use class\n\n* Add unit tests\n\n* Fix docstring\n\n* Add logic for min line length\n\n* Add unit tests\n\n* Remove bad file",
+          "timestamp": "2026-01-09T20:16:55-07:00",
+          "tree_id": "5ebb21d8c81a4de235bd78883c0e9f5617b65b94",
+          "url": "https://github.com/NREL/reVRt/commit/4b35de099ed6cdda1602bf896ab66409f9051ef5"
+        },
+        "date": 1768015896052,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 75613356,
+            "range": "± 1165957",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 74828250,
+            "range": "± 1080405",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 98855298,
+            "range": "± 1866666",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 149698897,
+            "range": "± 2085296",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 625669833,
+            "range": "± 16567828",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 152869148,
+            "range": "± 2674611",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 157209920,
+            "range": "± 2100260",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 170612605,
+            "range": "± 1836940",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 214125030,
+            "range": "± 1991236",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 369292756,
+            "range": "± 2603852",
             "unit": "ns/iter"
           }
         ]
