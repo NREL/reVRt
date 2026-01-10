@@ -5,187 +5,287 @@ import shutil
 import logging
 import warnings
 from pathlib import Path
+from functools import cached_property
 
 import pandas as pd
-from gaps.cli import CLICommandFromFunction
+from gaps.cli import CLICommandFromClass
 from gaps.utilities import resolve_path
 
-
+from revrt.constants import (
+    SHORT_CUTOFF,
+    MEDIUM_CUTOFF,
+    SHORT_MULT,
+    MEDIUM_MULT,
+)
 from revrt.utilities import IncrementalWriter, chunked_read_gpkg
 from revrt.exceptions import revrtValueError, revrtFileNotFoundError
 
 logger = logging.getLogger(__name__)
 
 
-def finalize_routes(
-    collect_pattern,
-    project_dir,
-    out_dir,
-    job_name,
-    chunk_size=10_000,
-    simplify_geo_tolerance=None,
-    purge_chunks=False,
-):
-    """Merge routing output files matching a pattern into a single file
+class _RoutePostProcessor:
+    """Class to finalize routing outputs"""
 
-    Parameters
-    ----------
-    collect_pattern : str
-        Unix-style ``/filepath/pattern*.gpkg`` representing the files to
-        be collected into a single output file. If no output file path
-        is specified (i.e. ``out_fp=None``), the output file path will
-        be inferred from the  pattern itself (specifically, the wildcard
-        will be removed and the result will be the output file path).
-    project_dir : path-like
-        Path to project directory. This path is used to resolve the
-        out filepath input from the user.
-    out_dir : path-like
-        Directory where finalized routing file should be written.
-    job_name : str
-        Label used to name the generated output file.
-    chunk_size : int, default=10_000
-        Number of features to read into memory at a time when merging
-        files. This helps limit memory usage when merging large files.
-        By default, ``10_000``.
-    simplify_geo_tolerance : float, optional
-        Option to simplify geometries before saving to output. Note that
-        this changes the path geometry and therefore create a mismatch
-        between the geometry and any associated attributes (e.g.,
-        length, cost, etc). This also means the paths should not be used
-        for characterization. If provided, this value will be used as
-        the tolerance parameter in the `geopandas.GeoSeries.simplify`
-        method. Specifically, all parts of a simplified geometry will
-        be no more than `tolerance` distance from the original. This
-        value has the same units as the coordinate reference system of
-        the GeoSeries. Only works for GeoPackage outputs
-        (errors otherwise). By default, ``None``.
-    out_fp : path-like, optional
-        Path to output file where the merged results should be saved. If
-        ``None``, the output file path will be inferred from the pattern
-        itself (specifically, the wildcard will be removed and the
-        result will be the output file path). By default, ``None``.
-    purge_chunks : bool, default=False
-        Option to delete single-node input files after the collection
-        step. By default, ``False``.
-
-    Raises
-    ------
-    revrtFileNotFoundError
-        Raised when no files are found matching the provided pattern.
-    revrtValueError
-        Raised when multiple file types are found matching the pattern.
-    """
-    files_to_collect = _files_to_collect(collect_pattern, project_dir)
-
-    file_suffix = _out_file_suffix(files_to_collect)
-    out_fp = Path(out_dir) / f"{job_name}{file_suffix}"
-    logger.info("Collecting routing outputs to: %s", out_fp)
-
-    if simplify_geo_tolerance:
-        logger.info(
-            "Simplifying geometries using a tolerance of %r",
-            simplify_geo_tolerance,
-        )
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        if file_suffix == ".gpkg":
-            _collect_geo_files(
-                files_to_collect,
-                out_fp,
-                simplify_geo_tolerance,
-                chunk_size,
-                purge_chunks,
-            )
-        else:
-            _collect_csv_files(
-                files_to_collect, out_fp, chunk_size, purge_chunks
-            )
-
-    return str(out_fp)
-
-
-def _files_to_collect(collect_pattern, project_dir):
-    """Get list of files to collect based on pattern"""
-    collect_pattern = resolve_path(
-        collect_pattern
-        if collect_pattern.startswith("/")
-        else f"./{collect_pattern}",
+    def __init__(
+        self,
+        collect_pattern,
         project_dir,
-    )
+        job_name,
+        out_dir=None,
+        length_mult_kind=None,
+        simplify_geo_tolerance=None,
+        purge_chunks=False,
+        chunk_size=10_000,
+    ):
+        """
 
-    files_to_collect = list(glob.glob(str(collect_pattern)))  # noqa
-    if not files_to_collect:
-        msg = f"No files found using collect pattern: {collect_pattern}"
-        raise revrtFileNotFoundError(msg)
+        Parameters
+        ----------
+        collect_pattern : str
+            Unix-style ``/filepath/pattern*.gpkg`` representing the
+            file(s) to be collected into a single output file. Can also
+            just be a path to a single file if data is already in one
+            place.
+        project_dir : path-like
+            Path to project directory. This path is used to resolve the
+            out filepath input from the user.
+        job_name : str
+            Label used to name the generated output file.
+        out_dir : path-like, optional
+            Directory where finalized routing file should be written.
+            If not given, defaults to ``project_dir``.
+            By default, ``None``.
+        length_mult_kind : {None, "step", "linear"}, optional
+            Type of length multiplier calculation to apply. Length
+            multipliers can be used to increase the cost of short lines
+            (similar to an economies-of-scale adjustment). Note that
+            your input files must contain a ``length_km`` column for
+            this to work. The valid options for this input are:
+            ``"step"``, which computes length multipliers using a step
+            function, ``"linear"``, which computes the length multiplier
+            using a linear interpolation between 0 amd 10 mile spur-line
+            lengths, or ``None``, which indicates no length multipliers
+            should be applied. The default for reV runs prior to 2024
+            was ``"step"``, after which it was updated to default to
+            ``"linear"``. Length multiplier data source:
+            https://www.wecc.org/Administrative/TEPPC_TransCapCostCalculator_E3_2019_Update.xlsx
+            By default, ``None``.
+        simplify_geo_tolerance : float, optional
+            Option to simplify geometries before saving to output. Note
+            that this changes the path geometry and therefore create a
+            mismatch between the geometry and any associated attributes
+            (e.g., length, cost, etc). This also means the paths should
+            not be used for characterization. If provided, this value
+            will be used as the tolerance parameter in the
+            `geopandas.GeoSeries.simplify` method. Specifically, all
+            parts of a simplified geometry will be no more than
+            `tolerance` distance from the original. This value has the
+            same units as the coordinate reference system of the
+            GeoSeries. Only works for GeoPackage outputs (errors
+            otherwise). By default, ``None``.
+        purge_chunks : bool, default=False
+            Option to delete single-node input files after the
+            collection step. By default, ``False``.
+        chunk_size : int, default=10_000
+            Number of features to read into memory at a time when
+            merging files. This helps limit memory usage when merging
+            large files. By default, ``10_000``.
+        """
+        self.collect_pattern = collect_pattern
+        self.project_dir = project_dir
+        self.job_name = job_name
+        self.out_dir = Path(out_dir or project_dir)
+        self.length_mult_kind = length_mult_kind
+        self.simplify_geo_tolerance = simplify_geo_tolerance
+        self.purge_chunks = purge_chunks
+        self.chunk_size = chunk_size
 
-    return files_to_collect
+        if simplify_geo_tolerance:
+            logger.info(
+                "Simplifying geometries using a tolerance of %r",
+                simplify_geo_tolerance,
+            )
 
-
-def _out_file_suffix(files_to_collect):
-    """Get the file suffix of the output file based on input files"""
-    file_types = {Path(fp).suffix.lower() for fp in files_to_collect}
-    if len(file_types) > 1:
-        msg = (
-            "Multiple file types found to collect! All files must be of "
-            f"the same type. Found: {file_types}"
+    @cached_property
+    def files_to_collect(self):
+        """list: List of files to collect"""
+        collect_pattern = resolve_path(
+            self.collect_pattern
+            if self.collect_pattern.startswith("/")
+            else f"./{self.collect_pattern}",
+            self.project_dir,
         )
+
+        files_to_collect = list(glob.glob(str(collect_pattern)))  # noqa
+        if not files_to_collect:
+            msg = f"No files found using collect pattern: {collect_pattern}"
+            raise revrtFileNotFoundError(msg)
+
+        return files_to_collect
+
+    @cached_property
+    def file_suffix(self):
+        """str: Output file suffix"""
+        file_types = {Path(fp).suffix.lower() for fp in self.files_to_collect}
+        if len(file_types) > 1:
+            msg = (
+                "Multiple file types found to collect! All files must be of "
+                f"the same type. Found: {file_types}"
+            )
+            raise revrtValueError(msg)
+
+        return file_types.pop()
+
+    @cached_property
+    def out_fp(self):
+        """pathlib.Path: Output filepath"""
+        return self.out_dir / f"{self.job_name}{self.file_suffix}"
+
+    @cached_property
+    def chunk_dir(self):
+        """pathlib.Path: Directory for chunk files"""
+        return self.out_dir / "chunk_files"
+
+    @cached_property
+    def writer(self):
+        """revrt.utilities.handlers.IncrementalWriter: Output writer"""
+        return IncrementalWriter(self.out_fp)
+
+    def _next_file_to_process(self):
+        """Generator yielding files to process"""
+        num_files = len(self.files_to_collect)
+        if not self.purge_chunks:
+            logger.debug("Creating chunk dir: %s", self.chunk_dir)
+            self.chunk_dir.mkdir(parents=True, exist_ok=True)
+
+        for i, data_fp in enumerate(self.files_to_collect, start=1):
+            logger.info("Loading %s (%i/%i)", data_fp, i, num_files)
+            logger.debug(
+                "\t- Processing file in chunks of %d", self.chunk_size
+            )
+            yield data_fp
+            self._handle_chunk_file(data_fp)
+
+    def process(self):
+        """Merge and post-process routes files into a single file
+
+        Raises
+        ------
+        revrtFileNotFoundError
+            Raised when no files are found matching the provided
+            pattern.
+        revrtValueError
+            Raised when multiple file types are found matching the
+            pattern or if the length multiplier kind is invalid.
+        """
+        logger.info("Collecting routing outputs to: %s", self.out_fp)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            if self.file_suffix == ".gpkg":
+                self._collect_geo_files()
+            else:
+                self._collect_csv_files()
+
+        return str(self.out_fp)
+
+    def _collect_geo_files(self):
+        """Collect GeoPackage files into a single output file"""
+        for data_fp in self._next_file_to_process():
+            for df in chunked_read_gpkg(data_fp, self.chunk_size):
+                if self.simplify_geo_tolerance:
+                    df.geometry = df.geometry.simplify(
+                        self.simplify_geo_tolerance
+                    )
+
+                if self.length_mult_kind:
+                    _apply_length_mult(df, self.length_mult_kind)
+
+                self.writer.save(df)
+
+    def _collect_csv_files(self):
+        """Collect CSV files into a single output file"""
+        for data_fp in self._next_file_to_process():
+            for chunk_idx, df in enumerate(
+                pd.read_csv(
+                    data_fp,
+                    chunksize=self.chunk_size,  # cspell:disable-line
+                )
+            ):
+                logger.debug("\t\t- Processing CSV chunk %d", chunk_idx)
+                if len(df) == 0:
+                    continue
+
+                if self.length_mult_kind:
+                    _apply_length_mult(df, self.length_mult_kind)
+
+                self.writer.save(df)
+
+    def _handle_chunk_file(self, chunk_fp):
+        """Handle chunk file after collection step"""
+        chunk_fp = Path(chunk_fp)
+        if self.purge_chunks:
+            logger.info("Purging chunk file: %s", chunk_fp)
+            chunk_fp.unlink()
+        else:
+            logger.debug("Retaining chunk file: %s", chunk_fp)
+            shutil.move(chunk_fp, self.chunk_dir / chunk_fp.name)
+
+
+def _apply_length_mult(features, kind):
+    """Apply length multipliers to features based on distance"""
+    if "length_km" not in features.columns:
+        msg = "Cannot compute length multipliers without 'length_km' column!"
         raise revrtValueError(msg)
 
-    return file_types.pop()
+    features = _compute_length_mult(features, kind)
+    features["raw_cost"] = features["cost"].copy()
+    features["cost"] *= features["length_mult"]
+    return features
 
 
-def _collect_geo_files(
-    files_to_collect, out_fp, simplify_geo_tolerance, chunk_size, purge_chunks
-):
-    """Collect GeoPackage files into a single output file"""
-    writer = IncrementalWriter(out_fp)
-    for i, data_fp in enumerate(files_to_collect, start=1):
-        logger.info("Loading %s (%i/%i)", data_fp, i, len(files_to_collect))
-        for df in chunked_read_gpkg(data_fp, chunk_size):
-            if simplify_geo_tolerance:
-                df.geometry = df.geometry.simplify(simplify_geo_tolerance)
+def _compute_length_mult(features, kind="linear"):
+    """Compute length multipliers based on user input"""
+    if kind.casefold() == "step":
+        return _compute_step_wise_lm(features)
 
-            writer.save(df)
+    if kind.casefold() == "linear":
+        return _compute_linear_lm(features)
 
-        _handle_chunk_file(Path(out_fp).parent, data_fp, purge_chunks)
+    msg = f"Unknown length computation kind: {kind}"
+    raise revrtValueError(msg)
 
 
-def _collect_csv_files(files_to_collect, out_fp, chunk_size, purge_chunks):
-    """Collect CSV files into a single output file"""
-    writer = IncrementalWriter(out_fp)
-    for i, data_fp in enumerate(files_to_collect, start=1):
-        logger.info("Loading %s (%i/%i)", data_fp, i, len(files_to_collect))
-        logger.debug(
-            "\t- Processing CSV in chunks of %d",
-            chunk_size,
-        )
-        for chunk_idx, df in enumerate(
-            pd.read_csv(data_fp, chunksize=chunk_size)  # cspell:disable-line
-        ):
-            logger.debug("\t\t- Processing CSV chunk %d", chunk_idx)
-            if len(df) == 0:
-                continue
-            writer.save(df)
+def _compute_step_wise_lm(features):
+    """Compute length multipliers using step function"""
+    features["length_mult"] = 1.0
 
-        _handle_chunk_file(Path(out_fp).parent, data_fp, purge_chunks)
+    # Handle medium cutoff **FIRST**
+    mask = features["length_km"] <= MEDIUM_CUTOFF
+    features.loc[mask, "length_mult"] = MEDIUM_MULT
+
+    # Short cutoff is second so it can overwrite medium where applicable
+    mask = features["length_km"] < SHORT_CUTOFF
+    features.loc[mask, "length_mult"] = SHORT_MULT
+    return features
 
 
-def _handle_chunk_file(out_dir, chunk_fp, purge_chunks):
-    """Handle chunk file after collection step"""
-    chunk_fp = Path(chunk_fp)
-    if purge_chunks:
-        logger.info("Purging chunk file: %s", chunk_fp)
-        chunk_fp.unlink()
-    else:
-        logger.debug("Retaining chunk file: %s", chunk_fp)
-        new_dir = out_dir / "chunk_files"
-        new_dir.mkdir(parents=True, exist_ok=True)
-        shutil.move(chunk_fp, new_dir / chunk_fp.name)
+def _compute_linear_lm(features):
+    """Compute length multipliers using linear interpolation"""
+
+    features["length_mult"] = 1.0
+    slope = (1 - SHORT_MULT) / (MEDIUM_CUTOFF - SHORT_CUTOFF / 2)
+
+    mask = features["length_km"] <= MEDIUM_CUTOFF
+    features.loc[mask, "length_mult"] = (
+        slope * (features.loc[mask, "length_km"] - MEDIUM_CUTOFF) + 1
+    )
+
+    return features
 
 
-finalize_routes_command = CLICommandFromFunction(
-    finalize_routes,
+finalize_routes_command = CLICommandFromClass(
+    init=_RoutePostProcessor,
+    method="process",
     name="finalize-routes",
     add_collect=False,
 )
