@@ -9,21 +9,21 @@ import pytest
 import geopandas as gpd
 from shapely.geometry import LineString
 
-from revrt.routing.cli.finalize import finalize_routes
+from revrt.routing.cli.finalize import _RoutePostProcessor
 from revrt.exceptions import revrtFileNotFoundError
 
 
 def test_merge_routes_no_files(tmp_path):
-    """finalize_routes should raise when no files match collect pattern"""
+    """_RoutePostProcessor should raise when no files match collect pattern"""
     with pytest.raises(
         revrtFileNotFoundError, match="No files found using collect pattern:"
     ):
-        finalize_routes(
+        _RoutePostProcessor(
             collect_pattern="dne*.csv",
             project_dir=tmp_path,
             out_dir=tmp_path,
             job_name="test",
-        )
+        ).process()
 
 
 @pytest.mark.skipif(
