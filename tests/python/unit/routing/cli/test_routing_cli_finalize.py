@@ -225,6 +225,47 @@ def test_cli_finalize_single_csv(run_gaps_cli_with_expected_file, tmp_path):
     )
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_finalize_min_length(run_gaps_cli_with_expected_file, tmp_path):
+    """CLI finalize should enforce minimum lengths and rescale cost"""
+
+    chunk_dir = tmp_path / "min_length_cli"
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame(
+        {
+            "route_id": ["very_short", "on_threshold"],
+            "start_row": [0, 1],
+            "start_col": [0, 1],
+            "end_row": [2, 3],
+            "end_col": [2, 3],
+            "length_km": [0.5, 2.0],
+            "cost": [5.0, 30.0],
+        }
+    ).to_csv(chunk_dir / "routes_part_0.csv", index=False)
+
+    config = {
+        "collect_pattern": "min_length_cli/routes_part_*.csv",
+        "chunk_size": 1,
+        "min_line_length": 2.0,
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    merged_df = pd.read_csv(merged_fp).set_index("route_id").sort_index()
+
+    assert merged_df.loc["very_short", "length_km"] == pytest.approx(2.0)
+    assert merged_df.loc["very_short", "cost"] == pytest.approx(20.0)
+    assert merged_df.loc["on_threshold", "length_km"] == pytest.approx(2.0)
+    assert merged_df.loc["on_threshold", "cost"] == pytest.approx(30.0)
+
+
 def test_process_csv_applies_linear_length_multiplier(tmp_path):
     """Linear length multipliers should adjust cost and add raw_cost"""
 
@@ -338,6 +379,45 @@ def test_process_csv_applies_step_length_multiplier(tmp_path):
         )
 
 
+def test_process_csv_enforces_min_length(tmp_path):
+    """Minimum line length floor should adjust length and scale cost"""
+
+    chunk_dir = tmp_path / "min_length_csv"
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+
+    original = pd.DataFrame(
+        {
+            "route_id": ["short", "long"],
+            "length_km": [1.5, 5.5],
+            "cost": [100.0, 200.0],
+        }
+    )
+
+    original.to_csv(chunk_dir / "routes.csv", index=False)
+
+    processor = _RoutePostProcessor(
+        collect_pattern="min_length_csv/routes.csv",
+        project_dir=tmp_path,
+        job_name="min_length",
+        min_line_length=3.0,
+        chunk_size=2,
+    )
+
+    out_fp = Path(processor.process())
+
+    processed = pd.read_csv(out_fp).set_index("route_id").sort_index()
+    original = original.set_index("route_id").sort_index()
+
+    assert processed.loc["short", "length_km"] == pytest.approx(3.0)
+    assert processed.loc["short", "cost"] == pytest.approx(200.0)
+    assert processed.loc["long", "length_km"] == pytest.approx(
+        original.loc["long", "length_km"]
+    )
+    assert processed.loc["long", "cost"] == pytest.approx(
+        original.loc["long", "cost"]
+    )
+
+
 def test_collect_geo_files_apply_length_multiplier(tmp_path):
     """GeoPackage collection should apply length multipliers"""
 
@@ -393,6 +473,44 @@ def test_collect_geo_files_apply_length_multiplier(tmp_path):
         )
 
 
+def test_collect_geo_files_enforces_min_length(tmp_path):
+    """GeoPackage collection should enforce minimum segment lengths"""
+
+    chunk_dir = tmp_path / "geo_min_length"
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+
+    gdf = gpd.GeoDataFrame(
+        {
+            "route_id": ["short_geo", "long_geo"],
+            "length_km": [2.0, 4.0],
+            "cost": [10.0, 20.0],
+        },
+        geometry=[
+            LineString([(0, 0), (0.02, 0.01)]),
+            LineString([(1, 1), (1.04, 1.03)]),
+        ],
+        crs="EPSG:4326",
+    )
+
+    gdf.to_file(chunk_dir / "segment.gpkg", driver="GPKG")
+
+    processor = _RoutePostProcessor(
+        collect_pattern="geo_min_length/*.gpkg",
+        project_dir=tmp_path,
+        job_name="geo_min",
+        min_line_length=5.0,
+        chunk_size=1,
+    )
+
+    out_fp = Path(processor.process())
+    processed = gpd.read_file(out_fp).set_index("route_id").sort_index()
+
+    assert processed.loc["short_geo", "length_km"] == pytest.approx(5.0)
+    assert processed.loc["short_geo", "cost"] == pytest.approx(25.0)
+    assert processed.loc["long_geo", "length_km"] == pytest.approx(5.0)
+    assert processed.loc["long_geo", "cost"] == pytest.approx(25.0)
+
+
 def test_process_csv_requires_length_column(tmp_path):
     """Length multipliers should error if length_km is missing"""
 
@@ -414,6 +532,28 @@ def test_process_csv_requires_length_column(tmp_path):
             project_dir=tmp_path,
             job_name="invalid",
             length_mult_kind="linear",
+        ).process()
+
+
+def test_process_csv_requires_length_for_min_floor(tmp_path):
+    """Minimum line length enforcement should require length_km column"""
+
+    chunk_dir = tmp_path / "min_length_missing"
+    chunk_dir.mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame(
+        {
+            "route_id": ["no_length"],
+            "cost": [10.0],
+        }
+    ).to_csv(chunk_dir / "routes.csv", index=False)
+
+    with pytest.raises(revrtValueError, match="length_km"):
+        _RoutePostProcessor(
+            collect_pattern="min_length_missing/routes.csv",
+            project_dir=tmp_path,
+            job_name="invalid_min_length",
+            min_line_length=1.0,
         ).process()
 
 
