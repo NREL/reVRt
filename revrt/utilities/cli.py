@@ -343,7 +343,6 @@ def ss_from_conn(
             continue
 
         subset = chunk.dropna(subset=["poi_gid", "poi_lat", "poi_lon"])
-
         if subset.empty:
             continue
 
