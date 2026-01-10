@@ -279,7 +279,7 @@ def test_ss_from_conn_csv(tmp_path):
     ).to_csv(csv_path, index=False)
 
     out_file = tmp_path / "out.gpkg"
-    cli.ss_from_conn(str(csv_path), "region_id", str(out_file))
+    cli.ss_from_conn(str(csv_path), str(out_file), "region_id")
 
     frame = gpd.read_file(out_file)
     assert len(frame) == 1
@@ -304,7 +304,7 @@ def test_ss_from_conn_gpkg(tmp_path):
     out_file = tmp_path / "out.gpkg"
     connections.to_file(connections_path, driver="GPKG")
 
-    cli.ss_from_conn(str(connections_path), "region_id", str(out_file))
+    cli.ss_from_conn(str(connections_path), str(out_file), "region_id")
 
     frame = gpd.read_file(out_file)
     assert len(frame) == 1
@@ -313,8 +313,8 @@ def test_ss_from_conn_gpkg(tmp_path):
 def test_ss_from_conn_invalid_extension():
     """Ensure invalid connection file extensions raise error"""
 
-    with pytest.raises(revrtValueError):
-        cli.ss_from_conn("connections.txt", "region_id", "out.gpkg")
+    with pytest.raises(revrtValueError, match="Unknown file ending"):
+        cli.ss_from_conn("connections.txt", "out.gpkg", "region_id")
 
 
 def test_add_rr_to_nn_with_zarr_template(tmp_path):
@@ -690,10 +690,7 @@ def test_cli_ss_from_conn_command(run_gaps_cli_with_expected_file, tmp_path):
         }
     ).to_csv(csv_path, index=False)
 
-    config = {
-        "connections_fpath": str(csv_path),
-        "region_identifier_column": "region_id",
-    }
+    config = {"connections_fpath": str(csv_path)}
 
     out_path = run_gaps_cli_with_expected_file(
         "ss-from-conn", config, tmp_path
