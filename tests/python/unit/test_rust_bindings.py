@@ -35,7 +35,9 @@ def test_find_paths_basic_single_route(tmp_path):
     test_cost_fp = tmp_path / "test.zarr"
     ds = xr.Dataset({"test_costs": da})
     ds["test_costs"].encoding = {"fill_value": 1_000.0, "_FillValue": 1_000.0}
-    ds.chunk({"x": 4, "y": 3}).to_zarr(test_cost_fp, mode="w", zarr_format=3)
+    ds.chunk({"x": 4, "y": 3}).to_zarr(
+        test_cost_fp, mode="w", zarr_format=3, consolidated=False
+    )
 
     cost_definition = {
         "cost_layers": [{"layer_name": "test_costs"}],
@@ -82,7 +84,9 @@ def test_route_finder_basic_single_route(tmp_path):
     test_cost_fp = tmp_path / "test.zarr"
     ds = xr.Dataset({"test_costs": da})
     ds["test_costs"].encoding = {"fill_value": 1_000.0, "_FillValue": 1_000.0}
-    ds.chunk({"x": 4, "y": 3}).to_zarr(test_cost_fp, mode="w", zarr_format=3)
+    ds.chunk({"x": 4, "y": 3}).to_zarr(
+        test_cost_fp, mode="w", zarr_format=3, consolidated=False
+    )
 
     cost_definition = {"cost_layers": [{"layer_name": "test_costs"}]}
     routing_results = RouteFinder(
