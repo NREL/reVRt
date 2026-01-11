@@ -5,7 +5,6 @@ import json
 import random
 import shutil
 import platform
-import traceback
 from pathlib import Path
 
 import pytest
@@ -15,7 +14,6 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 
-from revrt._cli import main
 from revrt.utilities import LayeredFile, features_to_route_table
 from revrt.costs.config import TransmissionConfig, parse_cap_class
 from revrt.routing.base import BatchRouteProcessor, RoutingScenario
@@ -110,8 +108,6 @@ def _run_cli(
     route_table.to_csv(routes_fp, index=False)
 
     config = {
-        "log_directory": str(tmp_path),
-        "execution_control": {"option": "local"},
         "transmission_config": {
             "row_width": str(row_config_path),
             "voltage_polarity_mult": str(polarity_config_path),
@@ -122,18 +118,14 @@ def _run_cli(
         "cost_layers": [cost_layer_config],
         "friction_layers": [DEFAULT_BARRIER_CONFIG],
     }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
 
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
+    out_fp = cli_command_run_func("route-points", config, tmp_path)
 
     if save_paths:
-        test = gpd.read_file(tmp_path / f"{tmp_path.stem}_route_points.gpkg")
+        test = gpd.read_file(out_fp)
         assert test.geometry is not None
     else:
-        test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+        test = pd.read_csv(out_fp)
     return test, truth
 
 
@@ -363,7 +355,7 @@ def test_cli(
     tmp_path,
     test_routing_data_dir,
     save_paths,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test reVX invariant cost layer routing against known outputs"""
 
@@ -376,7 +368,7 @@ def test_cli(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
         save_paths=save_paths,
     )
 
@@ -393,7 +385,7 @@ def test_config_given_but_no_mult_in_layers(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test Least cost path with transmission config but no volt in points"""
 
@@ -424,7 +416,7 @@ def test_apply_row_mult(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying row multiplier"""
 
@@ -442,7 +434,7 @@ def test_apply_row_mult(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     test["cost"] /= 2
 
@@ -459,7 +451,7 @@ def test_apply_polarity_mult(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying polarity multiplier"""
 
@@ -477,7 +469,7 @@ def test_apply_polarity_mult(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     test["cost"] /= 3 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
@@ -512,7 +504,7 @@ def test_apply_row_and_polarity_mult(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     test["cost"] /= 6 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
@@ -529,7 +521,7 @@ def test_apply_row_and_polarity_with_existing_mult(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying both row and polarity multiplier when mult exists"""
 
@@ -601,7 +593,7 @@ def test_apply_multipliers_by_route(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     divisors = []
     for __, row in test.iterrows():
