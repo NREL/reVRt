@@ -46,7 +46,7 @@ class BaseLayerCreator(ABC):
     @property
     def cell_size(self):
         """float: Size of cell in layer file"""
-        return abs(self._io_handler.profile["transform"].a)
+        return self._io_handler.cell_size
 
     @cached_property
     def output_tiff_dir(self):

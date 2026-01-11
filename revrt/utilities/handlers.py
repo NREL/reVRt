@@ -187,6 +187,11 @@ class LayeredFile:
         return self.profile["height"], self.profile["width"]
 
     @property
+    def cell_size(self):
+        """float: Size of cell in layer file"""
+        return abs(self.profile["transform"].a)
+
+    @property
     def layers(self):
         """list: All available layers in file"""
         if not self.fp.exists():
