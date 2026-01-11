@@ -820,6 +820,138 @@ def test_route_post_processor_merges_features_gpkg(
     assert (chunk_files_dir / chunk_fp.name).exists()
 
 
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_finalize_routes_merges_features_csv(
+    run_gaps_cli_with_expected_file,
+    tmp_path,
+    sample_cost_surface,
+    transmission_features,
+):
+    """CLI finalize should merge features for CSV chunks"""
+
+    chunk_dir = tmp_path / "csv_routes"
+    chunk_dir.mkdir()
+
+    pd.DataFrame(
+        {
+            "route_id": ["dup_match", "single_match", "no_feature"],
+            "end_row": [1, 2, 0],
+            "end_col": [2, 2, 3],
+            "length_km": [1.0, 2.0, 3.0],
+            "cost": [10.0, 20.0, 30.0],
+        }
+    ).to_csv(chunk_dir / "routes_part_0.csv", index=False)
+
+    config = {
+        "collect_pattern": "csv_routes/routes_part_*.csv",
+        "chunk_size": 1,
+        "purge_chunks": True,
+        "cost_fpath": str(sample_cost_surface["cost_fp"]),
+        "features_fpath": str(transmission_features["fp"]),
+        "transmission_feature_id_col": "trans_gid",
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    merged = pd.read_csv(merged_fp).set_index("route_id")
+
+    assert (
+        merged.loc["dup_match", "trans_gid"]
+        == transmission_features["matches"][(1, 2)]
+    )
+    assert (
+        merged.loc["single_match", "trans_gid"]
+        == transmission_features["matches"][(2, 2)]
+    )
+
+    missing_value = merged.loc["no_feature", "trans_gid"]
+    assert pd.isna(missing_value)
+    assert (None if pd.isna(missing_value) else missing_value) is None
+    assert not (chunk_dir / "routes_part_0.csv").exists()
+
+
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_cli_finalize_routes_merges_features_gpkg(
+    run_gaps_cli_with_expected_file,
+    tmp_path,
+    sample_cost_surface,
+    transmission_features,
+):
+    """CLI finalize should merge features for GeoPackage chunks"""
+
+    transform = sample_cost_surface["transform"]
+
+    start = xy(transform, 0, 0)
+    first_target = xy(transform, 1, 2)
+    second_target = xy(transform, 2, 2)
+    missing_target = xy(transform, 0, 3)
+
+    chunk_dir = tmp_path / "gpkg_routes"
+    chunk_dir.mkdir()
+
+    routes = gpd.GeoDataFrame(
+        {
+            "route_id": ["dup_match", "single_match", "no_feature"],
+            "start_row": [0, 0, 0],
+            "start_col": [0, 0, 0],
+            "end_row": [1, 2, 0],
+            "end_col": [2, 2, 3],
+            "length_km": [1.0, 2.0, 3.0],
+            "cost": [10.0, 20.0, 30.0],
+        },
+        geometry=[
+            LineString([start, first_target]),
+            LineString([start, second_target]),
+            LineString([start, missing_target]),
+        ],
+        crs=sample_cost_surface["crs"],
+    )
+
+    chunk_fp = chunk_dir / "routes_chunk.gpkg"
+    routes.to_file(chunk_fp, driver="GPKG")
+
+    config = {
+        "collect_pattern": "gpkg_routes/*.gpkg",
+        "chunk_size": 1,
+        "cost_fpath": str(sample_cost_surface["cost_fp"]),
+        "features_fpath": str(transmission_features["fp"]),
+        "transmission_feature_id_col": "trans_gid",
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    merged = gpd.read_file(merged_fp).set_index("route_id")
+
+    assert (
+        merged.loc["dup_match", "trans_gid"]
+        == transmission_features["matches"][(1, 2)]
+    )
+    assert (
+        merged.loc["single_match", "trans_gid"]
+        == transmission_features["matches"][(2, 2)]
+    )
+
+    missing_value = merged.loc["no_feature", "trans_gid"]
+    assert pd.isna(missing_value)
+    assert (None if pd.isna(missing_value) else missing_value) is None
+
+    chunk_files_dir = tmp_path / "chunk_files"
+    assert chunk_files_dir.exists()
+    assert (chunk_files_dir / chunk_fp.name).exists()
+
+
 def test_route_post_processor_requires_features_inputs(
     tmp_path, sample_cost_surface
 ):
