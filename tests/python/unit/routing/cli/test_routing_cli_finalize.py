@@ -16,16 +16,16 @@ from revrt.constants import (
     SHORT_MULT,
     MEDIUM_MULT,
 )
-from revrt.routing.cli.finalize import _RoutePostProcessor
+from revrt.routing.cli.finalize import RoutePostProcessor
 from revrt.exceptions import revrtFileNotFoundError, revrtValueError
 
 
 def test_merge_routes_no_files(tmp_path):
-    """_RoutePostProcessor should raise when no files match collect pattern"""
+    """RoutePostProcessor should raise when no files match collect pattern"""
     with pytest.raises(
         revrtFileNotFoundError, match="No files found using collect pattern:"
     ):
-        _RoutePostProcessor(
+        RoutePostProcessor(
             collect_pattern="dne*.csv",
             project_dir=tmp_path,
             out_dir=tmp_path,
@@ -294,7 +294,7 @@ def test_process_csv_applies_linear_length_multiplier(tmp_path):
 
     original.to_csv(chunk_dir / "routes.csv", index=False)
 
-    processor = _RoutePostProcessor(
+    processor = RoutePostProcessor(
         collect_pattern="segments/routes.csv",
         project_dir=tmp_path,
         job_name="linear",
@@ -349,7 +349,7 @@ def test_process_csv_applies_step_length_multiplier(tmp_path):
 
     original.to_csv(chunk_dir / "routes.csv", index=False)
 
-    processor = _RoutePostProcessor(
+    processor = RoutePostProcessor(
         collect_pattern="step_segments/routes.csv",
         project_dir=tmp_path,
         job_name="step",
@@ -395,7 +395,7 @@ def test_process_csv_enforces_min_length(tmp_path):
 
     original.to_csv(chunk_dir / "routes.csv", index=False)
 
-    processor = _RoutePostProcessor(
+    processor = RoutePostProcessor(
         collect_pattern="min_length_csv/routes.csv",
         project_dir=tmp_path,
         job_name="min_length",
@@ -444,7 +444,7 @@ def test_collect_geo_files_apply_length_multiplier(tmp_path):
     chunk_fp = chunk_dir / "segment.gpkg"
     gdf.to_file(chunk_fp, driver="GPKG")
 
-    processor = _RoutePostProcessor(
+    processor = RoutePostProcessor(
         collect_pattern="geo_segments/*.gpkg",
         project_dir=tmp_path,
         job_name="geo_merged",
@@ -494,7 +494,7 @@ def test_collect_geo_files_enforces_min_length(tmp_path):
 
     gdf.to_file(chunk_dir / "segment.gpkg", driver="GPKG")
 
-    processor = _RoutePostProcessor(
+    processor = RoutePostProcessor(
         collect_pattern="geo_min_length/*.gpkg",
         project_dir=tmp_path,
         job_name="geo_min",
@@ -527,7 +527,7 @@ def test_process_csv_requires_length_column(tmp_path):
     frame.to_csv(chunk_dir / "routes.csv", index=False)
 
     with pytest.raises(revrtValueError, match="length_km"):
-        _RoutePostProcessor(
+        RoutePostProcessor(
             collect_pattern="missing_length/routes.csv",
             project_dir=tmp_path,
             job_name="invalid",
@@ -549,7 +549,7 @@ def test_process_csv_requires_length_for_min_floor(tmp_path):
     ).to_csv(chunk_dir / "routes.csv", index=False)
 
     with pytest.raises(revrtValueError, match="length_km"):
-        _RoutePostProcessor(
+        RoutePostProcessor(
             collect_pattern="min_length_missing/routes.csv",
             project_dir=tmp_path,
             job_name="invalid_min_length",
@@ -576,7 +576,7 @@ def test_process_csv_rejects_unknown_length_kind(tmp_path):
     with pytest.raises(
         revrtValueError, match="Unknown length computation kind"
     ):
-        _RoutePostProcessor(
+        RoutePostProcessor(
             collect_pattern="unknown_kind/routes.csv",
             project_dir=tmp_path,
             job_name="invalid_kind",
@@ -591,7 +591,7 @@ def test_file_suffix_requires_matching_types(tmp_path):
     (tmp_path / "mixed/routes.csv").write_text("route_id,cost\nfoo,1\n")
     (tmp_path / "mixed/routes.txt").write_text("route_id,cost\nbar,2\n")
 
-    processor = _RoutePostProcessor(
+    processor = RoutePostProcessor(
         collect_pattern="mixed/routes.*",
         project_dir=tmp_path,
         job_name="mixed",

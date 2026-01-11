@@ -24,7 +24,7 @@ from revrt.exceptions import revrtValueError, revrtFileNotFoundError
 logger = logging.getLogger(__name__)
 
 
-class _RoutePostProcessor:
+class RoutePostProcessor:
     """Class to finalize routing outputs"""
 
     def __init__(
@@ -319,7 +319,7 @@ def _compute_linear_lm(features):
 
 
 finalize_routes_command = CLICommandFromClass(
-    init=_RoutePostProcessor,
+    init=RoutePostProcessor,
     method="process",
     name="finalize-routes",
     add_collect=False,
