@@ -81,7 +81,7 @@ class RouteToFeatureMapper:
 
         buffered_endpoints = routes.apply(self._buffered_endpoint, axis=1)
         buffered_endpoints = gpd.GeoDataFrame(
-            geometry=buffered_endpoints, crs=routes.crs
+            geometry=buffered_endpoints, crs=self._cost_lf.profile["crs"]
         ).to_crs(features_crs)
 
         transmission_features = gpd.read_file(
