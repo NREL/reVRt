@@ -43,7 +43,7 @@ class RouteToFeatureMapper:
         ----------
         cost_fpath : path-like
             Filepath to cost layer used for routing. This is used to
-            obtains profile information for the raster layer in order tp
+            obtain profile information for the raster layer in order to
             compute transmission feature row/column indices.
         transmission_feature_id_col : str, default="trans_gid"
             Name of column in features file uniquely identifying each
@@ -231,6 +231,29 @@ class RoutePostProcessor:
             same units as the coordinate reference system of the
             GeoSeries. Only works for GeoPackage outputs (errors
             otherwise). By default, ``None``.
+        cost_fpath : path-like, optional
+            Filepath to cost layer used for routing. If provided along
+            with `features_fpath`, the routes will be merged with the
+            transmission features that they connected to. To skip this
+            functionality, leave out **both** `cost_fpath` and
+            `features_fpath`. This is used to obtain profile information
+            for the cost raster layer in order to compute transmission
+            feature row/column indices. By default, ``None``.
+        features_fpath : path-like, optional
+            Filepath to transmission features GeoPackage. If provided
+            along with `cost_fpath`, the routes will be merged with the
+            transmission features that they connected to. The features
+            in this file must contain a column matching
+            `transmission_feature_id_col` that uniquely identifies each
+            transmission feature. These features will be merged into the
+            routes based on which features the routes connected to. To
+            skip this functionality, leave out **both** `cost_fpath` and
+            `features_fpath`. By default, ``None``.
+        transmission_feature_id_col : str, default="trans_gid"
+            Name of column in features file uniquely identifying each
+            transmission feature. This is only used if both `cost_fpath`
+            and `features_fpath` are provided.
+            By default, ``"trans_gid"``.
         purge_chunks : bool, default=False
             Option to delete single-node input files after the
             collection step. By default, ``False``.
