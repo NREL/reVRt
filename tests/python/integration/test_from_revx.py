@@ -88,7 +88,7 @@ def _run_cli(
     polarity_config,
     route_table,
     cost_layer_config,
-    cli_runner,
+    cli_command_run_func,
     save_paths=False,
 ):
     """Run reVRt CLI with given configs and return test and truth dataframes"""
@@ -400,7 +400,7 @@ def test_config_given_but_no_mult_in_layers(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
 
     check(truth, test)
@@ -486,7 +486,7 @@ def test_apply_row_and_polarity_mult(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying row multiplier"""
 
@@ -543,7 +543,7 @@ def test_apply_row_and_polarity_with_existing_mult(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     test["cost"] /= 30 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
@@ -560,7 +560,7 @@ def test_apply_multipliers_by_route(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying unique multipliers per route"""
 
