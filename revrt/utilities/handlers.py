@@ -799,6 +799,23 @@ def num_feats_in_gpkg(filename):
         return cursor.fetchall()[0][0]
 
 
+def gpkg_crs(data_fp):
+    """Get CRS of GeoPackage file
+
+    Parameters
+    ----------
+    data_fp : path-like
+        Path to GeoPackage file.
+
+    Returns
+    -------
+    pyproj.crs.CRS
+        CRS of GeoPackage file.
+    """
+    with fiona.Env(), fiona.open(data_fp) as src:
+        return src.crs
+
+
 def chunked_read_gpkg(data_fp, chunk_size):
     """Read GeoPackage file in chunks
 
