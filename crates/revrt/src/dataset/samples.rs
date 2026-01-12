@@ -3,7 +3,6 @@
 //! This module provides support for creating Zarr test datasets with
 //! various configurations.
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use ndarray::{Array2, Array3};
@@ -188,11 +187,11 @@ impl ZarrTestBuilder {
     }
 
     /// Build the Zarr store with configured layers
-    pub(crate) fn build(self) -> Result<(TempDir, PathBuf)> {
+    pub(crate) fn build(self) -> Result<TempDir> {
         let tmp_path = TempDir::new()?;
 
         let store: ReadableWritableListableStorage =
-            Arc::new(FilesystemStore::new(tmp_path.path())?);
+            Arc::new(FilesystemStore::new(tmp_path.path()).unwrap());
 
         // Create root group
         GroupBuilder::new()
@@ -204,11 +203,7 @@ impl ZarrTestBuilder {
             self.create_layer(&store, layer_config)?;
         }
 
-        if self.keep_temp {
-            Ok(tmp_path.keep())
-        } else {
-            Ok(tmp_path.path().to_path_buf())
-        }
+        Ok(tmp_path)
     }
 
     /// Create a single layer with its data
@@ -291,7 +286,7 @@ impl ZarrTestBuilder {
 // ============================================================================
 
 /// Quick builder for uniform cost surfaces (all ones)
-pub(crate) fn uniform_cost_zarr(ni: u64, nj: u64, ci: u64, cj: u64) -> PathBuf {
+pub(crate) fn uniform_cost_zarr(ni: u64, nj: u64, ci: u64, cj: u64) -> TempDir {
     ZarrTestBuilder::new()
         .shape(ni, nj, ci, cj)
         .layer(LayerConfig::ones("cost"))
@@ -300,7 +295,7 @@ pub(crate) fn uniform_cost_zarr(ni: u64, nj: u64, ci: u64, cj: u64) -> PathBuf {
 }
 
 /// Quick builder for three-layer test (A, B, C with ones)
-pub(crate) fn three_layer_ones(ni: u64, nj: u64, ci: u64, cj: u64) -> PathBuf {
+pub(crate) fn three_layer_ones(ni: u64, nj: u64, ci: u64, cj: u64) -> TempDir {
     ZarrTestBuilder::new()
         .shape(ni, nj, ci, cj)
         .layer(LayerConfig::ones("A"))
@@ -318,7 +313,7 @@ pub(crate) fn multi_variable_random(
     ci: u64,
     cj: u64,
     layers: &[&str],
-) -> PathBuf {
+) -> TempDir {
     let mut builder = ZarrTestBuilder::new().shape(ni, nj, ci, cj);
 
     for &layer_name in layers {
@@ -332,7 +327,7 @@ pub(crate) fn multi_variable_random(
 
 /// Quick builder for sequential data
 #[allow(dead_code)]
-pub(crate) fn sequential_layers(ni: u64, nj: u64, ci: u64, cj: u64, layers: &[&str]) -> PathBuf {
+pub(crate) fn sequential_layers(ni: u64, nj: u64, ci: u64, cj: u64, layers: &[&str]) -> TempDir {
     let mut builder = ZarrTestBuilder::new().shape(ni, nj, ci, cj);
 
     for &layer_name in layers {
@@ -604,19 +599,19 @@ mod tests {
 
     #[test]
     fn test_builder_basic() {
-        let path = ZarrTestBuilder::new()
+        let sample = ZarrTestBuilder::new()
             .dimensions(4, 4)
             .chunks(2, 2)
             .layer(LayerConfig::ones("test"))
             .build()
             .unwrap();
 
-        assert!(path.exists());
+        assert!(sample.path().exists());
     }
 
     #[test]
     fn test_builder_multiple_layers() {
-        let path = ZarrTestBuilder::new()
+        let sample = ZarrTestBuilder::new()
             .dimensions(8, 8)
             .chunks(4, 4)
             .layer(LayerConfig::ones("A"))
@@ -624,6 +619,7 @@ mod tests {
             .layer(LayerConfig::constant("C", 5.0))
             .build()
             .unwrap();
+        let path = sample.path();
 
         assert!(path.exists());
 
@@ -637,19 +633,20 @@ mod tests {
 
     #[test]
     fn test_custom_fill() {
-        let path = ZarrTestBuilder::new()
+        let sample = ZarrTestBuilder::new()
             .dimensions(4, 4)
             .chunks(2, 2)
             .layer(LayerConfig::custom("custom", |i, j| (i * 10 + j) as f32))
             .build()
             .unwrap();
 
-        assert!(path.exists());
+        assert!(sample.path().exists());
     }
 
     #[test]
     fn test_uniform_cost_helper() {
-        let path = uniform_cost_zarr(4, 4, 2, 2);
+        let sample = uniform_cost_zarr(4, 4, 2, 2);
+        let path = sample.path();
         assert!(path.exists());
 
         let store = Arc::new(FilesystemStore::new(&path).unwrap());
@@ -659,7 +656,8 @@ mod tests {
 
     #[test]
     fn test_three_layer_ones_helper() {
-        let path = three_layer_ones(4, 4, 2, 2);
+        let sample = three_layer_ones(4, 4, 2, 2);
+        let path = sample.path();
         assert!(path.exists());
 
         let store = Arc::new(FilesystemStore::new(&path).unwrap());
@@ -671,21 +669,22 @@ mod tests {
 
     #[test]
     fn test_preset_small() {
-        let path = preset_small()
+        let sample = preset_small()
             .layer(LayerConfig::ones("test"))
             .build()
             .unwrap();
 
-        assert!(path.exists());
+        assert!(sample.path().exists());
     }
 
     #[test]
     fn test_preset_cost_surface() {
-        let path = preset_cost_surface()
+        let sample = preset_cost_surface()
             .dimensions(8, 8)
             .chunks(4, 4)
             .build()
             .unwrap();
+        let path = sample.path();
 
         assert!(path.exists());
 
