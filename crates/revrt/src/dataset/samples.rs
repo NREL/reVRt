@@ -133,7 +133,7 @@ impl ZarrTestBuilder {
             layers: Vec::new(),
             dtype: DataType::Float32,
             fill_value: FillValue::from(zarrs::array::ZARR_NAN_F32),
-            keep_temp: true,
+            keep_temp: false,
         }
     }
 
