@@ -14,8 +14,6 @@ use zarrs::filesystem::FilesystemStore;
 use zarrs::group::GroupBuilder;
 use zarrs::storage::ReadableWritableListableStorage;
 
-use crate::Result;
-
 /// Fill strategy for layer data
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -187,7 +185,7 @@ impl ZarrTestBuilder {
     }
 
     /// Build the Zarr store with configured layers
-    pub(crate) fn build(self) -> Result<TempDir> {
+    pub(crate) fn build(self) -> Result<TempDir, Box<dyn std::error::Error>> {
         let tmp_path = TempDir::new()?;
 
         let store: ReadableWritableListableStorage =
