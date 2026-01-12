@@ -66,6 +66,8 @@ def transmission_features(tmp_path, sample_cost_surface):
     features = gpd.GeoDataFrame(
         {
             "trans_gid": [101, 101, 202],
+            "a_test_col": ["a", "a", "c"],
+            "another_test_col": [40, 40, 60],
         },
         geometry=[
             _cell_polygon(1, 1),
@@ -691,6 +693,9 @@ def test_route_to_feature_mapper_maps_features(
     mapper = RouteToFeatureMapper(sample_cost_surface["cost_fp"])
     mapped = mapper.process(routes, transmission_features["fp"])
     mapped = mapped.set_index("route_id")
+    assert len(mapped) == 3
+    assert "a_test_col" in mapped
+    assert "another_test_col" in mapped
 
     assert (
         mapped.loc["dup_match", "trans_gid"]
@@ -737,6 +742,9 @@ def test_route_post_processor_merges_features_csv(
 
     out_fp = Path(processor.process())
     merged = pd.read_csv(out_fp).set_index("route_id")
+    assert len(merged) == 3
+    assert "a_test_col" in merged
+    assert "another_test_col" in merged
 
     assert (
         merged.loc["dup_match", "trans_gid"]
@@ -801,6 +809,9 @@ def test_route_post_processor_merges_features_gpkg(
 
     out_fp = Path(processor.process())
     merged = gpd.read_file(out_fp).set_index("route_id")
+    assert len(merged) == 3
+    assert "a_test_col" in merged
+    assert "another_test_col" in merged
 
     assert (
         merged.loc["dup_match", "trans_gid"]
@@ -860,6 +871,9 @@ def test_cli_finalize_routes_merges_features_csv(
     )
 
     merged = pd.read_csv(merged_fp).set_index("route_id")
+    assert len(merged) == 3
+    assert "a_test_col" in merged
+    assert "another_test_col" in merged
 
     assert (
         merged.loc["dup_match", "trans_gid"]
@@ -933,6 +947,9 @@ def test_cli_finalize_routes_merges_features_gpkg(
     )
 
     merged = gpd.read_file(merged_fp).set_index("route_id")
+    assert len(merged) == 3
+    assert "a_test_col" in merged
+    assert "another_test_col" in merged
 
     assert (
         merged.loc["dup_match", "trans_gid"]
