@@ -8,11 +8,14 @@ use std::sync::Arc;
 
 use ndarray::{Array2, Array3};
 use rand::Rng;
+use tempfile::TempDir;
 use zarrs::array::{ArrayBuilder, DataType, FillValue};
 use zarrs::array_subset::ArraySubset;
 use zarrs::filesystem::FilesystemStore;
 use zarrs::group::GroupBuilder;
 use zarrs::storage::ReadableWritableListableStorage;
+
+use crate::Result;
 
 /// Fill strategy for layer data
 #[allow(dead_code)]
@@ -185,8 +188,8 @@ impl ZarrTestBuilder {
     }
 
     /// Build the Zarr store with configured layers
-    pub(crate) fn build(self) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let tmp_path = tempfile::TempDir::new()?;
+    pub(crate) fn build(self) -> Result<(TempDir, PathBuf)> {
+        let tmp_path = TempDir::new()?;
 
         let store: ReadableWritableListableStorage =
             Arc::new(FilesystemStore::new(tmp_path.path())?);
@@ -384,7 +387,7 @@ pub(crate) fn multi_variable_zarr() -> std::path::PathBuf {
     let ci = 4;
     let cj = 4;
 
-    let tmp_path = tempfile::TempDir::new().unwrap();
+    let tmp_path = TempDir::new().unwrap();
 
     let store: ReadableWritableListableStorage = std::sync::Arc::new(
         zarrs::filesystem::FilesystemStore::new(tmp_path.path())
@@ -444,7 +447,7 @@ pub(crate) fn constant_value_cost_zarr(cost_value: f32) -> std::path::PathBuf {
     let (ni, nj) = (8, 8);
     let (ci, cj) = (4, 4);
 
-    let tmp_path = tempfile::TempDir::new().unwrap();
+    let tmp_path = TempDir::new().unwrap();
 
     let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
         zarrs::filesystem::FilesystemStore::new(tmp_path.path())
@@ -486,7 +489,7 @@ pub(crate) fn constant_value_cost_zarr(cost_value: f32) -> std::path::PathBuf {
 
 /// Create a zarr store with a cost layer comprised of cell indices
 pub(crate) fn cost_as_index_zarr((ni, nj): (u64, u64), (ci, cj): (u64, u64)) -> std::path::PathBuf {
-    let tmp_path = tempfile::TempDir::new().unwrap();
+    let tmp_path = TempDir::new().unwrap();
 
     let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
         zarrs::filesystem::FilesystemStore::new(tmp_path.path())
@@ -541,7 +544,7 @@ pub(crate) fn specific_layers_zarr(
     friction_layer_weight: f32,
     invariant_layer_cost: f32,
 ) -> std::path::PathBuf {
-    let tmp_path = tempfile::TempDir::new().unwrap();
+    let tmp_path = TempDir::new().unwrap();
 
     let store: zarrs::storage::ReadableWritableListableStorage = std::sync::Arc::new(
         zarrs::filesystem::FilesystemStore::new(tmp_path.path())
