@@ -85,7 +85,7 @@ impl LayerConfig {
 ///
 /// # Example
 /// ```
-/// use zarr_test_builder::{ZarrTestBuilder, LayerConfig, FillStrategy};
+/// use dataset::samples::{ZarrTestBuilder, LayerConfig, FillStrategy};
 ///
 /// let store = ZarrTestBuilder::new()
 ///     .dimensions(8, 8)
