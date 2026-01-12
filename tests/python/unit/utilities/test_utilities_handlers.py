@@ -77,6 +77,43 @@ def test_tiff_fp(test_utility_data_dir):
     return test_utility_data_dir / "ri_transmission_barriers.tif"
 
 
+@pytest.fixture
+def gpkg_with_nan_features(tmp_path):
+    """Create GeoPackage with NaNs for chunked_read_gpkg tests"""
+
+    coords = [
+        (-71.431, 41.824),
+        (-71.512, 41.743),
+        (-71.612, 41.682),
+        (-71.389, 41.598),
+        (-71.274, 41.553),
+    ]
+    data = {
+        "feature_id": [101, 102, 103, 104, 105],
+        "voltage_kv": [69.0, np.nan, 115.0, 230.0, np.nan],
+        "all_nan": [np.nan] * len(coords),
+        "name": [
+            "Hope Line",
+            "Smithfield Tap",
+            "Providence Loop",
+            "Cranston Spur",
+            "Warwick Link",
+        ],
+    }
+
+    gdf = gpd.GeoDataFrame(
+        data,
+        geometry=[Point(x, y) for x, y in coords],
+        crs="EPSG:4326",
+    )
+
+    gpkg_fp = tmp_path / "nan_features.gpkg"
+    gdf.to_file(gpkg_fp, driver="GPKG", index=False)
+    stored = gpd.read_file(gpkg_fp).reset_index(drop=True)
+    stored["all_nan"] = stored["all_nan"].astype(float)
+    return gpkg_fp, stored
+
+
 def _validate_top_level_ds_props(ds, transform):
     """Validate top level dataset properties"""
 
@@ -909,43 +946,6 @@ def test_cli_layers_from_file_all(
         assert np.allclose(truth_tif, test_tif)
         assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
         assert truth_tif.rio.crs == test_tif.rio.crs
-
-
-@pytest.fixture
-def gpkg_with_nan_features(tmp_path):
-    """Create GeoPackage with NaNs for chunked_read_gpkg tests"""
-
-    coords = [
-        (-71.431, 41.824),
-        (-71.512, 41.743),
-        (-71.612, 41.682),
-        (-71.389, 41.598),
-        (-71.274, 41.553),
-    ]
-    data = {
-        "feature_id": [101, 102, 103, 104, 105],
-        "voltage_kv": [69.0, np.nan, 115.0, 230.0, np.nan],
-        "all_nan": [np.nan] * len(coords),
-        "name": [
-            "Hope Line",
-            "Smithfield Tap",
-            "Providence Loop",
-            "Cranston Spur",
-            "Warwick Link",
-        ],
-    }
-
-    gdf = gpd.GeoDataFrame(
-        data,
-        geometry=[Point(x, y) for x, y in coords],
-        crs="EPSG:4326",
-    )
-
-    gpkg_fp = tmp_path / "nan_features.gpkg"
-    gdf.to_file(gpkg_fp, driver="GPKG", index=False)
-    stored = gpd.read_file(gpkg_fp).reset_index(drop=True)
-    stored["all_nan"] = stored["all_nan"].astype(float)
-    return gpkg_fp, stored
 
 
 @pytest.mark.parametrize(
