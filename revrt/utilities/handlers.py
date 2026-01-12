@@ -846,15 +846,14 @@ def chunked_read_gpkg(data_fp, chunk_size):
             if not rows:
                 break
 
-            chunk_start = chunk_idx * chunk_size
             logger.debug(
                 "\t\t- Processing %d rows starting at index %d",
                 chunk_size,
-                chunk_start,
+                chunk_idx,
             )
+            chunk_idx += chunk_size
             df = gpd.GeoDataFrame.from_features(rows, crs=src.crs)
             if len(df) == 0:
-                chunk_idx += 1
                 continue
 
             yield df
