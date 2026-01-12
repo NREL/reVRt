@@ -113,8 +113,11 @@ class RouteToFeatureMapper:
         """De-duplicate GeoDataFrame while preserving geometries"""
         return gpd.GeoDataFrame(
             (
-                {self._tid_col: tid, "geometry": g.union_all()}
-                for tid, g in gdf.groupby(self._tid_col)
+                {
+                    **{k: v for k, v in g.iloc[0].items() if k != "geometry"},
+                    "geometry": g.union_all(),
+                }
+                for __, g in gdf.groupby(self._tid_col)
             ),
             crs=gdf.crs,
         )
