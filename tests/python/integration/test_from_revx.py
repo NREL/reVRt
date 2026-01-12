@@ -691,5 +691,137 @@ def test_tracked_layers(
     assert np.allclose(test["layer5_mean"], 1)
 
 
+@pytest.mark.parametrize("save_paths", [False, True])
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_regional_end_to_end_cli(
+    save_paths,
+    run_gaps_cli_with_expected_file,
+    tmp_path,
+    test_routing_data_dir,
+    revx_transmission_layers,
+):
+    """Test Regional cost routines and CLI"""
+
+    ri_feats_path = test_routing_data_dir / "ri_transmission_features.gpkg"
+    ri_ba_path = test_routing_data_dir / "ri_regions.gpkg"
+
+    # -- Build features (substations) to route to --
+
+    config = {
+        # "features_fpath": str(ri_feats_path),
+        "features_fpath": str(ri_feats_path),
+        "regions_fpath": str(ri_ba_path),
+        "region_identifier_column": "feature_id",
+    }
+    subs_fp = run_gaps_cli_with_expected_file("map-ss-to-rr", config, tmp_path)
+
+    assert len(gpd.read_file(subs_fp)) == 380
+
+    # -- Build Route Table --
+
+    config = {
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(subs_fp),
+        "out_dir": str(tmp_path),
+        "regions_fpath": str(ri_ba_path),
+        "resolution": 64,
+        "expand_radius": True,
+        "clip_points_to_regions": False,
+        "feature_out_fp": "config_features.gpkg",
+        "route_table_out_fp": "config_routes.csv",
+        "region_identifier_column": "feature_id",
+        "connection_identifier_column": "end_feat_id",
+    }
+
+    mapped_features_path = tmp_path / "config_features.gpkg"
+    assert not mapped_features_path.exists()
+
+    route_table_path = run_gaps_cli_with_expected_file(
+        "build-feature-route-table",
+        config,
+        tmp_path,
+        glob_pattern="config_routes.csv",
+    )
+
+    assert mapped_features_path.exists()
+    assert len(pd.read_csv(route_table_path)) == 270
+    assert len(gpd.read_file(mapped_features_path)) == 4045
+
+    # -- RUN LCP --
+
+    config = {
+        "cost_fpath": str(revx_transmission_layers),
+        "route_table_fpath": str(route_table_path),
+        "features_fpath": str(mapped_features_path),
+        "cost_layers": [{"layer_name": "tie_line_costs_1500MW"}],
+        "friction_layers": [DEFAULT_BARRIER_CONFIG],
+        "save_paths": save_paths,
+    }
+
+    out_fp = run_gaps_cli_with_expected_file(
+        "route-features", config, tmp_path
+    )
+
+    if save_paths:
+        test_routes = gpd.read_file(out_fp)
+        assert test_routes.geometry is not None
+    else:
+        test_routes = pd.read_csv(out_fp)
+
+    assert len(test_routes) == 270
+
+    # -- RUN Post-Processing --
+
+    config = {
+        "collect_pattern": str(out_fp),
+        "chunk_size": 200,
+        "purge_chunks": True,
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(ri_feats_path),
+        "transmission_feature_id_col": "trans_gid",
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    if save_paths:
+        test = gpd.read_file(merged_fp)
+        assert test.geometry is not None
+    else:
+        test = pd.read_csv(merged_fp)
+
+    assert "poi_lat" in test
+    assert "poi_lon" in test
+    assert "feature_id" in test
+
+    assert len(test) == 806
+    assert len(test) >= len(test_routes)
+    assert test["trans_gid"].notna().all()
+    assert test["cost"].notna().all()
+    assert test["length_km"].notna().all()
+
+    assert len(set(test["trans_gid"].unique())) == 138
+    assert len(test.groupby(["poi_lat", "poi_lon"])) == 69
+    assert set(test["feature_id"].unique()) == {1, 2, 3, 4}
+
+    mask = test["trans_gid"] == 69130
+    assert len(test[mask]) == 6
+    assert set(test[mask]["feature_id"].unique()) == {4}
+
+    assert np.allclose(
+        test["tie_line_costs_1500MW_cost"].astype(float),
+        test["cost"].astype(float),
+    )
+    assert np.allclose(
+        test["tie_line_costs_1500MW_length_km"].astype(float),
+        test["length_km"].astype(float),
+    )
+
+
 if __name__ == "__main__":
     pytest.main(["-q", "--show-capture=all", Path(__file__), "-rapP"])
