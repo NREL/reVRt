@@ -368,107 +368,8 @@ pub(crate) fn preset_cost_surface() -> ZarrTestBuilder {
         .layer(LayerConfig::ones("C"))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_builder_basic() {
-        let path = ZarrTestBuilder::new()
-            .dimensions(4, 4)
-            .chunks(2, 2)
-            .layer(LayerConfig::ones("test"))
-            .build()
-            .unwrap();
-
-        assert!(path.exists());
-    }
-
-    #[test]
-    fn test_builder_multiple_layers() {
-        let path = ZarrTestBuilder::new()
-            .dimensions(8, 8)
-            .chunks(4, 4)
-            .layer(LayerConfig::ones("A"))
-            .layer(LayerConfig::sequential("B"))
-            .layer(LayerConfig::constant("C", 5.0))
-            .build()
-            .unwrap();
-
-        assert!(path.exists());
-
-        // Verify layers exist
-        let store = Arc::new(FilesystemStore::new(&path).unwrap());
-        for layer_name in ["A", "B", "C"] {
-            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer_name));
-            assert!(array.is_ok(), "Layer {} should exist", layer_name);
-        }
-    }
-
-    #[test]
-    fn test_custom_fill() {
-        let path = ZarrTestBuilder::new()
-            .dimensions(4, 4)
-            .chunks(2, 2)
-            .layer(LayerConfig::custom("custom", |i, j| (i * 10 + j) as f32))
-            .build()
-            .unwrap();
-
-        assert!(path.exists());
-    }
-
-    #[test]
-    fn test_uniform_cost_helper() {
-        let path = uniform_cost_zarr(4, 4, 2, 2);
-        assert!(path.exists());
-
-        let store = Arc::new(FilesystemStore::new(&path).unwrap());
-        let array = zarrs::array::Array::open(store, "/cost");
-        assert!(array.is_ok());
-    }
-
-    #[test]
-    fn test_three_layer_ones_helper() {
-        let path = three_layer_ones(4, 4, 2, 2);
-        assert!(path.exists());
-
-        let store = Arc::new(FilesystemStore::new(&path).unwrap());
-        for layer in ["A", "B", "C"] {
-            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer));
-            assert!(array.is_ok(), "Layer {} should exist", layer);
-        }
-    }
-
-    #[test]
-    fn test_preset_small() {
-        let path = preset_small()
-            .layer(LayerConfig::ones("test"))
-            .build()
-            .unwrap();
-
-        assert!(path.exists());
-    }
-
-    #[test]
-    fn test_preset_cost_surface() {
-        let path = preset_cost_surface()
-            .dimensions(8, 8)
-            .chunks(4, 4)
-            .build()
-            .unwrap();
-
-        assert!(path.exists());
-
-        let store = Arc::new(FilesystemStore::new(&path).unwrap());
-        for layer in ["A", "B", "C"] {
-            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer));
-            assert!(array.is_ok(), "Layer {} should exist", layer);
-        }
-    }
-}
-
 // ============================================================================
-// Old approach. It will be eventually deprecated
+// Old approach. This will be eventually deprecated
 // ============================================================================
 
 // //! Dataset samples for tests and demonstrations
@@ -693,4 +594,102 @@ pub(crate) fn specific_layers_zarr(
     }
 
     tmp_path.keep()
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_builder_basic() {
+        let path = ZarrTestBuilder::new()
+            .dimensions(4, 4)
+            .chunks(2, 2)
+            .layer(LayerConfig::ones("test"))
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_builder_multiple_layers() {
+        let path = ZarrTestBuilder::new()
+            .dimensions(8, 8)
+            .chunks(4, 4)
+            .layer(LayerConfig::ones("A"))
+            .layer(LayerConfig::sequential("B"))
+            .layer(LayerConfig::constant("C", 5.0))
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+
+        // Verify layers exist
+        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        for layer_name in ["A", "B", "C"] {
+            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer_name));
+            assert!(array.is_ok(), "Layer {} should exist", layer_name);
+        }
+    }
+
+    #[test]
+    fn test_custom_fill() {
+        let path = ZarrTestBuilder::new()
+            .dimensions(4, 4)
+            .chunks(2, 2)
+            .layer(LayerConfig::custom("custom", |i, j| (i * 10 + j) as f32))
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_uniform_cost_helper() {
+        let path = uniform_cost_zarr(4, 4, 2, 2);
+        assert!(path.exists());
+
+        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        let array = zarrs::array::Array::open(store, "/cost");
+        assert!(array.is_ok());
+    }
+
+    #[test]
+    fn test_three_layer_ones_helper() {
+        let path = three_layer_ones(4, 4, 2, 2);
+        assert!(path.exists());
+
+        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        for layer in ["A", "B", "C"] {
+            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer));
+            assert!(array.is_ok(), "Layer {} should exist", layer);
+        }
+    }
+
+    #[test]
+    fn test_preset_small() {
+        let path = preset_small()
+            .layer(LayerConfig::ones("test"))
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_preset_cost_surface() {
+        let path = preset_cost_surface()
+            .dimensions(8, 8)
+            .chunks(4, 4)
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+
+        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        for layer in ["A", "B", "C"] {
+            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer));
+            assert!(array.is_ok(), "Layer {} should exist", layer);
+        }
+    }
 }
