@@ -2,6 +2,7 @@
 
 import os
 import json
+import math
 import shutil
 import platform
 import traceback
@@ -11,9 +12,12 @@ from pathlib import Path
 import pytest
 import pyproj
 import rioxarray
+import pandas as pd
 import numpy as np
 import xarray as xr
 import geopandas as gpd
+from shapely.geometry import Point
+from geopandas.testing import assert_geodataframe_equal
 from pyproj.crs import CRS
 from rasterio.transform import Affine
 from rasterio.warp import Resampling
@@ -27,7 +31,7 @@ from revrt.utilities import (
     load_data_using_layer_file_profile,
     save_data_using_layer_file_profile,
 )
-from revrt.utilities.handlers import num_feats_in_gpkg
+from revrt.utilities.handlers import chunked_read_gpkg, num_feats_in_gpkg
 from revrt.exceptions import (
     revrtFileExistsError,
     revrtFileNotFoundError,
@@ -905,6 +909,98 @@ def test_cli_layers_from_file_all(
         assert np.allclose(truth_tif, test_tif)
         assert np.allclose(truth_tif.rio.transform(), test_tif.rio.transform())
         assert truth_tif.rio.crs == test_tif.rio.crs
+
+
+@pytest.fixture
+def gpkg_with_nan_features(tmp_path):
+    """Create GeoPackage with NaNs for chunked_read_gpkg tests"""
+
+    coords = [
+        (-71.431, 41.824),
+        (-71.512, 41.743),
+        (-71.612, 41.682),
+        (-71.389, 41.598),
+        (-71.274, 41.553),
+    ]
+    data = {
+        "feature_id": [101, 102, 103, 104, 105],
+        "voltage_kv": [69.0, np.nan, 115.0, 230.0, np.nan],
+        "all_nan": [np.nan] * len(coords),
+        "name": [
+            "Hope Line",
+            "Smithfield Tap",
+            "Providence Loop",
+            "Cranston Spur",
+            "Warwick Link",
+        ],
+    }
+
+    gdf = gpd.GeoDataFrame(
+        data,
+        geometry=[Point(x, y) for x, y in coords],
+        crs="EPSG:4326",
+    )
+
+    gpkg_fp = tmp_path / "nan_features.gpkg"
+    gdf.to_file(gpkg_fp, driver="GPKG", index=False)
+    stored = gpd.read_file(gpkg_fp).reset_index(drop=True)
+    stored["all_nan"] = stored["all_nan"].astype(float)
+    return gpkg_fp, stored
+
+
+@pytest.mark.parametrize(
+    "chunk_size",
+    [
+        pytest.param(2, id="chunk-size-less"),
+        pytest.param(5, id="chunk-size-equal"),
+        pytest.param(10, id="chunk-size-greater"),
+    ],
+)
+def test_chunked_read_gpkg_chunk_sizes(chunk_size, gpkg_with_nan_features):
+    """Test chunked_read_gpkg yields expected GeoDataFrame chunks"""
+
+    gpkg_fp, expected = gpkg_with_nan_features
+    total_rows = len(expected)
+
+    chunks = list(chunked_read_gpkg(gpkg_fp, chunk_size))
+    assert chunks
+    assert all(isinstance(chunk, gpd.GeoDataFrame) for chunk in chunks)
+
+    chunk_lengths = [len(chunk) for chunk in chunks]
+    assert all(length > 0 for length in chunk_lengths)
+
+    expected_chunk_count = math.ceil(total_rows / chunk_size)
+    assert len(chunks) == expected_chunk_count
+
+    if chunk_size < total_rows:
+        assert all(length == chunk_size for length in chunk_lengths[:-1])
+        assert chunk_lengths[-1] <= chunk_size
+    else:
+        assert len(chunks) == 1
+        assert chunk_lengths[0] == total_rows
+
+    assert all(chunk.crs == expected.crs for chunk in chunks)
+    assert any(chunk["voltage_kv"].isna().any() for chunk in chunks)
+    assert any(chunk["all_nan"].isna().all() for chunk in chunks)
+
+    reconstructed = gpd.GeoDataFrame(
+        pd.concat(chunks, ignore_index=True),
+        geometry="geometry",
+        crs=expected.crs,
+    ).reset_index(drop=True)
+
+    for column in ("voltage_kv", "all_nan"):
+        reconstructed[column] = reconstructed[column].astype(float)
+    reconstructed = reconstructed[expected.columns]
+
+    assert list(reconstructed["feature_id"]) == list(expected["feature_id"])
+    assert_geodataframe_equal(reconstructed, expected, check_like=False)
+
+    assert (
+        reconstructed["voltage_kv"].isna().sum()
+        == expected["voltage_kv"].isna().sum()
+    )
+    assert reconstructed["all_nan"].isna().all()
 
 
 def test_num_feats_in_gpkg_normal(test_routing_data_dir):
