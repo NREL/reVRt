@@ -815,9 +815,14 @@ def test_regional_end_to_end_cli(
     assert test["cost"].notna().all()
     assert test["length_km"].notna().all()
 
+    assert (test["length_km"] >= 0.45).all()
+    assert (test["length_km"] <= 168).all()
+    assert (test["cost"] >= 1.46e6).all()
+    assert (test["cost"] <= 7.05e8).all()
+    assert set(test["feature_id"].unique()) == {1, 2, 3, 4}
+
     assert len(set(test["trans_gid"].unique())) == 138
     assert len(test.groupby(["poi_lat", "poi_lon"])) == 69
-    assert set(test["feature_id"].unique()) == {1, 2, 3, 4}
 
     mask = test["trans_gid"] == 69130
     assert len(test[mask]) == 6
@@ -869,6 +874,12 @@ def test_regional_end_to_end_cli(
     assert len(test) == 329  # ensures features are de-duplicated
     assert len(test) >= len(test_routes)
 
+    assert (test["length_km"] >= 0.45).all()
+    assert (test["length_km"] <= 168).all()
+    assert (test["cost"] >= 1.46e6).all()
+    assert (test["cost"] <= 7.05e8).all()
+    assert set(test["feature_id"].unique()) == {1, 2, 3, 4}
+
     # -- Test final linking configurations --
 
     merged_fp.unlink()
@@ -906,6 +917,12 @@ def test_regional_end_to_end_cli(
 
     assert len(test) == 329
     assert len(test) >= len(test_routes)
+
+    assert (test["length_km"] >= 0.45).all()
+    assert (test["length_km"] <= 168).all()
+    assert (test["cost"] >= 1.46e6).all()
+    assert (test["cost"] <= 7.05e8).all()
+    assert set(test["feature_id"].unique()) == {1, 2, 3, 4}
 
     assert not out_fp.exists()
 
