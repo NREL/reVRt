@@ -779,7 +779,7 @@ def test_regional_end_to_end_cli(
     config = {
         "collect_pattern": str(out_fp),
         "chunk_size": 200,
-        "purge_chunks": True,
+        "purge_chunks": False,
         "cost_fpath": str(revx_transmission_layers),
         "features_fpath": str(ri_feats_path),
         "transmission_feature_id_col": "trans_gid",
@@ -798,6 +798,16 @@ def test_regional_end_to_end_cli(
     assert "poi_lat" in test
     assert "poi_lon" in test
     assert "feature_id" in test
+    assert "trans_gid" in test
+    assert "ac_cap" in test
+    assert "category" in test
+    assert "voltage_transmission_feature" in test
+    assert "trans_gids" in test
+
+    assert "feature_id_transmission_feature" not in test
+    assert "min_volts" not in test
+    assert "max_volts" not in test
+    assert "end_feat_id_transmission_feature" not in test
 
     assert len(test) == 806
     assert len(test) >= len(test_routes)
@@ -821,6 +831,83 @@ def test_regional_end_to_end_cli(
         test["tie_line_costs_1500MW_length_km"].astype(float),
         test["length_km"].astype(float),
     )
+
+    # -- Test other linking configurations --
+    merged_fp.unlink()
+    shutil.move(tmp_path / "chunk_files" / out_fp.name, tmp_path / out_fp.name)
+    shutil.rmtree(tmp_path / ".gaps", ignore_errors=True)
+    config = {
+        "collect_pattern": str(out_fp),
+        "chunk_size": 200,
+        "purge_chunks": False,
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(mapped_features_path),
+        "transmission_feature_id_col": "trans_gid",
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    if save_paths:
+        test = gpd.read_file(merged_fp)
+        assert test.geometry is not None
+    else:
+        test = pd.read_csv(merged_fp)
+
+    assert "poi_lat" in test
+    assert "poi_lon" in test
+    assert "feature_id" in test
+    assert "ac_cap" in test
+    assert "category" in test
+    assert "trans_gids" in test
+    assert "feature_id_transmission_feature" in test
+    assert "min_volts" in test
+    assert "max_volts" in test
+    assert "end_feat_id_transmission_feature" in test
+
+    assert len(test) == 329  # ensures features are de-duplicated
+    assert len(test) >= len(test_routes)
+
+    # -- Test final linking configurations --
+
+    merged_fp.unlink()
+    shutil.move(tmp_path / "chunk_files" / out_fp.name, tmp_path / out_fp.name)
+    shutil.rmtree(tmp_path / ".gaps", ignore_errors=True)
+    config = {
+        "collect_pattern": str(out_fp),
+        "chunk_size": 200,
+        "purge_chunks": True,
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(subs_fp),
+        "transmission_feature_id_col": "trans_gid",
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    if save_paths:
+        test = gpd.read_file(merged_fp)
+        assert test.geometry is not None
+    else:
+        test = pd.read_csv(merged_fp)
+
+    assert "poi_lat" in test
+    assert "poi_lon" in test
+    assert "feature_id" in test
+    assert "ac_cap" in test
+    assert "category" in test
+    assert "trans_gids" in test
+    assert "feature_id_transmission_feature" in test
+    assert "min_volts" in test
+    assert "max_volts" in test
+    assert "end_feat_id_transmission_feature" not in test
+
+    assert len(test) == 329
+    assert len(test) >= len(test_routes)
+
+    assert not out_fp.exists()
 
 
 if __name__ == "__main__":
