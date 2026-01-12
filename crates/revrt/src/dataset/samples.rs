@@ -1,8 +1,469 @@
-//! Dataset samples for tests and demonstrations
+//! Builder pattern for creating test Zarr datasets
+//!
+//! This module provides support for creating Zarr test datasets with
+//! various configurations.
 
-use ndarray::Array3;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use ndarray::{Array2, Array3};
 use rand::Rng;
+use zarrs::array::{ArrayBuilder, DataType, FillValue};
+use zarrs::array_subset::ArraySubset;
+use zarrs::filesystem::FilesystemStore;
+use zarrs::group::GroupBuilder;
 use zarrs::storage::ReadableWritableListableStorage;
+
+/// Fill strategy for layer data
+#[derive(Debug, Clone)]
+pub(crate) enum FillStrategy {
+    /// Fill with constant value
+    Constant(f32),
+    /// Fill with sequential values starting from 1
+    Sequential,
+    /// Fill with random values in range [min, max]
+    Random(f32, f32),
+    /// Fill with custom function: (row, col) -> value
+    Custom(fn(u64, u64) -> f32),
+    /// Fill with provided vector
+    Values(Vec<f32>),
+}
+
+/// Configuration for a single layer
+#[derive(Debug, Clone)]
+pub(crate) struct LayerConfig {
+    /// Layer name (e.g., "A", "temperature", "cost")
+    name: String,
+    /// Fill strategy for this layer
+    fill: FillStrategy,
+}
+
+impl LayerConfig {
+    /// Create a new layer configuration
+    pub(crate) fn new(name: impl Into<String>, fill: FillStrategy) -> Self {
+        Self {
+            name: name.into(),
+            fill,
+        }
+    }
+
+    /// Create a constant-filled layer
+    pub(crate) fn constant(name: impl Into<String>, value: f32) -> Self {
+        Self::new(name, FillStrategy::Constant(value))
+    }
+
+    /// Create a sequentially-filled layer
+    pub(crate) fn sequential(name: impl Into<String>) -> Self {
+        Self::new(name, FillStrategy::Sequential)
+    }
+
+    /// Create a randomly-filled layer
+    pub(crate) fn random(name: impl Into<String>, min: f32, max: f32) -> Self {
+        Self::new(name, FillStrategy::Random(min, max))
+    }
+
+    /// Create a custom-filled layer
+    pub(crate) fn custom(name: impl Into<String>, fill_fn: fn(u64, u64) -> f32) -> Self {
+        Self::new(name, FillStrategy::Custom(fill_fn))
+    }
+
+    /// Create a layer with all ones
+    pub(crate) fn ones(name: impl Into<String>) -> Self {
+        Self::constant(name, 1.0)
+    }
+
+    /// Create a layer with all zeros
+    pub(crate) fn zeros(name: impl Into<String>) -> Self {
+        Self::constant(name, 0.0)
+    }
+}
+
+/// Builder for creating test Zarr datasets
+///
+/// # Example
+/// ```
+/// use zarr_test_builder::{ZarrTestBuilder, LayerConfig, FillStrategy};
+///
+/// let store = ZarrTestBuilder::new()
+///     .dimensions(8, 8)
+///     .chunks(4, 4)
+///     .layer(LayerConfig::ones("A"))
+///     .layer(LayerConfig::sequential("B"))
+///     .layer(LayerConfig::constant("C", 5.0))
+///     .build()
+///     .unwrap();
+/// ```
+pub(crate) struct ZarrTestBuilder {
+    /// Number of rows
+    ni: u64,
+    /// Number of columns
+    nj: u64,
+    /// Chunk rows
+    ci: u64,
+    /// Chunk columns
+    cj: u64,
+    /// Layer configurations
+    layers: Vec<LayerConfig>,
+    /// Data type for all layers
+    dtype: DataType,
+    /// Fill value for NaN
+    fill_value: FillValue,
+    /// Keep temporary directory (for debugging)
+    keep_temp: bool,
+}
+
+impl Default for ZarrTestBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ZarrTestBuilder {
+    /// Create a new builder with default settings
+    pub(crate) fn new() -> Self {
+        Self {
+            ni: 8,
+            nj: 8,
+            ci: 4,
+            cj: 4,
+            layers: Vec::new(),
+            dtype: DataType::Float32,
+            fill_value: FillValue::from(zarrs::array::ZARR_NAN_F32),
+            keep_temp: true,
+        }
+    }
+
+    /// Set array dimensions (rows, columns)
+    pub(crate) fn dimensions(mut self, ni: u64, nj: u64) -> Self {
+        self.ni = ni;
+        self.nj = nj;
+        self
+    }
+
+    /// Set chunk dimensions (rows, columns)
+    pub(crate) fn chunks(mut self, ci: u64, cj: u64) -> Self {
+        self.ci = ci;
+        self.cj = cj;
+        self
+    }
+
+    /// Set both array and chunk dimensions
+    pub(crate) fn shape(mut self, ni: u64, nj: u64, ci: u64, cj: u64) -> Self {
+        self.ni = ni;
+        self.nj = nj;
+        self.ci = ci;
+        self.cj = cj;
+        self
+    }
+
+    /// Add a layer configuration
+    pub(crate) fn layer(mut self, layer: LayerConfig) -> Self {
+        self.layers.push(layer);
+        self
+    }
+
+    /// Add multiple layers at once
+    pub(crate) fn layers(mut self, layers: Vec<LayerConfig>) -> Self {
+        self.layers.extend(layers);
+        self
+    }
+
+    /// Set data type for all layers (default: Float32)
+    pub(crate) fn data_type(mut self, dtype: DataType) -> Self {
+        self.dtype = dtype;
+        self
+    }
+
+    /// Whether to keep temporary directory (default: true)
+    pub(crate) fn keep_temp(mut self, keep: bool) -> Self {
+        self.keep_temp = keep;
+        self
+    }
+
+    /// Build the Zarr store with configured layers
+    pub(crate) fn build(self) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let tmp_path = tempfile::TempDir::new()?;
+
+        let store: ReadableWritableListableStorage =
+            Arc::new(FilesystemStore::new(tmp_path.path())?);
+
+        // Create root group
+        GroupBuilder::new()
+            .build(store.clone(), "/")?
+            .store_metadata()?;
+
+        // Create each layer
+        for layer_config in &self.layers {
+            self.create_layer(&store, layer_config)?;
+        }
+
+        if self.keep_temp {
+            Ok(tmp_path.keep())
+        } else {
+            Ok(tmp_path.path().to_path_buf())
+        }
+    }
+
+    /// Create a single layer with its data
+    fn create_layer(
+        &self,
+        store: &ReadableWritableListableStorage,
+        config: &LayerConfig,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Create array
+        let array = ArrayBuilder::new(
+            vec![self.ni, self.nj],
+            vec![self.ci, self.cj],
+            self.dtype.clone(),
+            self.fill_value.clone(),
+        )
+        .dimension_names(["y", "x"].into())
+        .build(store.clone(), &format!("/{}", config.name))?;
+
+        array.store_metadata()?;
+
+        // Generate data based on fill strategy
+        let data = self.generate_data(&config.fill)?;
+
+        // Write data
+        let subset =
+            ArraySubset::new_with_ranges(&[0..(self.ni / self.ci), 0..(self.nj / self.cj)]);
+
+        array.store_chunks_ndarray(&subset, data)?;
+
+        Ok(())
+    }
+
+    /// Generate data based on fill strategy
+    fn generate_data(
+        &self,
+        fill: &FillStrategy,
+    ) -> Result<Array2<f32>, Box<dyn std::error::Error>> {
+        let size = (self.ni * self.nj) as usize;
+        let values = match fill {
+            FillStrategy::Constant(val) => vec![*val; size],
+
+            FillStrategy::Sequential => (1..=size).map(|x| x as f32).collect(),
+
+            FillStrategy::Random(min, max) => {
+                let mut rng = rand::rng();
+                (0..size).map(|_| rng.random_range(*min..=*max)).collect()
+            }
+
+            FillStrategy::Custom(func) => {
+                let mut values = Vec::with_capacity(size);
+                for i in 0..self.ni {
+                    for j in 0..self.nj {
+                        values.push(func(i, j));
+                    }
+                }
+                values
+            }
+
+            FillStrategy::Values(vals) => {
+                if vals.len() != size {
+                    return Err(format!(
+                        "Values vector length {} doesn't match array size {}",
+                        vals.len(),
+                        size
+                    )
+                    .into());
+                }
+                vals.clone()
+            }
+        };
+
+        let data = Array2::from_shape_vec((self.ni as usize, self.nj as usize), values)?;
+
+        Ok(data)
+    }
+}
+
+// ============================================================================
+// Convenience builders for common patterns
+// ============================================================================
+
+/// Quick builder for uniform cost surfaces (all ones)
+pub(crate) fn uniform_cost_zarr(ni: u64, nj: u64, ci: u64, cj: u64) -> PathBuf {
+    ZarrTestBuilder::new()
+        .shape(ni, nj, ci, cj)
+        .layer(LayerConfig::ones("cost"))
+        .build()
+        .expect("Failed to create uniform cost zarr")
+}
+
+/// Quick builder for three-layer test (A, B, C with ones)
+pub(crate) fn three_layer_ones(ni: u64, nj: u64, ci: u64, cj: u64) -> PathBuf {
+    ZarrTestBuilder::new()
+        .shape(ni, nj, ci, cj)
+        .layer(LayerConfig::ones("A"))
+        .layer(LayerConfig::ones("B"))
+        .layer(LayerConfig::ones("C"))
+        .build()
+        .expect("Failed to create three-layer zarr")
+}
+
+/// Quick builder for multi-variable random data
+pub(crate) fn multi_variable_random(
+    ni: u64,
+    nj: u64,
+    ci: u64,
+    cj: u64,
+    layers: &[&str],
+) -> PathBuf {
+    let mut builder = ZarrTestBuilder::new().shape(ni, nj, ci, cj);
+
+    for &layer_name in layers {
+        builder = builder.layer(LayerConfig::random(layer_name, 0.0, 1.0));
+    }
+
+    builder
+        .build()
+        .expect("Failed to create multi-variable zarr")
+}
+
+/// Quick builder for sequential data
+pub(crate) fn sequential_layers(ni: u64, nj: u64, ci: u64, cj: u64, layers: &[&str]) -> PathBuf {
+    let mut builder = ZarrTestBuilder::new().shape(ni, nj, ci, cj);
+
+    for &layer_name in layers {
+        builder = builder.layer(LayerConfig::sequential(layer_name));
+    }
+
+    builder.build().expect("Failed to create sequential zarr")
+}
+
+// ============================================================================
+// Preset configurations
+// ============================================================================
+
+/// Preset: Simple 4x4 grid for quick unit tests
+pub(crate) fn preset_small() -> ZarrTestBuilder {
+    ZarrTestBuilder::new().dimensions(4, 4).chunks(2, 2)
+}
+
+/// Preset: Medium 16x16 grid for integration tests
+pub(crate) fn preset_medium() -> ZarrTestBuilder {
+    ZarrTestBuilder::new().dimensions(16, 16).chunks(4, 4)
+}
+
+/// Preset: Large 128x128 grid for performance tests
+pub(crate) fn preset_large() -> ZarrTestBuilder {
+    ZarrTestBuilder::new().dimensions(128, 128).chunks(32, 32)
+}
+
+/// Preset: Standard cost surface setup (A, B, C layers)
+pub(crate) fn preset_cost_surface() -> ZarrTestBuilder {
+    ZarrTestBuilder::new()
+        .layer(LayerConfig::sequential("A"))
+        .layer(LayerConfig::constant("B", 2.0))
+        .layer(LayerConfig::ones("C"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_builder_basic() {
+        let path = ZarrTestBuilder::new()
+            .dimensions(4, 4)
+            .chunks(2, 2)
+            .layer(LayerConfig::ones("test"))
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_builder_multiple_layers() {
+        let path = ZarrTestBuilder::new()
+            .dimensions(8, 8)
+            .chunks(4, 4)
+            .layer(LayerConfig::ones("A"))
+            .layer(LayerConfig::sequential("B"))
+            .layer(LayerConfig::constant("C", 5.0))
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+
+        // Verify layers exist
+        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        for layer_name in ["A", "B", "C"] {
+            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer_name));
+            assert!(array.is_ok(), "Layer {} should exist", layer_name);
+        }
+    }
+
+    #[test]
+    fn test_custom_fill() {
+        let path = ZarrTestBuilder::new()
+            .dimensions(4, 4)
+            .chunks(2, 2)
+            .layer(LayerConfig::custom("custom", |i, j| (i * 10 + j) as f32))
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_uniform_cost_helper() {
+        let path = uniform_cost_zarr(4, 4, 2, 2);
+        assert!(path.exists());
+
+        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        let array = zarrs::array::Array::open(store, "/cost");
+        assert!(array.is_ok());
+    }
+
+    #[test]
+    fn test_three_layer_ones_helper() {
+        let path = three_layer_ones(4, 4, 2, 2);
+        assert!(path.exists());
+
+        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        for layer in ["A", "B", "C"] {
+            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer));
+            assert!(array.is_ok(), "Layer {} should exist", layer);
+        }
+    }
+
+    #[test]
+    fn test_preset_small() {
+        let path = preset_small()
+            .layer(LayerConfig::ones("test"))
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_preset_cost_surface() {
+        let path = preset_cost_surface()
+            .dimensions(8, 8)
+            .chunks(4, 4)
+            .build()
+            .unwrap();
+
+        assert!(path.exists());
+
+        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        for layer in ["A", "B", "C"] {
+            let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer));
+            assert!(array.is_ok(), "Layer {} should exist", layer);
+        }
+    }
+}
+
+// ============================================================================
+// Old approach. It will be eventually deprecated
+// ============================================================================
+
+// //! Dataset samples for tests and demonstrations
 
 /// Create a zarr store with a few sample layers
 ///
