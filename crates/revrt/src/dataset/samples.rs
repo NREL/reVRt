@@ -15,6 +15,7 @@ use zarrs::group::GroupBuilder;
 use zarrs::storage::ReadableWritableListableStorage;
 
 /// Fill strategy for layer data
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) enum FillStrategy {
     /// Fill with constant value
@@ -30,6 +31,7 @@ pub(crate) enum FillStrategy {
 }
 
 /// Configuration for a single layer
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct LayerConfig {
     /// Layer name (e.g., "A", "temperature", "cost")
@@ -38,6 +40,7 @@ pub(crate) struct LayerConfig {
     fill: FillStrategy,
 }
 
+#[allow(dead_code)]
 impl LayerConfig {
     /// Create a new layer configuration
     pub(crate) fn new(name: impl Into<String>, fill: FillStrategy) -> Self {
@@ -118,6 +121,7 @@ impl Default for ZarrTestBuilder {
     }
 }
 
+#[allow(dead_code)]
 impl ZarrTestBuilder {
     /// Create a new builder with default settings
     pub(crate) fn new() -> Self {
@@ -304,6 +308,7 @@ pub(crate) fn three_layer_ones(ni: u64, nj: u64, ci: u64, cj: u64) -> PathBuf {
 }
 
 /// Quick builder for multi-variable random data
+#[allow(dead_code)]
 pub(crate) fn multi_variable_random(
     ni: u64,
     nj: u64,
@@ -323,6 +328,7 @@ pub(crate) fn multi_variable_random(
 }
 
 /// Quick builder for sequential data
+#[allow(dead_code)]
 pub(crate) fn sequential_layers(ni: u64, nj: u64, ci: u64, cj: u64, layers: &[&str]) -> PathBuf {
     let mut builder = ZarrTestBuilder::new().shape(ni, nj, ci, cj);
 
@@ -343,11 +349,13 @@ pub(crate) fn preset_small() -> ZarrTestBuilder {
 }
 
 /// Preset: Medium 16x16 grid for integration tests
+#[allow(dead_code)]
 pub(crate) fn preset_medium() -> ZarrTestBuilder {
     ZarrTestBuilder::new().dimensions(16, 16).chunks(4, 4)
 }
 
 /// Preset: Large 128x128 grid for performance tests
+#[allow(dead_code)]
 pub(crate) fn preset_large() -> ZarrTestBuilder {
     ZarrTestBuilder::new().dimensions(128, 128).chunks(32, 32)
 }
