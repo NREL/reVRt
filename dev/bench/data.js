@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768040592010,
+  "lastUpdate": 1768266998919,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -5039,6 +5039,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 365218334,
             "range": "± 7118026",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "guilherme@castelao.net",
+            "name": "Guilherme Castelão",
+            "username": "castelao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "79290e729314c90c966227eb77f54156b8aa5b39",
+          "message": "Builder to create datasets for tests (#209)\n\n* Builder support to create datasets in support for tests\n\n* Bump Rust to 1.92\n\nMismatch on lint rules due to different versions.\n\n* Allow dead code while it is not used yet\n\n* style: Moving tests to the bottom\n\n* cfg: Updating pixi.lock\n\n* fix: Correct module to import ZarrTestBuilder\n\n* fix: Default keep_tmp set to false\n\nWe might want to remove this option to avoid leaving trash behind by\nmistake.\n\n* Loading TempDir and crate::Result\n\n* feat: Extending ZarrsArrayError into crates' errors\n\n* refact: Sample builder now returns a populated TempDir\n\nThe TempDir is the root for a Zarr dataset, so it can be accessed\ndirectly while simplifying the process to guarantee it will be\nautomatically cleaned once dropped.\n\n* refact: Using standard Result with samples\n\n* doc: Info on keep_tmp\n\n* style:\n\n* style: Renaming inherited error\n\n* style:",
+          "timestamp": "2026-01-12T18:05:08-07:00",
+          "tree_id": "2aeb49871cf1598dbd92afb015f35ebb00d10a5c",
+          "url": "https://github.com/NREL/reVRt/commit/79290e729314c90c966227eb77f54156b8aa5b39"
+        },
+        "date": 1768266998353,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 72595879,
+            "range": "± 1149772",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 88892557,
+            "range": "± 1590554",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 96824885,
+            "range": "± 2236449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 146781134,
+            "range": "± 2486950",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 621025067,
+            "range": "± 14129457",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 148422173,
+            "range": "± 1976826",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 153801246,
+            "range": "± 1067098",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 166966175,
+            "range": "± 1497397",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 209778032,
+            "range": "± 2478904",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 365338664,
+            "range": "± 4956691",
             "unit": "ns/iter"
           }
         ]
