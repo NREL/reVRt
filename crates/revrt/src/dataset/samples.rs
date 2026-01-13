@@ -690,7 +690,7 @@ mod tests {
 
         assert!(path.exists());
 
-        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        let store = Arc::new(FilesystemStore::new(path).unwrap());
         for layer in ["A", "B", "C"] {
             let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer));
             assert!(array.is_ok(), "Layer {} should exist", layer);
