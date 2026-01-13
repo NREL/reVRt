@@ -7,12 +7,13 @@ same conditions.
 import json
 
 import hypothesis
-from hypothesis.extra.numpy import arrays, array_shapes
 import numpy as np
-from skimage.graph import MCP_Geometric
 import xarray as xr
+from shapely.geometry import LineString
+from skimage.graph import MCP_Geometric
+from hypothesis.extra.numpy import arrays, array_shapes
 
-from revrt import find_paths, RouteFinder
+from revrt import RouteFinder, find_paths, simplify_using_slopes
 
 # Maximum value for input features used to calculate cost
 # The test never ends for large values, such as 1e10.
@@ -57,6 +58,12 @@ def validate_find_paths_single_var(data, start, end, tmp_path):
     # compare final cost
     assert np.isclose(revrt_cost, costs[end])
 
+    # make sure path simplification is equivalent
+    if len(revrt_route) > 1:
+        assert LineString(skimage_route).equals(
+            LineString(simplify_using_slopes(revrt_route))
+        )
+
 
 def validate_route_finder_single_var(data, start, end, tmp_path):
     """Validate reVRt against skimage for a given feature array
@@ -96,6 +103,12 @@ def validate_route_finder_single_var(data, start, end, tmp_path):
     assert np.array_equal(skimage_route, revrt_route)
     # compare final cost
     assert np.isclose(revrt_cost, costs[end])
+
+    # make sure path simplification is equivalent
+    if len(revrt_route) > 1:
+        assert LineString(skimage_route).equals(
+            LineString(simplify_using_slopes(revrt_route))
+        )
 
 
 @hypothesis.given(
