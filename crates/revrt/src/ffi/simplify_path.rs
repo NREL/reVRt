@@ -31,8 +31,13 @@ fn equal_slopes(a: Option<f64>, b: Option<f64>, tol: f64) -> bool {
 /// Function to simplify a path by removing points that fall on straight segments
 ///
 /// `points`: A collection points (x, y) representing a path.
-/// `slope_tolerance`: A float representing a slope tolerance to allow.
-///  For typical 8-direction routing, a value of 1 should suffice
+/// `slope_tolerance`: A float representing a slope tolerance to allow
+///  (not inclusive). For typical 8-direction routing, a value of 1 or less
+///  should suffice.
+///
+/// Note that this function intentionally consumes the input vector.
+/// The idea is that the output vector will be a lossless representation
+/// of the input, so cloning is not necessary.
 pub(super) fn simplify_path(points: Vec<(f64, f64)>, slope_tolerance: f64) -> Vec<(f64, f64)> {
     let len = points.len();
     if len <= 2 {
