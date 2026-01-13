@@ -626,7 +626,7 @@ mod tests {
         assert!(path.exists());
 
         // Verify layers exist
-        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        let store = Arc::new(FilesystemStore::new(path).unwrap());
         for layer_name in ["A", "B", "C"] {
             let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer_name));
             assert!(array.is_ok(), "Layer {} should exist", layer_name);
@@ -651,7 +651,7 @@ mod tests {
         let path = sample.path();
         assert!(path.exists());
 
-        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        let store = Arc::new(FilesystemStore::new(path).unwrap());
         let array = zarrs::array::Array::open(store, "/cost");
         assert!(array.is_ok());
     }
@@ -662,7 +662,7 @@ mod tests {
         let path = sample.path();
         assert!(path.exists());
 
-        let store = Arc::new(FilesystemStore::new(&path).unwrap());
+        let store = Arc::new(FilesystemStore::new(path).unwrap());
         for layer in ["A", "B", "C"] {
             let array = zarrs::array::Array::open(store.clone(), &format!("/{}", layer));
             assert!(array.is_ok(), "Layer {} should exist", layer);
