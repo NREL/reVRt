@@ -5,7 +5,6 @@ import json
 import random
 import shutil
 import platform
-import traceback
 from pathlib import Path
 
 import pytest
@@ -15,7 +14,6 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
 
-from revrt._cli import main
 from revrt.utilities import LayeredFile, features_to_route_table
 from revrt.costs.config import TransmissionConfig, parse_cap_class
 from revrt.routing.base import BatchRouteProcessor, RoutingScenario
@@ -90,7 +88,7 @@ def _run_cli(
     polarity_config,
     route_table,
     cost_layer_config,
-    cli_runner,
+    cli_command_run_func,
     save_paths=False,
 ):
     """Run reVRt CLI with given configs and return test and truth dataframes"""
@@ -110,8 +108,6 @@ def _run_cli(
     route_table.to_csv(routes_fp, index=False)
 
     config = {
-        "log_directory": str(tmp_path),
-        "execution_control": {"option": "local"},
         "transmission_config": {
             "row_width": str(row_config_path),
             "voltage_polarity_mult": str(polarity_config_path),
@@ -122,18 +118,14 @@ def _run_cli(
         "cost_layers": [cost_layer_config],
         "friction_layers": [DEFAULT_BARRIER_CONFIG],
     }
-    config_path = tmp_path / "config.json"
-    config_path.write_text(json.dumps(config))
 
-    result = cli_runner.invoke(main, ["route-points", "-c", config_path])
-    msg = f"Failed with error {traceback.print_exception(*result.exc_info)}"
-    assert result.exit_code == 0, msg
+    out_fp = cli_command_run_func("route-points", config, tmp_path)
 
     if save_paths:
-        test = gpd.read_file(tmp_path / f"{tmp_path.stem}_route_points.gpkg")
+        test = gpd.read_file(out_fp)
         assert test.geometry is not None
     else:
-        test = pd.read_csv(tmp_path / f"{tmp_path.stem}_route_points.csv")
+        test = pd.read_csv(out_fp)
     return test, truth
 
 
@@ -363,7 +355,7 @@ def test_cli(
     tmp_path,
     test_routing_data_dir,
     save_paths,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test reVX invariant cost layer routing against known outputs"""
 
@@ -376,7 +368,7 @@ def test_cli(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
         save_paths=save_paths,
     )
 
@@ -393,7 +385,7 @@ def test_config_given_but_no_mult_in_layers(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test Least cost path with transmission config but no volt in points"""
 
@@ -408,7 +400,7 @@ def test_config_given_but_no_mult_in_layers(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
 
     check(truth, test)
@@ -424,7 +416,7 @@ def test_apply_row_mult(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying row multiplier"""
 
@@ -442,7 +434,7 @@ def test_apply_row_mult(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     test["cost"] /= 2
 
@@ -459,7 +451,7 @@ def test_apply_polarity_mult(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying polarity multiplier"""
 
@@ -477,7 +469,7 @@ def test_apply_polarity_mult(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     test["cost"] /= 3 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
@@ -494,7 +486,7 @@ def test_apply_row_and_polarity_mult(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying row multiplier"""
 
@@ -512,7 +504,7 @@ def test_apply_row_and_polarity_mult(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     test["cost"] /= 6 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
@@ -529,7 +521,7 @@ def test_apply_row_and_polarity_with_existing_mult(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying both row and polarity multiplier when mult exists"""
 
@@ -551,7 +543,7 @@ def test_apply_row_and_polarity_with_existing_mult(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     test["cost"] /= 30 * _MILLION_USD_PER_MILE_TO_USD_PER_PIXEL
 
@@ -568,7 +560,7 @@ def test_apply_multipliers_by_route(
     route_table,
     tmp_path,
     test_routing_data_dir,
-    cli_runner,
+    run_gaps_cli_with_expected_file,
 ):
     """Test applying unique multipliers per route"""
 
@@ -601,7 +593,7 @@ def test_apply_multipliers_by_route(
         polarity_config,
         route_table,
         cost_layer_config,
-        cli_runner,
+        run_gaps_cli_with_expected_file,
     )
     divisors = []
     for __, row in test.iterrows():
@@ -697,6 +689,242 @@ def test_tracked_layers(
     assert (test["layer1_sum"] <= test["length_km"] / 90 * 1000 + 1).all()
     assert np.allclose(test["layer2_max"], 2)
     assert np.allclose(test["layer5_mean"], 1)
+
+
+@pytest.mark.parametrize("save_paths", [False, True])
+@pytest.mark.skipif(
+    (os.environ.get("TOX_RUNNING") == "True")
+    and (platform.system() == "Windows"),
+    reason="CLI does not work under tox env on windows",
+)
+def test_regional_end_to_end_cli(
+    save_paths,
+    run_gaps_cli_with_expected_file,
+    tmp_path,
+    test_routing_data_dir,
+    revx_transmission_layers,
+):
+    """Test Regional cost routines and CLI"""
+
+    ri_feats_path = test_routing_data_dir / "ri_transmission_features.gpkg"
+    ri_ba_path = test_routing_data_dir / "ri_regions.gpkg"
+
+    # -- Build features (substations) to route to --
+
+    config = {
+        # "features_fpath": str(ri_feats_path),
+        "features_fpath": str(ri_feats_path),
+        "regions_fpath": str(ri_ba_path),
+        "region_identifier_column": "feature_id",
+    }
+    subs_fp = run_gaps_cli_with_expected_file("map-ss-to-rr", config, tmp_path)
+
+    assert len(gpd.read_file(subs_fp)) == 380
+
+    # -- Build Route Table --
+
+    config = {
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(subs_fp),
+        "out_dir": str(tmp_path),
+        "regions_fpath": str(ri_ba_path),
+        "resolution": 64,
+        "expand_radius": True,
+        "clip_points_to_regions": False,
+        "feature_out_fp": "config_features.gpkg",
+        "route_table_out_fp": "config_routes.csv",
+        "region_identifier_column": "feature_id",
+        "connection_identifier_column": "end_feat_id",
+    }
+
+    mapped_features_path = tmp_path / "config_features.gpkg"
+    assert not mapped_features_path.exists()
+
+    route_table_path = run_gaps_cli_with_expected_file(
+        "build-feature-route-table",
+        config,
+        tmp_path,
+        glob_pattern="config_routes.csv",
+    )
+
+    assert mapped_features_path.exists()
+    assert len(pd.read_csv(route_table_path)) == 270
+    assert len(gpd.read_file(mapped_features_path)) == 4045
+
+    # -- RUN LCP --
+
+    config = {
+        "cost_fpath": str(revx_transmission_layers),
+        "route_table_fpath": str(route_table_path),
+        "features_fpath": str(mapped_features_path),
+        "cost_layers": [{"layer_name": "tie_line_costs_1500MW"}],
+        "friction_layers": [DEFAULT_BARRIER_CONFIG],
+        "save_paths": save_paths,
+    }
+
+    out_fp = run_gaps_cli_with_expected_file(
+        "route-features", config, tmp_path
+    )
+
+    if save_paths:
+        test_routes = gpd.read_file(out_fp)
+        assert test_routes.geometry is not None
+    else:
+        test_routes = pd.read_csv(out_fp)
+
+    assert len(test_routes) == 270
+
+    # -- RUN Post-Processing --
+
+    config = {
+        "collect_pattern": str(out_fp),
+        "chunk_size": 200,
+        "purge_chunks": False,
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(ri_feats_path),
+        "transmission_feature_id_col": "trans_gid",
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    if save_paths:
+        test = gpd.read_file(merged_fp)
+        assert test.geometry is not None
+    else:
+        test = pd.read_csv(merged_fp)
+
+    assert "poi_lat" in test
+    assert "poi_lon" in test
+    assert "feature_id" in test
+    assert "trans_gid" in test
+    assert "ac_cap" in test
+    assert "category" in test
+    assert "voltage_transmission_feature" in test
+    assert "trans_gids" in test
+
+    assert "feature_id_transmission_feature" not in test
+    assert "min_volts" not in test
+    assert "max_volts" not in test
+    assert "end_feat_id_transmission_feature" not in test
+
+    assert len(test) == 806
+    assert len(test) >= len(test_routes)
+    assert test["trans_gid"].notna().all()
+    assert test["cost"].notna().all()
+    assert test["length_km"].notna().all()
+
+    assert (test["length_km"] >= 0.45).all()
+    assert (test["length_km"] <= 168).all()
+    assert (test["cost"] >= 1.46e6).all()
+    assert (test["cost"] <= 7.05e8).all()
+    assert set(test["feature_id"].unique()) == {1, 2, 3, 4}
+
+    assert len(set(test["trans_gid"].unique())) == 138
+    assert len(test.groupby(["poi_lat", "poi_lon"])) == 69
+
+    mask = test["trans_gid"] == 69130
+    assert len(test[mask]) == 6
+    assert set(test[mask]["feature_id"].unique()) == {4}
+
+    assert np.allclose(
+        test["tie_line_costs_1500MW_cost"].astype(float),
+        test["cost"].astype(float),
+    )
+    assert np.allclose(
+        test["tie_line_costs_1500MW_length_km"].astype(float),
+        test["length_km"].astype(float),
+    )
+
+    # -- Test other linking configurations --
+    merged_fp.unlink()
+    shutil.move(tmp_path / "chunk_files" / out_fp.name, tmp_path / out_fp.name)
+    shutil.rmtree(tmp_path / ".gaps", ignore_errors=True)
+    config = {
+        "collect_pattern": str(out_fp),
+        "chunk_size": 200,
+        "purge_chunks": False,
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(mapped_features_path),
+        "transmission_feature_id_col": "trans_gid",
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    if save_paths:
+        test = gpd.read_file(merged_fp)
+        assert test.geometry is not None
+    else:
+        test = pd.read_csv(merged_fp)
+
+    assert "poi_lat" in test
+    assert "poi_lon" in test
+    assert "feature_id" in test
+    assert "ac_cap" in test
+    assert "category" in test
+    assert "trans_gids" in test
+    assert "feature_id_transmission_feature" in test
+    assert "min_volts" in test
+    assert "max_volts" in test
+    assert "end_feat_id_transmission_feature" in test
+
+    assert len(test) == 329  # ensures features are de-duplicated
+    assert len(test) >= len(test_routes)
+
+    assert (test["length_km"] >= 0.45).all()
+    assert (test["length_km"] <= 168).all()
+    assert (test["cost"] >= 1.46e6).all()
+    assert (test["cost"] <= 7.05e8).all()
+    assert set(test["feature_id"].unique()) == {1, 2, 3, 4}
+
+    # -- Test final linking configurations --
+
+    merged_fp.unlink()
+    shutil.move(tmp_path / "chunk_files" / out_fp.name, tmp_path / out_fp.name)
+    shutil.rmtree(tmp_path / ".gaps", ignore_errors=True)
+    config = {
+        "collect_pattern": str(out_fp),
+        "chunk_size": 200,
+        "purge_chunks": True,
+        "cost_fpath": str(revx_transmission_layers),
+        "features_fpath": str(subs_fp),
+        "transmission_feature_id_col": "trans_gid",
+    }
+
+    merged_fp = run_gaps_cli_with_expected_file(
+        "finalize-routes", config, tmp_path
+    )
+
+    if save_paths:
+        test = gpd.read_file(merged_fp)
+        assert test.geometry is not None
+    else:
+        test = pd.read_csv(merged_fp)
+
+    assert "poi_lat" in test
+    assert "poi_lon" in test
+    assert "feature_id" in test
+    assert "ac_cap" in test
+    assert "category" in test
+    assert "trans_gids" in test
+    assert "feature_id_transmission_feature" in test
+    assert "min_volts" in test
+    assert "max_volts" in test
+    assert "end_feat_id_transmission_feature" not in test
+
+    assert len(test) == 329
+    assert len(test) >= len(test_routes)
+
+    assert (test["length_km"] >= 0.45).all()
+    assert (test["length_km"] <= 168).all()
+    assert (test["cost"] >= 1.46e6).all()
+    assert (test["cost"] <= 7.05e8).all()
+    assert set(test["feature_id"].unique()) == {1, 2, 3, 4}
+
+    assert not out_fp.exists()
 
 
 if __name__ == "__main__":

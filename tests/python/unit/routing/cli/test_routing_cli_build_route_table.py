@@ -281,7 +281,7 @@ def test_point_to_feature_route_table_builds_outputs(
         revx_transmission_layers, consolidated=False, engine="zarr"
     ) as ds:
         subset = ds.isel(y=slice(0, 6), x=slice(0, 6))
-        subset.to_zarr(cost_fp, mode="w")
+        subset.to_zarr(cost_fp, mode="w", zarr_format=3, consolidated=False)
         crs = subset.rio.crs
         transform = subset.rio.transform()
         shape = (subset.rio.height, subset.rio.width)
@@ -372,7 +372,7 @@ def test_point_to_feature_route_table_radius_only(
         revx_transmission_layers, consolidated=False, engine="zarr"
     ) as ds:
         subset = ds.isel(y=slice(0, 6), x=slice(0, 6))
-        subset.to_zarr(cost_fp, mode="w")
+        subset.to_zarr(cost_fp, mode="w", zarr_format=3, consolidated=False)
         crs = subset.rio.crs
         transform = subset.rio.transform()
         shape = (subset.rio.height, subset.rio.width)

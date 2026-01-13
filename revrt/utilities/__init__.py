@@ -18,4 +18,5 @@ from .handlers import (
     IncrementalWriter,
     chunked_read_gpkg,
     num_feats_in_gpkg,
+    gpkg_crs,
 )
