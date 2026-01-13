@@ -12,7 +12,7 @@ pub enum Error {
     ZarrsGroupCreate(#[from] zarrs::group::GroupCreateError),
 
     #[error(transparent)]
-    ZarrsArrayError(#[from] zarrs::array::ArrayError),
+    ZarrsArray(#[from] zarrs::array::ArrayError),
 
     #[error(transparent)]
     ZarrsStorage(#[from] zarrs::storage::StorageError),
