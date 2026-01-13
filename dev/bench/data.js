@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768266998919,
+  "lastUpdate": 1768282540619,
   "repoUrl": "https://github.com/NREL/reVRt",
   "entries": {
     "Rust Benchmark": [
@@ -5123,6 +5123,90 @@ window.BENCHMARK_DATA = {
             "name": "distance/10",
             "value": 365338664,
             "range": "± 4956691",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "ppinchuk@nrel.gov",
+            "name": "Paul Pinchuk",
+            "username": "ppinchuk"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d6d8dc8a29a6b340d2b88926511aa0f5b06c5319",
+          "message": "Add option to link back to features (#210)\n\n* Change name of class\n\n* Add `RouteToFeatureMapper` class + functionality to finalize\n\n* `LayeredFile` now has a `cell_size` attr\n\n* Add `gpkg_crs` function\n\n* Add missing docstring\n\n* Add unit tests\n\n* Fix a few warnings\n\n* Fix bug\n\n* Add CLI tests\n\n* Use new fixture\n\n* New fixture\n\n* Minor update\n\n* Add tests\n\n* Add `test_regional_end_to_end_cli` test\n\n* Simplify `chunked_read_gpkg`\n\n* Move fixture\n\n* Fix linter rule\n\n* Fix bug\n\n* More comprehensive tests\n\n* Make sure file is overwritten\n\n* Add a few extra pieces to the tests\n\n* More things to tests\n\n* Update lockfile",
+          "timestamp": "2026-01-12T22:24:16-07:00",
+          "tree_id": "9e4b36be15c27cb63aa3d32f71991f4d8e4e9d69",
+          "url": "https://github.com/NREL/reVRt/commit/d6d8dc8a29a6b340d2b88926511aa0f5b06c5319"
+        },
+        "date": 1768282539788,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "constant_cost",
+            "value": 73137142,
+            "range": "± 944530",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "random_cost",
+            "value": 101770910,
+            "range": "± 777206",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_near_routes",
+            "value": 96700361,
+            "range": "± 1754484",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "multiple_spread_routes",
+            "value": 148470253,
+            "range": "± 2363565",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "single_chunk",
+            "value": 621638013,
+            "range": "± 13500790",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/0",
+            "value": 147561715,
+            "range": "± 588429",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/1",
+            "value": 152544563,
+            "range": "± 810168",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/2",
+            "value": 165636381,
+            "range": "± 1102580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/5",
+            "value": 208862234,
+            "range": "± 23638648",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "distance/10",
+            "value": 366398645,
+            "range": "± 2906886",
             "unit": "ns/iter"
           }
         ]
