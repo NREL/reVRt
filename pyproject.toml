@@ -49,8 +49,15 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "contextily>=1.6.2,<2",
+  "datashader>=0.18.2,<0.19",
+  "geoviews>=1.15.0,<2",
+  "holoviews>=1.22.1,<2",
+  "hvplot>=0.12.2,<0.13",
   "ipython>=9.1.0,<10",
   "jupyter>=1.1.1,<2",
+  "jupyter_bokeh>=4.0.5,<5",
+  "matplotlib>=3.10.1,<4",
   "maturin>=1.9.3,<2",
   "pipreqs>=0.4.13,<0.5",
   "ruff>=0.14.11,<0.15",
@@ -257,9 +264,14 @@ packaging = ">=24.2,<25"
 
 [tool.pixi.feature.dev.dependencies]
 contextily = ">=1.6.2,<2"
+datashader = ">=0.18.2,<0.19"
+geoviews = ">=1.15.0,<2"
 hdf5 = ">=1.14.6,<2"
+holoviews = ">=1.22.1,<2"
+hvplot = ">=0.12.2,<0.13"
 ipython = ">=9.1.0,<10"
 jupyter = ">=1.1.1,<2"
+jupyter_bokeh = ">=4.0.5,<5"
 matplotlib = ">=3.10.1,<4"
 pip = ">=25.1.1,<26"
 pipreqs = ">=0.4.13,<0.5"
