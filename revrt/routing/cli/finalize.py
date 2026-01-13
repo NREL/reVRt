@@ -7,8 +7,11 @@ import warnings
 from pathlib import Path
 from functools import cached_property
 
+import rasterio
 import numpy as np
 import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point
 from gaps.cli import CLICommandFromClass
 from gaps.utilities import resolve_path
 
@@ -18,16 +21,155 @@ from revrt.constants import (
     SHORT_MULT,
     MEDIUM_MULT,
 )
-from revrt.utilities import IncrementalWriter, chunked_read_gpkg
+from revrt.utilities import (
+    IncrementalWriter,
+    LayeredFile,
+    chunked_read_gpkg,
+    gpkg_crs,
+)
+from revrt.utilities.raster import integer_dimension_window
 from revrt.exceptions import revrtValueError, revrtFileNotFoundError
 
 logger = logging.getLogger(__name__)
 
 
-class _RoutePostProcessor:
+class RouteToFeatureMapper:
+    """Class to map routes to transmission features"""
+
+    def __init__(self, cost_fpath, transmission_feature_id_col="trans_gid"):
+        """
+
+        Parameters
+        ----------
+        cost_fpath : path-like
+            Filepath to cost layer used for routing. This is used to
+            obtain profile information for the raster layer in order to
+            compute transmission feature row/column indices.
+        transmission_feature_id_col : str, default="trans_gid"
+            Name of column in features file uniquely identifying each
+            transmission feature. By default, ``"trans_gid"``.
+        """
+        self._cost_lf = LayeredFile(cost_fpath)
+        self._tid_col = transmission_feature_id_col
+
+    def _buffered_endpoint(self, row):
+        """Buffered endpoints of a route"""
+        x, y = rasterio.transform.xy(
+            self._cost_lf.profile["transform"], row["end_row"], row["end_col"]
+        )
+        return Point(x, y).buffer(self._cost_lf.cell_size * np.sqrt(2) * 1.1)
+
+    def process(self, routes, transmission_feature_fp):
+        """Map routes to transmission features
+
+        Parameters
+        ----------
+        routes : pandas.DataFrame or geopandas.GeoDataFrame
+            DataFrame containing routing results with 'end_row' and
+            'end_col' columns representing the endpoint indices (into
+            the cost raster) of each route.
+        transmission_feature_fp : path-like
+            Path to GeoPackage file containing transmission features.
+
+        Returns
+        -------
+        pandas.DataFrame or geopandas.GeoDataFrame
+            Input routes DataFrame with transmission feature columns
+            merged in based on route endpoints.
+        """
+        features_crs = gpkg_crs(transmission_feature_fp)
+
+        buffered_endpoints = routes.apply(self._buffered_endpoint, axis=1)
+        buffered_endpoints = gpd.GeoDataFrame(
+            geometry=buffered_endpoints, crs=self._cost_lf.profile["crs"]
+        ).to_crs(features_crs)
+
+        transmission_features = gpd.read_file(
+            transmission_feature_fp, mask=buffered_endpoints.union_all()
+        )
+        transmission_features = self._de_duplicate_preserve_geo(
+            transmission_features
+        )
+
+        clipped_for_rasterizing = gpd.clip(
+            transmission_features, buffered_endpoints
+        )
+
+        endpoint_lookup = self._create_endpoint_lookup(
+            clipped_for_rasterizing,
+        )
+
+        routes_with_features = routes.merge(
+            endpoint_lookup, on=["end_row", "end_col"], how="left"
+        )
+        return routes_with_features.merge(
+            transmission_features.drop(columns="geometry"),
+            on=[self._tid_col],
+            how="left",
+            suffixes=("", "_transmission_feature"),
+        )
+
+    def _de_duplicate_preserve_geo(self, gdf):
+        """De-duplicate GeoDataFrame while preserving geometries"""
+        return gpd.GeoDataFrame(
+            (
+                {
+                    **{k: v for k, v in g.iloc[0].items() if k != "geometry"},
+                    "geometry": g.union_all(),
+                }
+                for __, g in gdf.groupby(self._tid_col)
+            ),
+            crs=gdf.crs,
+        )
+
+    def _create_endpoint_lookup(self, transmission_features):
+        """Create endpoint lookup DataFrame from transmission feats"""
+        transmission_features = transmission_features.to_crs(
+            self._cost_lf.profile["crs"]
+        )
+
+        endpoint_lookup = []
+        for __, feat in transmission_features.iterrows():
+            rows, cols = self._feature_to_row_col(feat)
+            tid = feat[self._tid_col]
+            endpoint_lookup += [
+                {
+                    "end_row": int(r),
+                    "end_col": int(c),
+                    self._tid_col: tid,
+                }
+                for r, c in zip(rows, cols, strict=True)
+                if 0 <= r < self._cost_lf.profile["height"]
+                and 0 <= c < self._cost_lf.profile["width"]
+            ]
+        return pd.DataFrame(endpoint_lookup)
+
+    def _feature_to_row_col(self, feat):
+        """Get row/col indices for a transmission feature geometry"""
+        window = integer_dimension_window(
+            feat.geometry.bounds,
+            transform=self._cost_lf.profile["transform"],
+        )
+        window_transform = rasterio.windows.transform(
+            window=window, transform=self._cost_lf.profile["transform"]
+        )
+        mask = rasterio.features.geometry_mask(
+            [feat.geometry],
+            out_shape=(window.height, window.width),
+            transform=window_transform,
+            invert=True,
+        )
+        rows, cols = np.where(mask)
+        return rows + window.row_off, cols + window.col_off
+        # rows += window.row_off
+        # cols += window.col_off
+        # return rows, cols
+
+
+class RoutePostProcessor:
     """Class to finalize routing outputs"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         collect_pattern,
         project_dir,
@@ -36,6 +178,9 @@ class _RoutePostProcessor:
         min_line_length=0,
         length_mult_kind=None,
         simplify_geo_tolerance=None,
+        cost_fpath=None,
+        features_fpath=None,
+        transmission_feature_id_col="trans_gid",
         purge_chunks=False,
         chunk_size=10_000,
     ):
@@ -89,6 +234,29 @@ class _RoutePostProcessor:
             same units as the coordinate reference system of the
             GeoSeries. Only works for GeoPackage outputs (errors
             otherwise). By default, ``None``.
+        cost_fpath : path-like, optional
+            Filepath to cost layer used for routing. If provided along
+            with `features_fpath`, the routes will be merged with the
+            transmission features that they connected to. To skip this
+            functionality, leave out **both** `cost_fpath` and
+            `features_fpath`. This is used to obtain profile information
+            for the cost raster layer in order to compute transmission
+            feature row/column indices. By default, ``None``.
+        features_fpath : path-like, optional
+            Filepath to transmission features GeoPackage. If provided
+            along with `cost_fpath`, the routes will be merged with the
+            transmission features that they connected to. The features
+            in this file must contain a column matching
+            `transmission_feature_id_col` that uniquely identifies each
+            transmission feature. These features will be merged into the
+            routes based on which features the routes connected to. To
+            skip this functionality, leave out **both** `cost_fpath` and
+            `features_fpath`. By default, ``None``.
+        transmission_feature_id_col : str, default="trans_gid"
+            Name of column in features file uniquely identifying each
+            transmission feature. This is only used if both `cost_fpath`
+            and `features_fpath` are provided.
+            By default, ``"trans_gid"``.
         purge_chunks : bool, default=False
             Option to delete single-node input files after the
             collection step. By default, ``False``.
@@ -104,6 +272,9 @@ class _RoutePostProcessor:
         self.min_line_length = min_line_length
         self.length_mult_kind = length_mult_kind
         self.simplify_geo_tolerance = simplify_geo_tolerance
+        self.cost_fpath = cost_fpath
+        self.features_fpath = features_fpath
+        self.transmission_feature_id_col = transmission_feature_id_col
         self.purge_chunks = purge_chunks
         self.chunk_size = chunk_size
 
@@ -158,6 +329,14 @@ class _RoutePostProcessor:
         """revrt.utilities.handlers.IncrementalWriter: Output writer"""
         return IncrementalWriter(self.out_fp)
 
+    @cached_property
+    def rtf_mapper(self):
+        """RouteToFeatureMapper: Shared route-to-feature mapper obj"""
+        return RouteToFeatureMapper(
+            cost_fpath=self.cost_fpath,
+            transmission_feature_id_col=self.transmission_feature_id_col,
+        )
+
     def _next_file_to_process(self):
         """Generator yielding files to process"""
         num_files = len(self.files_to_collect)
@@ -205,10 +384,13 @@ class _RoutePostProcessor:
                     )
 
                 if self.length_mult_kind:
-                    _apply_length_mult(df, self.length_mult_kind)
+                    df = _apply_length_mult(df, self.length_mult_kind)
 
                 if self.min_line_length > 0:
-                    _apply_min_length_floor(df, self.min_line_length)
+                    df = _apply_min_length_floor(df, self.min_line_length)
+
+                if self.cost_fpath or self.features_fpath:
+                    df = self._merge_transmission_features(df)
 
                 self.writer.save(df)
 
@@ -226,10 +408,13 @@ class _RoutePostProcessor:
                     continue
 
                 if self.length_mult_kind:
-                    _apply_length_mult(df, self.length_mult_kind)
+                    df = _apply_length_mult(df, self.length_mult_kind)
 
                 if self.min_line_length > 0:
-                    _apply_min_length_floor(df, self.min_line_length)
+                    df = _apply_min_length_floor(df, self.min_line_length)
+
+                if self.cost_fpath or self.features_fpath:
+                    df = self._merge_transmission_features(df)
 
                 self.writer.save(df)
 
@@ -242,6 +427,17 @@ class _RoutePostProcessor:
         else:
             logger.debug("Retaining chunk file: %s", chunk_fp)
             shutil.move(chunk_fp, self.chunk_dir / chunk_fp.name)
+
+    def _merge_transmission_features(self, routes):
+        """Merge transmission feature attributes into routes"""
+        if self.cost_fpath is None or self.features_fpath is None:
+            msg = (
+                "Both `cost_fpath` and `features_fpath` must be provided "
+                "to merge transmission feature attributes into routes!"
+            )
+            raise revrtValueError(msg)
+
+        return self.rtf_mapper.process(routes, self.features_fpath)
 
 
 def _apply_min_length_floor(features, min_line_length):
@@ -319,7 +515,7 @@ def _compute_linear_lm(features):
 
 
 finalize_routes_command = CLICommandFromClass(
-    init=_RoutePostProcessor,
+    init=RoutePostProcessor,
     method="process",
     name="finalize-routes",
     add_collect=False,

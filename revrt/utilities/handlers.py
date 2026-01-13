@@ -7,7 +7,6 @@ import operator
 import functools
 from pathlib import Path
 from warnings import warn
-from itertools import islice
 from functools import cached_property
 
 import zarr
@@ -185,6 +184,11 @@ class LayeredFile:
     def shape(self):
         """tuple: Template layer shape"""
         return self.profile["height"], self.profile["width"]
+
+    @property
+    def cell_size(self):
+        """float: Size of cell in layer file"""
+        return abs(self.profile["transform"].a)
 
     @property
     def layers(self):
@@ -794,6 +798,23 @@ def num_feats_in_gpkg(filename):
         return cursor.fetchall()[0][0]
 
 
+def gpkg_crs(data_fp):
+    """Get CRS of GeoPackage file
+
+    Parameters
+    ----------
+    data_fp : path-like
+        Path to GeoPackage file.
+
+    Returns
+    -------
+    pyproj.crs.CRS
+        CRS of GeoPackage file.
+    """
+    with fiona.Env(), fiona.open(data_fp) as src:
+        return src.crs
+
+
 def chunked_read_gpkg(data_fp, chunk_size):
     """Read GeoPackage file in chunks
 
@@ -811,31 +832,25 @@ def chunked_read_gpkg(data_fp, chunk_size):
     """
     with fiona.Env(), fiona.open(data_fp) as src:
         total_rows = len(src)
+
+    logger.debug(
+        "\t- Processing %s with %d rows in chunks of %d",
+        data_fp,
+        total_rows,
+        chunk_size,
+    )
+
+    for start in range(0, total_rows, chunk_size):
+        df = gpd.read_file(data_fp, rows=slice(start, start + chunk_size))
+        if df.empty:
+            continue
+
         logger.debug(
-            "\t- Processing %s with %d rows in chunks of %d",
-            data_fp,
-            total_rows,
-            chunk_size,
+            "\t\t- Processing %d rows starting at index %d",
+            len(df),
+            start,
         )
-        feature_iter = iter(src)
-        chunk_idx = 0
-        while True:
-            rows = list(islice(feature_iter, chunk_size))
-            if not rows:
-                break
-
-            chunk_start = chunk_idx * chunk_size
-            logger.debug(
-                "\t\t- Processing %d rows starting at index %d",
-                chunk_size,
-                chunk_start,
-            )
-            df = gpd.GeoDataFrame.from_features(rows, crs=src.crs)
-            if len(df) == 0:
-                chunk_idx += 1
-                continue
-
-            yield df
+        yield df
 
 
 def _layer_profile_from_open_ds(layer, ds):

@@ -118,6 +118,7 @@ def run_gaps_cli_with_expected_file(cli_runner, cli_error_message):
         """Run a CLI command and check for expected output file"""
         out_pattern = cli_command.replace("-", "_")
         config_fp = run_dir / f"test_{out_pattern}_config.json"
+        config_fp.unlink(missing_ok=True)
         config_fp.write_text(json.dumps(config))
 
         if glob_pattern is None:
