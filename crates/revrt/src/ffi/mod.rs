@@ -79,9 +79,10 @@ fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// Parameters
 /// ----------
 /// path : list of tuple
-///     List of two-tuples containing non-negative integers representing
-///     the points making up the route. This function works best if these
-///     values represent array indices instead of values in a CRS.
+///     List of two-tuples containing floating-point numbers or integers
+///     representing the points making up the route. This function works
+///     best if these values represent array indices instead of values
+///     in a CRS.
 /// slope_tolerance : float, default=0.5
 ///     Tolerance value for determining if two slopes are the same.
 ///     For typical 8-direction routing, any value 1 and below should

@@ -196,12 +196,33 @@ def test_route_finder_basic_single_route(tmp_path):
                 (6.5, 4.5),
             ],
         ),
+        (
+            [
+                (1, 5),
+                (2, 4),
+                (3, 3),
+                (4, 3),
+                (5, 3),
+                (6, 3),
+                (6, 4),
+            ],
+            [
+                (1, 5),
+                (3, 3),
+                (6, 3),
+                (6, 4),
+            ],
+        ),
     ],
 )
-def test_simplify_using_slopes_basic(in_path, out_path):
+@pytest.mark.parametrize("use_default_tol", [True, False])
+def test_simplify_using_slopes_basic(in_path, out_path, use_default_tol):
     """Test basic slope simplification"""
 
-    simplified_path = simplify_using_slopes(in_path, slope_tolerance=0.1)
+    if use_default_tol:
+        simplified_path = simplify_using_slopes(in_path)
+    else:
+        simplified_path = simplify_using_slopes(in_path, slope_tolerance=1)
     assert simplified_path == out_path
 
 
