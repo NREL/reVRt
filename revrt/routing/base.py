@@ -16,7 +16,7 @@ import geopandas as gpd
 from shapely.geometry import Point
 from shapely.geometry.linestring import LineString
 
-from revrt import RouteFinder
+from revrt import RouteFinder, simplify_using_slopes
 from revrt.utilities.handlers import IncrementalWriter
 from revrt.exceptions import (
     revrtKeyError,
@@ -519,8 +519,10 @@ class RouteMetrics:
         x, y = rasterio.transform.xy(
             self._routing_layers.transform, rows, cols
         )
-        geom = Point if len(self._route) == 1 else LineString
-        return geom(list(zip(x, y, strict=True)))
+        if len(self._route) == 1:
+            return Point(x, y)
+
+        return LineString(simplify_using_slopes(list(zip(x, y, strict=True))))
 
     def compute(self):
         """Assemble route metrics and optional geometry payload"""

@@ -1,4 +1,5 @@
 mod py_tracing;
+mod simplify_path;
 
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -61,9 +62,40 @@ impl From<Error> for PyErr {
 #[pymodule]
 fn _rust(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(find_paths, m)?)?;
+    m.add_function(wrap_pyfunction!(simplify_using_slopes, m)?)?;
     m.add("revrtRustError", py.get_type::<revrtRustError>())?;
     m.add_class::<RouteFinder>()?;
     Ok(())
+}
+
+/// Simplify path geometry by removing points on the same slope.
+///
+/// This function removes all points that fall on the same slope,
+/// only keeping the points required to define new segments (i.e.
+/// changes in slope). This effectively reduces the storage
+/// requirement for a shapely LineString without changing the
+/// geometry at all.
+///
+/// Parameters
+/// ----------
+/// path : list of tuple
+///     List of two-tuples containing floating-point numbers or integers
+///     representing the points making up the route. This function works
+///     best if these values represent array indices instead of values
+///     in a CRS.
+/// slope_tolerance : float, default=0.5
+///     Tolerance value for determining if two slopes are the same.
+///     For typical 8-direction routing, any value 1 and below should
+///     suffice. By default, ``0.5``.
+///
+/// Returns
+/// -------
+/// list of tuple
+///     Input path with redundant points removed.
+#[pyfunction]
+#[pyo3(signature = (path, slope_tolerance=0.5))]
+fn simplify_using_slopes(path: Vec<(f64, f64)>, slope_tolerance: f64) -> Vec<(f64, f64)> {
+    simplify_path::simplify_path(path, slope_tolerance)
 }
 
 /// Find least-cost paths for one or more starting points.

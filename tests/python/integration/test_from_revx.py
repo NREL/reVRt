@@ -712,7 +712,6 @@ def test_regional_end_to_end_cli(
     # -- Build features (substations) to route to --
 
     config = {
-        # "features_fpath": str(ri_feats_path),
         "features_fpath": str(ri_feats_path),
         "regions_fpath": str(ri_ba_path),
         "region_identifier_column": "feature_id",

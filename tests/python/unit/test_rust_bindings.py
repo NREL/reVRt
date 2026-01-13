@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 from skimage.graph import MCP_Geometric
 
-from revrt import find_paths, RouteFinder
+from revrt import RouteFinder, find_paths, simplify_using_slopes
 
 
 def test_find_paths_basic_single_route(tmp_path):
@@ -111,6 +111,119 @@ def test_route_finder_basic_single_route(tmp_path):
 
     assert test_path == mcp.traceback((2, 6))
     assert np.isclose(test_cost, costs[(2, 6)])
+
+
+@pytest.mark.parametrize(
+    "in_path, out_path",
+    [
+        (
+            [
+                (0.0, 0.0),
+                (1.0, 1.0),
+                (2.0, 2.0),
+                (3.0, 3.0),
+                (4.0, 4.0),
+                (5.0, 5.0),
+                (6.0, 5.0),
+                (7.0, 5.0),
+                (8.0, 5.0),
+                (9.0, 6.0),
+                (10.0, 7.0),
+            ],
+            [
+                (0.0, 0.0),
+                (5.0, 5.0),
+                (8.0, 5.0),
+                (10.0, 7.0),
+            ],
+        ),
+        (
+            [
+                (1.5, 5.5),
+                (1.5, 4.5),
+                (2.5, 3.5),
+                (3.5, 2.5),
+                (4.5, 1.5),
+                (5.5, 2.5),
+                (5.5, 3.5),
+                (6.5, 4.5),
+            ],
+            [
+                (1.5, 5.5),
+                (1.5, 4.5),
+                (4.5, 1.5),
+                (5.5, 2.5),
+                (5.5, 3.5),
+                (6.5, 4.5),
+            ],
+        ),
+        (
+            [
+                (2.5, 5.5),
+                (2.5, 4.5),
+                (3.5, 3.5),
+                (3.5, 2.5),
+                (4.5, 1.5),
+                (5.5, 2.5),
+                (5.5, 3.5),
+                (6.5, 4.5),
+            ],
+            [
+                (2.5, 5.5),
+                (2.5, 4.5),
+                (3.5, 3.5),
+                (3.5, 2.5),
+                (4.5, 1.5),
+                (5.5, 2.5),
+                (5.5, 3.5),
+                (6.5, 4.5),
+            ],
+        ),
+        (
+            [
+                (1.5, 5.5),
+                (2.5, 4.5),
+                (3.5, 3.5),
+                (4.5, 3.5),
+                (5.5, 3.5),
+                (6.5, 3.5),
+                (6.5, 4.5),
+            ],
+            [
+                (1.5, 5.5),
+                (3.5, 3.5),
+                (6.5, 3.5),
+                (6.5, 4.5),
+            ],
+        ),
+        (
+            [
+                (1, 5),
+                (2, 4),
+                (3, 3),
+                (4, 3),
+                (5, 3),
+                (6, 3),
+                (6, 4),
+            ],
+            [
+                (1, 5),
+                (3, 3),
+                (6, 3),
+                (6, 4),
+            ],
+        ),
+    ],
+)
+@pytest.mark.parametrize("use_default_tol", [True, False])
+def test_simplify_using_slopes_basic(in_path, out_path, use_default_tol):
+    """Test basic slope simplification"""
+
+    if use_default_tol:
+        simplified_path = simplify_using_slopes(in_path)
+    else:
+        simplified_path = simplify_using_slopes(in_path, slope_tolerance=1)
+    assert simplified_path == out_path
 
 
 if __name__ == "__main__":

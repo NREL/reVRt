@@ -161,9 +161,6 @@ class RouteToFeatureMapper:
         )
         rows, cols = np.where(mask)
         return rows + window.row_off, cols + window.col_off
-        # rows += window.row_off
-        # cols += window.col_off
-        # return rows, cols
 
 
 class RoutePostProcessor:
