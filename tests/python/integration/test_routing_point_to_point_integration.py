@@ -85,7 +85,7 @@ def test_soft_barrier_with_large_dataset(
         assert route["cost"] == pytest.approx(550.0)
         assert route["length_km"] == pytest.approx(0.9)
         x, y = route["geometry"].xy
-        assert np.allclose(x, np.linspace(0.5, 900.5, num=901))
+        assert np.allclose(x, [0.5, 900.5])
         assert np.allclose(y, 994.5)
 
 

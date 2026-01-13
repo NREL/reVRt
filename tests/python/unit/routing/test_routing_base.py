@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+import rasterio
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -361,8 +362,6 @@ def test_save_paths_returns_expected_geometry(sample_layered_data, tmp_path):
         [
             (1.5, 5.5),
             (1.5, 4.5),
-            (2.5, 3.5),
-            (3.5, 2.5),
             (4.5, 1.5),
             (5.5, 2.5),
             (5.5, 3.5),
@@ -1016,19 +1015,20 @@ def test_length_invariant_layers_sum_raw_values(sample_layered_data, tmp_path):
         engine="zarr",
     ) as ds:
         layer_two = ds["layer_2"].isel(band=0)
-        x_coords = ds["x"].to_numpy()
-        y_coords = ds["y"].to_numpy()
-        xs, ys = route["geometry"].xy
-        route_indices = [
-            (
-                int(np.argmin(np.abs(y_coords - y_val))),
-                int(np.argmin(np.abs(x_coords - x_val))),
-            )
-            for x_val, y_val in zip(xs, ys, strict=True)
-        ]
+        mask = rasterio.features.geometry_mask(
+            [route["geometry"]],
+            out_shape=layer_two.shape,
+            transform=ds.rio.transform(),
+            invert=True,
+        )
+        start_row, start_col = rasterio.transform.rowcol(
+            ds.rio.transform(), *route["geometry"].coords[0]
+        )
+        rows, cols = np.where(mask)
         expected_invariant_cost = sum(
             layer_two.isel(y=row, x=col).item()
-            for row, col in route_indices[1:]
+            for row, col in zip(rows, cols, strict=True)
+            if (row, col) != (start_row, start_col)
         )
 
     assert route["layer_2_cost"] == pytest.approx(
@@ -1121,10 +1121,7 @@ def test_length_invariant_hidden_and_friction_layers(
     )
     assert list(route["geometry"].coords) == [
         (1.5, 5.5),
-        (2.5, 4.5),
         (3.5, 3.5),
-        (4.5, 3.5),
-        (5.5, 3.5),
         (6.5, 3.5),
         (6.5, 4.5),
     ]
@@ -1793,7 +1790,7 @@ def test_soft_barrier(sample_layered_data, ignore_invalid_costs, tmp_path):
         assert route["cost"] == pytest.approx(6)
         assert route["length_km"] == pytest.approx(0.005)
         x, y = route["geometry"].xy
-        assert np.allclose(x, np.linspace(0.5, 5.5, num=6))
+        assert np.allclose(x, [0.5, 5.5])
         assert np.allclose(y, 2.5)
 
 
