@@ -22,10 +22,13 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
 
+use tokio::sync::RwLock;
 use tracing::trace;
 use zarrs::array::{Array, DataType, ElementOwned};
 use zarrs::array_subset::ArraySubset;
+use zarrs::storage::AsyncReadableListableStorage;
 use zarrs::storage::{ReadableListableStorage, ReadableListableStorageTraits};
 
 use crate::error::{Error, Result};
@@ -209,4 +212,145 @@ mod tests {
         }
     }
     */
+}
+
+#[allow(dead_code)]
+/// Trait defining types that can be used as LazySubset element types
+trait LazySubsetElement: ElementOwned + Clone + Send + Sync {
+    /// Convert from f32
+    fn from_f32(value: f32) -> Self;
+    /// Convert from f64
+    fn from_f64(value: f64) -> Self;
+}
+
+impl LazySubsetElement for f32 {
+    fn from_f32(value: f32) -> Self {
+        value
+    }
+    // A lossy cast.
+    // The value is rounded, if needed, and overflow results in infinity.
+    fn from_f64(value: f64) -> Self {
+        value as f32
+    }
+}
+
+impl LazySubsetElement for f64 {
+    fn from_f32(value: f32) -> Self {
+        value as f64
+    }
+    fn from_f64(value: f64) -> Self {
+        value
+    }
+}
+
+#[allow(dead_code)]
+/// Asynchronous lazy loaded subset of a Zarr Dataset.
+///
+/// Work as an async cache for a consistent subset (same indices range) for
+/// multiple variables of a Zarr Dataset.
+// pub struct AsyncLazySubset<T: LazySubsetElement> {
+struct AsyncLazySubset<T: LazySubsetElement> {
+    /// Source Zarr storage
+    source: AsyncReadableListableStorage,
+    /// Subset of the source to be lazily loaded
+    subset: ArraySubset,
+    /// Cached data with RwLock for concurrent access
+    data: Arc<
+        RwLock<
+            HashMap<
+                String,
+                ndarray::ArrayBase<ndarray::OwnedRepr<T>, ndarray::Dim<ndarray::IxDynImpl>>,
+            >,
+        >,
+    >,
+}
+
+impl<T: LazySubsetElement> fmt::Display for AsyncLazySubset<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "AsyncLazySubset {{ subset: {:?}, ... }}", self.subset)
+    }
+}
+
+impl<T: LazySubsetElement> fmt::Debug for AsyncLazySubset<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("AsyncLazySubset")
+            .field("subset", &self.subset)
+            .field("element_type", &std::any::type_name::<T>())
+            .finish()
+    }
+}
+
+#[allow(dead_code)]
+impl<T: LazySubsetElement> AsyncLazySubset<T> {
+    /// Create a new AsyncLazySubset for a given source and subset.
+    ///
+    /// # Arguments
+    /// * `source` - Async readable Zarr storage
+    /// * `subset` - The array subset to load
+    ///
+    /// # Returns
+    /// A new AsyncLazySubset instance with an empty cache
+    fn new(source: AsyncReadableListableStorage, subset: ArraySubset) -> Self {
+        trace!("Creating AsyncLazySubset for subset: {:?}", subset);
+
+        AsyncLazySubset {
+            source,
+            subset,
+            data: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Get the subset used by this AsyncLazySubset.
+    fn subset(&self) -> &ArraySubset {
+        &self.subset
+    }
+
+    /// Get data for a specific variable asynchronously.
+    ///
+    /// This method will check the cache first. If the variable is not cached,
+    /// it will load the data from storage, convert it to the target type,
+    /// cache it, and return it.
+    ///
+    /// # Arguments
+    /// * `varname` - Name of the variable to load
+    ///
+    /// # Returns
+    /// The array data as an ndarray with the target element type
+    ///
+    /// # Errors
+    /// Returns an error if the variable cannot be opened or loaded
+    async fn get(
+        &self,
+        varname: &str,
+    ) -> Result<ndarray::ArrayBase<ndarray::OwnedRepr<T>, ndarray::Dim<ndarray::IxDynImpl>>> {
+        trace!("Getting data subset for variable: {}", varname);
+
+        // Check if already cached (read lock)
+        {
+            let data_read = self.data.read().await;
+            if let Some(cached) = data_read.get(varname) {
+                trace!("Data for variable {} already loaded", varname);
+                return Ok(cached.clone());
+            }
+        }
+
+        // Not cached, need to load (write lock)
+        trace!(
+            "Loading data subset ({:?}) for variable: {}",
+            self.subset, varname
+        );
+
+        let variable = Array::async_open(self.source.clone(), &format!("/{varname}")).await?;
+
+        let values = variable
+            .async_retrieve_array_subset_ndarray(&self.subset)
+            .await
+            .expect("Failed to retrieve array subset");
+
+        // Cache the loaded data
+        let mut data_write = self.data.write().await;
+        data_write.insert(varname.to_string(), values.clone());
+
+        Ok(values)
+    }
 }
